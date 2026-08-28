@@ -48,7 +48,8 @@ function onWheel(event: WheelEvent) {
           v-for="node in store.tree"
           :key="node.id"
           :node="node"
-          @open="store.createTerminal($event.name)"
+          @open="store.openSidebarNode($event)"
+          @move="(id, direction) => store.moveSidebarNode(id, direction)"
         />
       </ul>
       <button class="new-terminal" @click="store.createTerminal()">
@@ -78,6 +79,20 @@ function onWheel(event: WheelEvent) {
             class="notification-dot"
           />
         </button>
+        <details v-if="store.workspaces.length > 5" class="workspace-overflow">
+          <summary class="workspace-icon" aria-label="Afficher tous les workspaces">
+            <IconGlyph name="Ellipsis" />
+          </summary>
+          <div class="workspace-overflow-menu">
+            <button
+              v-for="workspace in store.workspaces.slice(5)"
+              :key="workspace.id"
+              @click="store.switchWorkspace(workspace.id)"
+            >
+              {{ workspace.name }}
+            </button>
+          </div>
+        </details>
         <button
           class="workspace-icon"
           aria-label="Créer un workspace"

@@ -15,6 +15,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
+use std::{collections::HashMap, time::Duration};
 use tauri::{Emitter, Manager, State};
 use uuid::Uuid;
 
@@ -23,12 +24,30 @@ pub struct BackendState {
     pub sessions: Arc<SessionManager>,
     locked: AtomicBool,
     pin_hash: Mutex<Option<String>>,
+    ssh_statuses: Arc<Mutex<HashMap<Uuid, ssh::SshStatus>>>,
 }
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct TerminalOutput {
     session_id: Uuid,
     data_base64: String,
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SshStateChanged {
+    session_id: Uuid,
+    status: ssh::SshStatus,
+    attempt: u8,
+    replacement_session_id: Option<Uuid>,
+}
+
+#[derive(Clone)]
+struct SshConnectionSpec {
+    executable: String,
+    args: Vec<String>,
+    cols: u16,
+    rows: u16,
 }
 
 impl BackendState {
@@ -44,6 +63,35 @@ impl BackendState {
 #[tauri::command]
 fn app_snapshot(state: State<BackendState>) -> Result<AppData, String> {
     state.domain.snapshot()
+}
+#[tauri::command]
+fn tab_save(
+    state: State<BackendState>,
+    tab: Tab,
+    sessions: Vec<SavedSession>,
+) -> Result<Tab, String> {
+    state.require_unlocked()?;
+    state.domain.save_tab(tab, sessions)
+}
+#[tauri::command]
+fn window_state_save(
+    state: State<BackendState>,
+    window: WindowState,
+) -> Result<WindowState, String> {
+    state.require_unlocked()?;
+    state.domain.save_window_state(window)
+}
+#[tauri::command]
+fn app_recovery_state(state: State<BackendState>) -> Result<AppState, String> {
+    state.domain.recovery_state()
+}
+#[tauri::command]
+fn app_recovery_finish(state: State<BackendState>) -> Result<(), String> {
+    state.domain.finish_recovery()
+}
+#[tauri::command]
+fn app_mark_clean_shutdown(state: State<BackendState>) -> Result<(), String> {
+    state.domain.mark_clean_shutdown()
 }
 #[tauri::command]
 fn workspace_list(state: State<BackendState>) -> Result<Vec<Workspace>, String> {
@@ -153,6 +201,237 @@ fn ssh_config_list() -> Result<Vec<ssh::SshTarget>, String> {
     }
     ssh::load_config(&path)
 }
+
+fn ssh_executable() -> Result<String, String> {
+    let candidate = if cfg!(windows) { "ssh.exe" } else { "ssh" };
+    command_exists(candidate)
+        .then(|| candidate.to_string())
+        .ok_or_else(|| "OpenSSH was not found on PATH".into())
+}
+
+fn ssh_spec(
+    state: &BackendState,
+    workspace_id: Uuid,
+    resource_id: Uuid,
+    identity_id: Uuid,
+    cols: u16,
+    rows: u16,
+) -> Result<(SshConnectionSpec, ssh::ResolvedSshTarget), String> {
+    if cols == 0 || rows == 0 || cols > 1000 || rows > 1000 {
+        return Err("invalid terminal dimensions".into());
+    }
+    let data = state.domain.snapshot()?;
+    let resource = data
+        .resources
+        .iter()
+        .find(|item| item.id == resource_id && item.workspace_id == workspace_id)
+        .ok_or("resource does not belong to workspace")?;
+    let identity = data
+        .identities
+        .iter()
+        .find(|item| item.id == identity_id && item.workspace_id == workspace_id)
+        .ok_or("identity does not belong to workspace")?;
+    if resource.identity_id != Some(identity.id) {
+        return Err("resource is not associated with this identity".into());
+    }
+    let destination = resource
+        .ssh_alias
+        .as_deref()
+        .or(resource.host.as_deref())
+        .ok_or("resource has no SSH destination")?;
+    let executable = ssh_executable()?;
+    let args = ssh::connection_args(
+        destination,
+        Some(&identity.username),
+        resource.port,
+        identity.identity_file.as_deref(),
+    )?;
+    let resolved = ssh::resolve_with_openssh(
+        &executable,
+        destination,
+        Some(&identity.username),
+        resource.port,
+        identity.identity_file.as_deref(),
+    )?;
+    Ok((
+        SshConnectionSpec {
+            executable,
+            args,
+            cols,
+            rows,
+        },
+        resolved,
+    ))
+}
+
+fn spawn_ssh_attempt(
+    app: tauri::AppHandle,
+    sessions: Arc<SessionManager>,
+    statuses: Arc<Mutex<HashMap<Uuid, ssh::SshStatus>>>,
+    spec: SshConnectionSpec,
+    attempt: u8,
+) -> Result<pty::SpawnedSession, String> {
+    let output_app = app.clone();
+    let exit_app = app.clone();
+    let exit_sessions = sessions.clone();
+    let exit_statuses = statuses.clone();
+    let exit_spec = spec.clone();
+    let spawned = sessions.spawn_with_exit(
+        &spec.executable,
+        &spec.args,
+        None,
+        spec.cols,
+        spec.rows,
+        move |id, bytes| {
+            let _ = output_app.emit(
+                "terminal-output",
+                TerminalOutput {
+                    session_id: id,
+                    data_base64: BASE64.encode(bytes),
+                },
+            );
+        },
+        move |id| {
+            let closed = exit_statuses
+                .lock()
+                .map(|map| map.get(&id) == Some(&ssh::SshStatus::Closed))
+                .unwrap_or(true);
+            if closed {
+                return;
+            }
+            if let Ok(mut map) = exit_statuses.lock() {
+                map.insert(id, ssh::SshStatus::Disconnected);
+            }
+            let _ = exit_app.emit(
+                "ssh-state-changed",
+                SshStateChanged {
+                    session_id: id,
+                    status: ssh::SshStatus::Disconnected,
+                    attempt,
+                    replacement_session_id: None,
+                },
+            );
+            let policy = ssh::ReconnectPolicy::default();
+            let Some(delay) = policy.delay(attempt) else {
+                if let Ok(mut map) = exit_statuses.lock() {
+                    map.insert(id, ssh::SshStatus::Failed);
+                }
+                let _ = exit_app.emit(
+                    "ssh-state-changed",
+                    SshStateChanged {
+                        session_id: id,
+                        status: ssh::SshStatus::Failed,
+                        attempt,
+                        replacement_session_id: None,
+                    },
+                );
+                return;
+            };
+            std::thread::sleep(Duration::from_millis(delay));
+            if let Ok(mut map) = exit_statuses.lock() {
+                map.insert(id, ssh::SshStatus::Reconnecting);
+            }
+            let _ = exit_app.emit(
+                "ssh-state-changed",
+                SshStateChanged {
+                    session_id: id,
+                    status: ssh::SshStatus::Reconnecting,
+                    attempt: attempt + 1,
+                    replacement_session_id: None,
+                },
+            );
+            match spawn_ssh_attempt(
+                exit_app.clone(),
+                exit_sessions,
+                exit_statuses.clone(),
+                exit_spec,
+                attempt + 1,
+            ) {
+                Ok(next) => {
+                    let _ = exit_app.emit(
+                        "ssh-state-changed",
+                        SshStateChanged {
+                            session_id: id,
+                            status: ssh::SshStatus::Connected,
+                            attempt: attempt + 1,
+                            replacement_session_id: Some(next.id),
+                        },
+                    );
+                }
+                Err(_) => {
+                    if let Ok(mut map) = exit_statuses.lock() {
+                        map.insert(id, ssh::SshStatus::Failed);
+                    }
+                }
+            }
+        },
+    )?;
+    statuses
+        .lock()
+        .map_err(|_| "SSH state unavailable")?
+        .insert(spawned.id, ssh::SshStatus::Connected);
+    Ok(spawned)
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SshConnectionResult {
+    session_id: Uuid,
+    resolved: ssh::ResolvedSshTarget,
+}
+
+#[tauri::command]
+fn ssh_session_connect(
+    app: tauri::AppHandle,
+    state: State<BackendState>,
+    workspace_id: Uuid,
+    resource_id: Uuid,
+    identity_id: Uuid,
+    cols: Option<u16>,
+    rows: Option<u16>,
+) -> Result<SshConnectionResult, String> {
+    state.require_unlocked()?;
+    let (spec, resolved) = ssh_spec(
+        &state,
+        workspace_id,
+        resource_id,
+        identity_id,
+        cols.unwrap_or(80),
+        rows.unwrap_or(24),
+    )?;
+    let spawned = spawn_ssh_attempt(
+        app.clone(),
+        state.sessions.clone(),
+        state.ssh_statuses.clone(),
+        spec,
+        0,
+    )?;
+    app.emit(
+        "ssh-state-changed",
+        SshStateChanged {
+            session_id: spawned.id,
+            status: ssh::SshStatus::Connected,
+            attempt: 0,
+            replacement_session_id: None,
+        },
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(SshConnectionResult {
+        session_id: spawned.id,
+        resolved,
+    })
+}
+
+#[tauri::command]
+fn ssh_session_status(state: State<BackendState>, id: Uuid) -> Result<ssh::SshStatus, String> {
+    state
+        .ssh_statuses
+        .lock()
+        .map_err(|_| "SSH state unavailable".to_string())?
+        .get(&id)
+        .copied()
+        .ok_or("SSH session not found".into())
+}
 #[tauri::command]
 fn session_spawn(
     app: tauri::AppHandle,
@@ -207,6 +486,11 @@ fn session_resize(
 }
 #[tauri::command]
 fn session_close(state: State<BackendState>, id: Uuid) -> Result<(), String> {
+    if let Ok(mut statuses) = state.ssh_statuses.lock() {
+        if statuses.contains_key(&id) {
+            statuses.insert(id, ssh::SshStatus::Closed);
+        }
+    }
     state.sessions.close(id)
 }
 
@@ -274,7 +558,7 @@ fn app_unlock(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
@@ -290,17 +574,24 @@ pub fn run() {
             let repo = Repository::open(data_dir.join("terminarr.sqlite"))
                 .map_err(std::io::Error::other)?;
             let domain = DomainService::new(repo);
+            domain.begin_run().map_err(std::io::Error::other)?;
             let pin_hash = domain.pin_hash().map_err(std::io::Error::other)?;
             app.manage(BackendState {
                 domain,
                 sessions: Arc::new(SessionManager::default()),
                 locked: AtomicBool::new(pin_hash.is_some()),
                 pin_hash: Mutex::new(pin_hash),
+                ssh_statuses: Arc::new(Mutex::new(HashMap::new())),
             });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             app_snapshot,
+            tab_save,
+            window_state_save,
+            app_recovery_state,
+            app_recovery_finish,
+            app_mark_clean_shutdown,
             workspace_list,
             workspace_create,
             workspace_duplicate,
@@ -313,6 +604,8 @@ pub fn run() {
             import_apply,
             profile_detect,
             ssh_config_list,
+            ssh_session_connect,
+            ssh_session_status,
             session_spawn,
             session_write,
             session_resize,
@@ -323,6 +616,12 @@ pub fn run() {
             pin_configure,
             app_unlock
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Terminarr")
+        .build(tauri::generate_context!())
+        .expect("error while building Terminarr");
+    app.run(|app_handle, event| {
+        if matches!(event, tauri::RunEvent::Exit) {
+            let state = app_handle.state::<BackendState>();
+            let _ = state.domain.mark_clean_shutdown();
+        }
+    });
 }

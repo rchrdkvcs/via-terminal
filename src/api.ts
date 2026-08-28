@@ -22,6 +22,20 @@ export const nativeApi = {
       cols: 80,
       rows: 24,
     }),
+  createSshSession: (
+    workspaceId: string,
+    resourceId: string,
+    identityId: string,
+    cols = 80,
+    rows = 24,
+  ) =>
+    command<{ id: string }>('ssh_session_connect', {
+      workspaceId,
+      resourceId,
+      identityId,
+      cols,
+      rows,
+    }),
   writeSession: (sessionId: string, data: string) =>
     command<void>('session_write', { id: sessionId, data }),
   resizeSession: (sessionId: string, cols: number, rows: number) =>

@@ -1,9 +1,15 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAppStore } from './app'
 
 describe('workspace navigation', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true),
+    )
+  })
 
   it('keeps sessions alive while switching workspaces', async () => {
     const store = useAppStore()
@@ -26,7 +32,13 @@ describe('workspace navigation', () => {
 })
 
 describe('terminal tabs', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true),
+    )
+  })
 
   it('opens a terminal in the current workspace', async () => {
     const store = useAppStore()
@@ -53,5 +65,31 @@ describe('terminal tabs', () => {
     expect(tab).toMatchObject({ sessionId: firstSessionId, split: 'vertical' })
     expect(tab?.secondarySessionId).toBeTruthy()
     expect(store.sessions).toHaveLength(2)
+  })
+
+  it('opens a resource as an SSH session', async () => {
+    const store = useAppStore()
+    const resource = store.tree[1].children![0]
+    await store.openSidebarNode(resource)
+    expect(store.activeSession).toMatchObject({
+      kind: 'ssh',
+      resourceId: resource.id,
+      workspaceId: 'support',
+    })
+  })
+
+  it('keeps an active tab when close confirmation is cancelled', async () => {
+    vi.mocked(window.confirm).mockReturnValue(false)
+    const store = useAppStore()
+    const id = store.tabs[0].id
+    await store.closeTab(id)
+    expect(store.tabs.some((tab) => tab.id === id)).toBe(true)
+  })
+
+  it('reports disconnected sessions on their workspace', () => {
+    const store = useAppStore()
+    store.updateSessionStatus('welcome', 'disconnected', 'Connexion perdue')
+    expect(store.workspaces[0].activity).toBe(true)
+    expect(store.notices[0]).toMatchObject({ kind: 'error', message: 'Connexion perdue' })
   })
 })

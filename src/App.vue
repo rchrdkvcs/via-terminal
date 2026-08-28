@@ -10,6 +10,7 @@ import TerminalView from './components/TerminalView.vue'
 import { useAppStore } from './stores/app'
 const store = useAppStore()
 let unlistenLock: UnlistenFn | undefined
+let unlistenSession: UnlistenFn | undefined
 function shortcuts(event: KeyboardEvent) {
   if (event.ctrlKey && event.key.toLowerCase() === 'k') {
     event.preventDefault()
@@ -29,11 +30,19 @@ onMounted(async () => {
     unlistenLock = await listen<boolean>('app-lock-changed', ({ payload }) => {
       store.locked = payload
     })
+    unlistenSession = await listen<{
+      id: string
+      status: import('./types').SessionStatus
+      message?: string
+    }>('session-status-changed', ({ payload }) =>
+      store.updateSessionStatus(payload.id, payload.status, payload.message),
+    )
   }
   window.addEventListener('keydown', shortcuts)
 })
 onUnmounted(() => {
   unlistenLock?.()
+  unlistenSession?.()
   window.removeEventListener('keydown', shortcuts)
 })
 </script>
@@ -88,8 +97,14 @@ onUnmounted(() => {
       </header>
       <div v-if="store.activeSession" class="terminal-stage">
         <div class="terminal-toolbar">
-          <span><i class="status-light" />{{ store.activeSession.name }}</span
-          ><span class="muted">Local · {{ store.activeWorkspace?.name }}</span>
+          <span
+            ><i class="status-light" :class="store.activeSession.status" />{{
+              store.activeSession.name
+            }}</span
+          ><span class="muted"
+            >{{ store.activeSession.kind === 'ssh' ? 'SSH' : 'Local' }} ·
+            {{ store.activeSession.status }} · {{ store.activeWorkspace?.name }}</span
+          >
         </div>
         <div
           class="terminal-panes"
@@ -113,5 +128,14 @@ onUnmounted(() => {
       </div>
     </section>
     <CommandPalette /><SettingsPanel /><LockScreen />
+    <div class="notice-stack" role="status" aria-live="polite">
+      <div v-for="notice in store.notices" :key="notice.id" class="notice" :class="notice.kind">
+        <IconGlyph :name="notice.kind === 'error' ? 'CircleAlert' : 'Info'" />
+        <span>{{ notice.message }}</span>
+        <button :aria-label="'Fermer la notification'" @click="store.dismissNotice(notice.id)">
+          <IconGlyph name="X" :size="14" />
+        </button>
+      </div>
+    </div>
   </main>
 </template>

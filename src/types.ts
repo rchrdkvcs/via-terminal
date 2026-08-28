@@ -72,6 +72,13 @@ export interface SessionSummary {
   kind: SessionKind
   status: SessionStatus
   workspaceId: string
+  resourceId?: string
+  message?: string
+}
+export interface AppNotice {
+  id: string
+  kind: 'info' | 'error'
+  message: string
 }
 export interface Tab {
   id: string

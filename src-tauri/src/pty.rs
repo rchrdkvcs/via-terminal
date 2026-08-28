@@ -33,6 +33,24 @@ impl SessionManager {
     where
         F: Fn(Uuid, Vec<u8>) + Send + 'static,
     {
+        self.spawn_with_exit(executable, args, cwd, cols, rows, on_output, |_| {})
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn spawn_with_exit<F, E>(
+        &self,
+        executable: &str,
+        args: &[String],
+        cwd: Option<&str>,
+        cols: u16,
+        rows: u16,
+        on_output: F,
+        on_exit: E,
+    ) -> Result<SpawnedSession, String>
+    where
+        F: Fn(Uuid, Vec<u8>) + Send + 'static,
+        E: FnOnce(Uuid) + Send + 'static,
+    {
         let pair = native_pty_system()
             .openpty(PtySize {
                 rows,
@@ -61,6 +79,7 @@ impl SessionManager {
                     Ok(n) => on_output(id, buf[..n].to_vec()),
                 }
             }
+            on_exit(id);
         });
         self.sessions.lock().unwrap().insert(
             id,

@@ -177,6 +177,39 @@ impl DomainService {
                 };
                 d.favorites.push(favorite);
             }
+            let mut session_map = std::collections::HashMap::new();
+            for mut session in d
+                .saved_sessions
+                .iter()
+                .filter(|item| item.workspace_id == id)
+                .cloned()
+                .collect::<Vec<_>>()
+            {
+                let old = session.id;
+                session.id = Uuid::new_v4();
+                session.workspace_id = new_id;
+                session.target_id = match session.target_kind.as_str() {
+                    "profile" => profile_map[&session.target_id],
+                    "resource" => resource_map[&session.target_id],
+                    _ => unreachable!("validated saved session kind"),
+                };
+                session_map.insert(old, session.id);
+                d.saved_sessions.push(session);
+            }
+            for mut tab in d
+                .tabs
+                .iter()
+                .filter(|item| item.workspace_id == id)
+                .cloned()
+                .collect::<Vec<_>>()
+            {
+                tab.id = Uuid::new_v4();
+                tab.workspace_id = new_id;
+                if let Some(root) = &mut tab.root {
+                    remap_pane_sessions(root, &session_map);
+                }
+                d.tabs.push(tab);
+            }
             let w = Workspace {
                 id: new_id,
                 name,
@@ -242,8 +275,78 @@ impl DomainService {
             Ok(settings)
         })
     }
+    pub fn save_tab(&self, tab: Tab, sessions: Vec<SavedSession>) -> Result<Tab, String> {
+        self.mutate(|data| {
+            if !data
+                .workspaces
+                .iter()
+                .any(|workspace| workspace.id == tab.workspace_id)
+            {
+                return Err("workspace not found".into());
+            }
+            if sessions
+                .iter()
+                .any(|session| session.workspace_id != tab.workspace_id)
+            {
+                return Err("cross-workspace saved session reference".into());
+            }
+            let old_session_ids: std::collections::HashSet<_> = data
+                .tabs
+                .iter()
+                .find(|item| item.id == tab.id)
+                .and_then(|item| item.root.as_ref())
+                .map(pane_session_ids)
+                .unwrap_or_default()
+                .into_iter()
+                .collect();
+            data.saved_sessions
+                .retain(|session| !old_session_ids.contains(&session.id));
+            data.saved_sessions.extend(sessions);
+            match data.tabs.iter_mut().find(|item| item.id == tab.id) {
+                Some(existing) => *existing = tab.clone(),
+                None => data.tabs.push(tab.clone()),
+            }
+            Ok(tab)
+        })
+    }
+    pub fn save_window_state(&self, window: WindowState) -> Result<WindowState, String> {
+        self.mutate(|data| {
+            match data.windows.iter_mut().find(|item| item.id == window.id) {
+                Some(existing) => *existing = window.clone(),
+                None => data.windows.push(window.clone()),
+            }
+            Ok(window)
+        })
+    }
+    pub fn begin_run(&self) -> Result<bool, String> {
+        self.mutate(|data| {
+            let recovery_available = !data.app_state.clean_shutdown;
+            data.app_state.recovery_available = recovery_available;
+            data.app_state.clean_shutdown = false;
+            Ok(recovery_available)
+        })
+    }
+    pub fn recovery_state(&self) -> Result<AppState, String> {
+        Ok(self.snapshot()?.app_state)
+    }
+    pub fn finish_recovery(&self) -> Result<(), String> {
+        self.mutate(|data| {
+            data.app_state.recovery_available = false;
+            Ok(())
+        })
+    }
+    pub fn mark_clean_shutdown(&self) -> Result<(), String> {
+        self.mutate(|data| {
+            data.app_state.clean_shutdown = true;
+            data.app_state.recovery_available = false;
+            Ok(())
+        })
+    }
     pub fn export_json(&self) -> Result<String, String> {
-        serde_json::to_string_pretty(&self.snapshot()?).map_err(|e| e.to_string())
+        let mut portable = self.snapshot()?;
+        portable.windows.clear();
+        portable.app_state = AppState::default();
+        serde_json::to_string_pretty(&portable).map_err(|e| e.to_string())
     }
     pub fn import_json(&self, json: &str) -> Result<AppData, String> {
         let mut incoming: AppData = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -316,6 +419,49 @@ fn remap_ids(data: &mut AppData) {
             "resource" => resources[&favorite.target_id],
             _ => unreachable!("validated favorite kind"),
         };
+    }
+    let mut sessions = std::collections::HashMap::new();
+    for session in &mut data.saved_sessions {
+        let old = session.id;
+        session.id = Uuid::new_v4();
+        session.workspace_id = ws[&session.workspace_id];
+        session.target_id = match session.target_kind.as_str() {
+            "profile" => profiles[&session.target_id],
+            "resource" => resources[&session.target_id],
+            _ => unreachable!("validated saved session kind"),
+        };
+        sessions.insert(old, session.id);
+    }
+    for tab in &mut data.tabs {
+        tab.id = Uuid::new_v4();
+        tab.workspace_id = ws[&tab.workspace_id];
+        if let Some(root) = &mut tab.root {
+            remap_pane_sessions(root, &sessions);
+        }
+    }
+    // Window state belongs to a particular installation, not to a portable export.
+    data.windows.clear();
+    data.app_state = AppState::default();
+}
+
+fn pane_session_ids(tree: &PaneTree) -> Vec<Id> {
+    match tree {
+        PaneTree::Pane { session_id } => vec![*session_id],
+        PaneTree::Split { first, second, .. } => {
+            let mut ids = pane_session_ids(first);
+            ids.extend(pane_session_ids(second));
+            ids
+        }
+    }
+}
+
+fn remap_pane_sessions(tree: &mut PaneTree, sessions: &std::collections::HashMap<Id, Id>) {
+    match tree {
+        PaneTree::Pane { session_id } => *session_id = sessions[session_id],
+        PaneTree::Split { first, second, .. } => {
+            remap_pane_sessions(first, sessions);
+            remap_pane_sessions(second, sessions);
+        }
     }
 }
 #[cfg(test)]
@@ -489,5 +635,67 @@ mod tests {
             Some("encoded-secret-verifier")
         );
         assert!(!s.export_json().unwrap().contains("encoded-secret-verifier"));
+    }
+
+    #[test]
+    fn layout_and_window_state_round_trip_through_public_service() {
+        let service = DomainService::new(Repository::memory().unwrap());
+        let snapshot = service.snapshot().unwrap();
+        let workspace_id = snapshot.workspaces[0].id;
+        let profile_id = snapshot.profiles[0].id;
+        let session_id = Uuid::new_v4();
+        let tab = Tab {
+            id: Uuid::new_v4(),
+            workspace_id,
+            name: "Operations".into(),
+            root: Some(PaneTree::Pane { session_id }),
+            position: 0,
+        };
+        service
+            .save_tab(
+                tab.clone(),
+                vec![SavedSession {
+                    id: session_id,
+                    workspace_id,
+                    target_kind: "profile".into(),
+                    target_id: profile_id,
+                    working_directory: Some("C:\\Work".into()),
+                }],
+            )
+            .unwrap();
+        let window = WindowState {
+            id: Uuid::new_v4(),
+            active_workspace_id: Some(workspace_id),
+            active_tab_id: Some(tab.id),
+            x: Some(10),
+            y: Some(20),
+            width: 1200,
+            height: 800,
+            maximized: false,
+            sidebar_hidden: true,
+        };
+        service.save_window_state(window.clone()).unwrap();
+        let restored = service.snapshot().unwrap();
+        assert_eq!(restored.tabs, vec![tab]);
+        assert_eq!(restored.windows, vec![window]);
+        assert_eq!(
+            restored.saved_sessions[0].working_directory.as_deref(),
+            Some("C:\\Work")
+        );
+    }
+
+    #[test]
+    fn an_unclean_run_is_offered_for_recovery_once() {
+        let repository = Repository::memory().unwrap();
+        let service = DomainService::new(repository);
+        assert!(!service.begin_run().unwrap());
+        assert!(!service.recovery_state().unwrap().clean_shutdown);
+        // Simulate a new process opening the snapshot left by the crashed run.
+        assert!(service.begin_run().unwrap());
+        assert!(service.recovery_state().unwrap().recovery_available);
+        service.finish_recovery().unwrap();
+        assert!(!service.recovery_state().unwrap().recovery_available);
+        service.mark_clean_shutdown().unwrap();
+        assert!(service.recovery_state().unwrap().clean_shutdown);
     }
 }

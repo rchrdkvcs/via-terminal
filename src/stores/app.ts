@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type {
   AppSnapshot,
+  AppNotice,
   Favorite,
   LocalProfile,
   SessionSummary,
@@ -33,6 +34,7 @@ export const useAppStore = defineStore('app', () => {
   const paletteOpen = ref(false)
   const settingsOpen = ref(false)
   const locked = ref(false)
+  const notices = ref<AppNotice[]>([])
   const settings = ref<Settings>({ ...defaultSettings })
   const profiles = ref<LocalProfile[]>([])
   const persistedSnapshot = ref<AppSnapshot>()
@@ -203,6 +205,84 @@ export const useAppStore = defineStore('app', () => {
     tabs.value.push(tab)
     activeTabId.value = tab.id
   }
+  async function openSidebarNode(node: SidebarNode) {
+    if (node.kind === 'profile') return createTerminal(node.name)
+    if (node.kind !== 'resource') return
+    const workspace = activeWorkspace.value
+    const resource = persistedSnapshot.value?.resources.find((item) => item.id === node.id)
+    const status: SessionSummary['status'] = nativeAvailable() ? 'connecting' : 'connected'
+    try {
+      if (nativeAvailable() && !resource?.identityId) {
+        throw new Error('Cette ressource SSH ne possède aucune identité configurée.')
+      }
+      const spawned =
+        nativeAvailable() && workspace && resource?.identityId
+          ? await nativeApi.createSshSession(workspace.id, node.id, resource.identityId)
+          : undefined
+      const id = spawned?.id ?? crypto.randomUUID()
+      const session: SessionSummary = {
+        id,
+        name: node.name,
+        kind: 'ssh',
+        status,
+        workspaceId: activeWorkspaceId.value,
+        resourceId: node.id,
+      }
+      sessions.value.push(session)
+      node.sessions ??= []
+      node.sessions.push(session)
+      const tab: Tab = {
+        id: crypto.randomUUID(),
+        name: node.name,
+        workspaceId: activeWorkspaceId.value,
+        sessionId: id,
+      }
+      tabs.value.push(tab)
+      activeTabId.value = tab.id
+    } catch (error) {
+      reportError(`Connexion à « ${node.name} » impossible`, error)
+    }
+  }
+  function updateSessionStatus(id: string, status: SessionSummary['status'], message?: string) {
+    const session = sessions.value.find((item) => item.id === id)
+    if (!session) return
+    session.status = status
+    session.message = message
+    if (status === 'failed' || status === 'disconnected') {
+      const workspace = workspaces.value.find((item) => item.id === session.workspaceId)
+      if (workspace) workspace.activity = true
+      notices.value.push({
+        id: crypto.randomUUID(),
+        kind: 'error',
+        message:
+          message ?? `${session.name} est ${status === 'failed' ? 'en échec' : 'déconnecté'}.`,
+      })
+    }
+  }
+  function reportError(context: string, error: unknown) {
+    notices.value.push({
+      id: crypto.randomUUID(),
+      kind: 'error',
+      message: `${context}. ${error instanceof Error ? error.message : String(error)}`,
+    })
+  }
+  function dismissNotice(id: string) {
+    notices.value = notices.value.filter((notice) => notice.id !== id)
+  }
+  function moveSidebarNode(id: string, direction: -1 | 1) {
+    const moveIn = (nodes: SidebarNode[]): boolean => {
+      const index = nodes.findIndex((node) => node.id === id)
+      if (index >= 0) {
+        const target = index + direction
+        if (target >= 0 && target < nodes.length) {
+          ;[nodes[index], nodes[target]] = [nodes[target], nodes[index]]
+        }
+        return true
+      }
+      return nodes.some((node) => (node.children ? moveIn(node.children) : false))
+    }
+    moveIn(tree.value)
+  }
   async function createWorkspace() {
     const name = window.prompt('Nom du workspace')?.trim()
     if (!name) return
@@ -259,6 +339,13 @@ export const useAppStore = defineStore('app', () => {
     if (index < 0) return
     const sessionId = tabs.value[index].sessionId
     const secondarySessionId = tabs.value[index].secondarySessionId
+    const activeSessions = [sessionId, secondarySessionId]
+      .map((session) => sessions.value.find((item) => item.id === session))
+      .filter(
+        (session) => session && !['closed', 'failed', 'disconnected'].includes(session.status),
+      )
+    if (activeSessions.length && !window.confirm('Fermer cet onglet et ses sessions actives ?'))
+      return
     tabs.value.splice(index, 1)
     if (sessionId && nativeAvailable())
       await nativeApi.closeSession(sessionId).catch(() => undefined)
@@ -274,6 +361,7 @@ export const useAppStore = defineStore('app', () => {
     paletteOpen,
     settingsOpen,
     locked,
+    notices,
     settings,
     profiles,
     favorites,
@@ -287,6 +375,11 @@ export const useAppStore = defineStore('app', () => {
     switchWorkspace,
     cycleWorkspace,
     createTerminal,
+    openSidebarNode,
+    updateSessionStatus,
+    reportError,
+    dismissNotice,
+    moveSidebarNode,
     createWorkspace,
     splitActiveTab,
     lock,

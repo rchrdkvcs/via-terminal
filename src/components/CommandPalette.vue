@@ -19,8 +19,18 @@ const actions = computed(() =>
       label: 'Diviser horizontalement',
       detail: 'Panneau actif',
       icon: 'Rows2',
-      run: () => undefined,
+      run: () => store.splitActiveTab('horizontal'),
     },
+    ...store.tree
+      .flatMap((node) => [...(node.kind === 'folder' ? (node.children ?? []) : [node])])
+      .filter((node) => node.kind !== 'folder')
+      .map((node) => ({
+        id: `target-${node.id}`,
+        label: `Ouvrir ${node.name}`,
+        detail: node.kind === 'resource' ? 'Ressource SSH' : 'Profil local',
+        icon: node.icon ?? 'Terminal',
+        run: () => store.openSidebarNode(node),
+      })),
     ...store.workspaces.map((w) => ({
       id: w.id,
       label: `Ouvrir ${w.name}`,

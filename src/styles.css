@@ -620,6 +620,73 @@ kbd {
   white-space: nowrap;
   border: 0;
 }
+.status-dot {
+  width: 7px;
+  height: 7px;
+  margin-inline-start: auto;
+  border-radius: 50%;
+  background: #67e8f9;
+}
+.status-dot.failed,
+.status-light.failed,
+.status-light.disconnected {
+  background: #fb7185;
+}
+.status-light.connecting,
+.status-light.reconnecting {
+  background: #fbbf24;
+}
+.workspace-overflow {
+  position: relative;
+}
+.workspace-overflow summary {
+  list-style: none;
+}
+.workspace-overflow summary::-webkit-details-marker {
+  display: none;
+}
+.workspace-overflow-menu {
+  position: absolute;
+  bottom: 42px;
+  right: 0;
+  z-index: 15;
+  min-width: 180px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #24242b;
+  box-shadow: 0 12px 36px #0008;
+}
+.workspace-overflow-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  border-radius: 6px;
+}
+.notice-stack {
+  position: fixed;
+  z-index: 60;
+  right: 18px;
+  bottom: 18px;
+  display: grid;
+  gap: 8px;
+  width: min(380px, calc(100vw - 36px));
+}
+.notice {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #24242b;
+  box-shadow: 0 10px 30px #0008;
+}
+.notice.error {
+  border-color: #fb718566;
+}
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.16s;
