@@ -35,6 +35,12 @@ struct TerminalOutput {
 
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+struct SessionExited {
+    session_id: Uuid,
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct SshStateChanged {
     session_id: Uuid,
     status: ssh::SshStatus,
@@ -451,20 +457,26 @@ fn session_spawn(
     if cols == 0 || rows == 0 || cols > 1000 || rows > 1000 {
         return Err("invalid terminal dimensions".into());
     }
-    let result = state.sessions.spawn(
+    let output_app = app.clone();
+    let result = state.sessions.spawn_with_exit(
         &profile.executable,
         &profile.args,
         profile.working_directory.as_deref(),
         cols,
         rows,
         move |id, bytes| {
-            let _ = app.emit(
+            let _ = output_app.emit(
                 "terminal-output",
                 TerminalOutput {
                     session_id: id,
                     data_base64: BASE64.encode(bytes),
                 },
             );
+        },
+        // Without this the webview cannot tell a finished shell from a silent
+        // one, so a closed tab looked identical to a live session.
+        move |id| {
+            let _ = app.emit("session-exited", SessionExited { session_id: id });
         },
     )?;
     Ok(result)
@@ -494,6 +506,80 @@ fn session_close(state: State<BackendState>, id: Uuid) -> Result<(), String> {
     state.sessions.close(id)
 }
 
+#[tauri::command]
+fn profile_create(
+    state: State<BackendState>,
+    workspace_id: Uuid,
+    name: String,
+    executable: String,
+    args: Option<Vec<String>>,
+    working_directory: Option<String>,
+) -> Result<LocalProfile, String> {
+    state.require_unlocked()?;
+    state.domain.create_profile(
+        workspace_id,
+        name,
+        executable,
+        args.unwrap_or_default(),
+        working_directory,
+    )
+}
+#[tauri::command]
+fn sidebar_node_create(
+    state: State<BackendState>,
+    workspace_id: Uuid,
+    kind: String,
+    label: String,
+    parent_id: Option<Uuid>,
+    target_id: Option<Uuid>,
+) -> Result<SidebarNode, String> {
+    state.require_unlocked()?;
+    state
+        .domain
+        .create_sidebar_node(workspace_id, kind, label, parent_id, target_id)
+}
+#[tauri::command]
+fn sidebar_node_rename(
+    state: State<BackendState>,
+    id: Uuid,
+    label: String,
+) -> Result<SidebarNode, String> {
+    state.require_unlocked()?;
+    state.domain.rename_sidebar_node(id, label)
+}
+#[tauri::command]
+fn sidebar_node_move(
+    state: State<BackendState>,
+    id: Uuid,
+    parent_id: Option<Uuid>,
+    position: i64,
+) -> Result<SidebarNode, String> {
+    state.require_unlocked()?;
+    state.domain.move_sidebar_node(id, parent_id, position)
+}
+#[tauri::command]
+fn sidebar_node_delete(state: State<BackendState>, id: Uuid) -> Result<(), String> {
+    state.require_unlocked()?;
+    state.domain.delete_sidebar_node(id)
+}
+#[tauri::command]
+fn favorite_set(
+    state: State<BackendState>,
+    workspace_id: Uuid,
+    target_kind: String,
+    target_id: Uuid,
+    pinned: bool,
+) -> Result<(), String> {
+    state.require_unlocked()?;
+    state
+        .domain
+        .set_favorite(workspace_id, target_kind, target_id, pinned)
+}
+#[tauri::command]
+fn tab_delete(state: State<BackendState>, id: Uuid) -> Result<(), String> {
+    state.require_unlocked()?;
+    state.domain.delete_tab(id)
+}
 #[tauri::command]
 fn window_create(app: tauri::AppHandle) -> Result<(), String> {
     let label = format!("window-{}", Uuid::new_v4());
@@ -596,6 +682,13 @@ pub fn run() {
             workspace_duplicate,
             identity_create,
             resource_create,
+            profile_create,
+            sidebar_node_create,
+            sidebar_node_rename,
+            sidebar_node_move,
+            sidebar_node_delete,
+            favorite_set,
+            tab_delete,
             settings_get,
             settings_update,
             export_create,
