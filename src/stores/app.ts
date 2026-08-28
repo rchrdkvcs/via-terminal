@@ -1,6 +1,15 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import type { Favorite, SessionSummary, Settings, SidebarNode, Tab, Workspace } from '../types'
+import type {
+  AppSnapshot,
+  Favorite,
+  LocalProfile,
+  SessionSummary,
+  Settings,
+  SidebarNode,
+  Tab,
+  Workspace,
+} from '../types'
 import { defaultSettings } from '../types'
 import { nativeApi, nativeAvailable } from '../api'
 
@@ -25,6 +34,8 @@ export const useAppStore = defineStore('app', () => {
   const settingsOpen = ref(false)
   const locked = ref(false)
   const settings = ref<Settings>({ ...defaultSettings })
+  const profiles = ref<LocalProfile[]>([])
+  const persistedSnapshot = ref<AppSnapshot>()
   const favorites = ref<Favorite[]>([
     {
       id: 'fav-ps',
@@ -90,7 +101,10 @@ export const useAppStore = defineStore('app', () => {
   )
 
   function switchWorkspace(id: string) {
-    if (workspaces.value.some((w) => w.id === id)) activeWorkspaceId.value = id
+    if (workspaces.value.some((w) => w.id === id)) {
+      activeWorkspaceId.value = id
+      if (persistedSnapshot.value) applyWorkspacePresentation(persistedSnapshot.value, id)
+    }
   }
   function cycleWorkspace(direction: 1 | -1) {
     const index = workspaces.value.findIndex((w) => w.id === activeWorkspaceId.value)
@@ -101,22 +115,77 @@ export const useAppStore = defineStore('app', () => {
   async function initialize() {
     if (!nativeAvailable()) return
     try {
-      const persisted = (await nativeApi.workspaces()) as Workspace[]
-      if (persisted.length) {
-        workspaces.value = persisted.map((workspace, position) => ({ ...workspace, position }))
+      const snapshot = await nativeApi.snapshot()
+      applySnapshot(snapshot)
+      locked.value = await nativeApi.isLocked()
+      if (workspaces.value.length) {
         activeWorkspaceId.value = workspaces.value[0].id
       }
     } catch {
       // Keep the in-memory preview available if native startup fails.
     }
   }
+  function applySnapshot(snapshot: AppSnapshot) {
+    persistedSnapshot.value = snapshot
+    workspaces.value = [...snapshot.workspaces].sort((a, b) => a.position - b.position)
+    profiles.value = snapshot.profiles
+    settings.value = { ...defaultSettings, ...snapshot.settings }
+    applyWorkspacePresentation(snapshot, workspaces.value[0]?.id)
+  }
+  function applyWorkspacePresentation(snapshot: AppSnapshot, workspaceId?: string) {
+    const nodes = snapshot.sidebarNodes
+      .filter((node) => node.workspaceId === workspaceId)
+      .sort((a, b) => a.position - b.position)
+    const byId = new Map<string, SidebarNode>()
+    for (const node of nodes) {
+      const target =
+        snapshot.profiles.find((profile) => profile.id === node.targetId) ??
+        snapshot.resources.find((resource) => resource.id === node.targetId)
+      byId.set(node.id, {
+        id: node.targetId ?? node.id,
+        name: target?.name ?? node.label,
+        kind: node.kind as SidebarNode['kind'],
+        icon:
+          node.kind === 'resource' ? 'Server' : node.kind === 'profile' ? 'Terminal' : undefined,
+        children: node.kind === 'folder' ? [] : undefined,
+      })
+    }
+    tree.value = []
+    for (const node of nodes) {
+      const mapped = byId.get(node.id)!
+      const parent = node.parentId ? byId.get(node.parentId) : undefined
+      if (parent?.children) parent.children.push(mapped)
+      else tree.value.push(mapped)
+    }
+    const pinned = snapshot.favorites
+      .filter((favorite) => favorite.workspaceId === workspaceId)
+      .sort((a, b) => a.position - b.position)
+    favorites.value = pinned.flatMap((favorite) => {
+      const target =
+        snapshot.profiles.find((profile) => profile.id === favorite.targetId) ??
+        snapshot.resources.find((resource) => resource.id === favorite.targetId)
+      return target
+        ? [
+            {
+              id: favorite.id,
+              name: target.name,
+              icon: favorite.targetKind === 'resource' ? 'Server' : 'Terminal',
+              kind: favorite.targetKind === 'resource' ? ('ssh' as const) : ('local' as const),
+              targetId: favorite.targetId,
+            },
+          ]
+        : []
+    })
+  }
   async function createTerminal(name = 'PowerShell') {
-    const executable = name.toLowerCase().includes('ubuntu')
-      ? 'wsl.exe'
-      : name.toLowerCase().includes('cmd')
-        ? 'cmd.exe'
-        : 'powershell.exe'
-    const spawned = nativeAvailable() ? await nativeApi.createSession(executable) : undefined
+    const workspace = activeWorkspace.value
+    const profile =
+      profiles.value.find((item) => item.id === name || item.name === name) ??
+      profiles.value.find((item) => item.id === workspace?.defaultProfileId)
+    const spawned =
+      nativeAvailable() && workspace && profile
+        ? await nativeApi.createSession(workspace.id, profile.id)
+        : undefined
     const id = spawned?.id ?? crypto.randomUUID()
     sessions.value.push({
       id,
@@ -134,13 +203,67 @@ export const useAppStore = defineStore('app', () => {
     tabs.value.push(tab)
     activeTabId.value = tab.id
   }
+  async function createWorkspace() {
+    const name = window.prompt('Nom du workspace')?.trim()
+    if (!name) return
+    if (nativeAvailable()) {
+      const workspace = await nativeApi.createWorkspace(name)
+      applySnapshot(await nativeApi.snapshot())
+      switchWorkspace(workspace.id)
+    } else {
+      const workspace: Workspace = {
+        id: crypto.randomUUID(),
+        name,
+        icon: 'Terminal',
+        color: '#7c6ef6',
+        position: workspaces.value.length,
+      }
+      workspaces.value.push(workspace)
+      switchWorkspace(workspace.id)
+    }
+  }
+  async function splitActiveTab(orientation: 'horizontal' | 'vertical' = 'vertical') {
+    const tab = tabs.value.find((item) => item.id === activeTabId.value)
+    if (!tab || tab.secondarySessionId) return
+    const workspace = activeWorkspace.value
+    const profile = profiles.value.find((item) => item.id === workspace?.defaultProfileId)
+    const spawned =
+      nativeAvailable() && workspace && profile
+        ? await nativeApi.createSession(workspace.id, profile.id)
+        : undefined
+    const id = spawned?.id ?? crypto.randomUUID()
+    sessions.value.push({
+      id,
+      name: profile?.name ?? 'PowerShell',
+      kind: 'local',
+      status: 'connected',
+      workspaceId: activeWorkspaceId.value,
+    })
+    tab.secondarySessionId = id
+    tab.split = orientation
+  }
+  async function lock() {
+    if (nativeAvailable()) await nativeApi.lock()
+    else locked.value = true
+  }
+  async function unlock(pin: string) {
+    if (nativeAvailable()) await nativeApi.unlock(pin)
+    else locked.value = false
+  }
+  async function configurePin(pin: string) {
+    if (!/^\d{4,}$/.test(pin)) throw new Error('Le PIN doit contenir au moins 4 chiffres.')
+    if (nativeAvailable()) await nativeApi.setupPin(pin)
+  }
   async function closeTab(id: string) {
     const index = tabs.value.findIndex((t) => t.id === id)
     if (index < 0) return
     const sessionId = tabs.value[index].sessionId
+    const secondarySessionId = tabs.value[index].secondarySessionId
     tabs.value.splice(index, 1)
     if (sessionId && nativeAvailable())
       await nativeApi.closeSession(sessionId).catch(() => undefined)
+    if (secondarySessionId && nativeAvailable())
+      await nativeApi.closeSession(secondarySessionId).catch(() => undefined)
     activeTabId.value = visibleTabs.value[Math.max(0, index - 1)]?.id ?? ''
   }
   return {
@@ -152,6 +275,7 @@ export const useAppStore = defineStore('app', () => {
     settingsOpen,
     locked,
     settings,
+    profiles,
     favorites,
     tree,
     sessions,
@@ -163,6 +287,11 @@ export const useAppStore = defineStore('app', () => {
     switchWorkspace,
     cycleWorkspace,
     createTerminal,
+    createWorkspace,
+    splitActiveTab,
+    lock,
+    unlock,
+    configurePin,
     closeTab,
   }
 })

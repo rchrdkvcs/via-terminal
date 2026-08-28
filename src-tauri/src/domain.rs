@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use uuid::Uuid;
 pub type Id = Uuid;
 
@@ -127,6 +128,21 @@ impl AppData {
         }
     }
     pub fn validate(&self) -> Result<(), String> {
+        let mut ids = HashSet::new();
+        for id in self
+            .workspaces
+            .iter()
+            .map(|x| x.id)
+            .chain(self.profiles.iter().map(|x| x.id))
+            .chain(self.resources.iter().map(|x| x.id))
+            .chain(self.identities.iter().map(|x| x.id))
+            .chain(self.sidebar_nodes.iter().map(|x| x.id))
+            .chain(self.favorites.iter().map(|x| x.id))
+        {
+            if !ids.insert(id) {
+                return Err("duplicate id".into());
+            }
+        }
         let has = |id| self.workspaces.iter().any(|w| w.id == id);
         for p in &self.profiles {
             if !has(p.workspace_id) {
@@ -165,13 +181,168 @@ impl AppData {
                 }
             }
         }
+        for node in &self.sidebar_nodes {
+            if !has(node.workspace_id) {
+                return Err("sidebar node references missing workspace".into());
+            }
+            if let Some(parent_id) = node.parent_id {
+                let parent = self
+                    .sidebar_nodes
+                    .iter()
+                    .find(|candidate| candidate.id == parent_id)
+                    .ok_or("sidebar parent missing")?;
+                if parent.workspace_id != node.workspace_id {
+                    return Err("cross-workspace sidebar parent reference".into());
+                }
+                if parent.kind != "folder" {
+                    return Err("sidebar parent is not a folder".into());
+                }
+            }
+            match (node.kind.as_str(), node.target_id) {
+                ("folder", None) => {}
+                ("profile", Some(target_id)) => {
+                    let target = self
+                        .profiles
+                        .iter()
+                        .find(|item| item.id == target_id)
+                        .ok_or("sidebar profile target missing")?;
+                    if target.workspace_id != node.workspace_id {
+                        return Err("cross-workspace sidebar target reference".into());
+                    }
+                }
+                ("resource", Some(target_id)) => {
+                    let target = self
+                        .resources
+                        .iter()
+                        .find(|item| item.id == target_id)
+                        .ok_or("sidebar resource target missing")?;
+                    if target.workspace_id != node.workspace_id {
+                        return Err("cross-workspace sidebar target reference".into());
+                    }
+                }
+                _ => return Err("invalid sidebar node kind or target".into()),
+            }
+            let mut ancestors = HashSet::new();
+            let mut parent_id = node.parent_id;
+            while let Some(id) = parent_id {
+                if !ancestors.insert(id) || id == node.id {
+                    return Err("sidebar parent cycle".into());
+                }
+                parent_id = self
+                    .sidebar_nodes
+                    .iter()
+                    .find(|candidate| candidate.id == id)
+                    .and_then(|parent| parent.parent_id);
+            }
+        }
+        for favorite in &self.favorites {
+            if !has(favorite.workspace_id) {
+                return Err("favorite references missing workspace".into());
+            }
+            let owns_target = match favorite.target_kind.as_str() {
+                "profile" => self.profiles.iter().any(|item| {
+                    item.id == favorite.target_id && item.workspace_id == favorite.workspace_id
+                }),
+                "resource" => self.resources.iter().any(|item| {
+                    item.id == favorite.target_id && item.workspace_id == favorite.workspace_id
+                }),
+                _ => return Err("invalid favorite target kind".into()),
+            };
+            if !owns_target {
+                return Err("favorite target missing or belongs to another workspace".into());
+            }
+        }
         Ok(())
     }
 }
-fn default_shell() -> String {
+pub(crate) fn default_shell() -> String {
     if cfg!(windows) {
         "powershell.exe".into()
     } else {
         std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_duplicate_ids_across_entity_types() {
+        let mut data = AppData::seed();
+        let workspace_id = data.workspaces[0].id;
+        data.identities.push(Identity {
+            id: workspace_id,
+            workspace_id,
+            name: "Admin".into(),
+            username: "root".into(),
+            identity_file: None,
+        });
+        assert_eq!(data.validate().unwrap_err(), "duplicate id");
+    }
+
+    #[test]
+    fn rejects_sidebar_and_favorite_cross_workspace_references() {
+        let mut data = AppData::seed();
+        let first = data.workspaces[0].id;
+        let second = Uuid::new_v4();
+        data.workspaces.push(Workspace {
+            id: second,
+            name: "Other".into(),
+            icon: "terminal".into(),
+            color: "#000".into(),
+            position: 1,
+            default_profile_id: None,
+        });
+        let profile_id = data.profiles[0].id;
+        data.sidebar_nodes.push(SidebarNode {
+            id: Uuid::new_v4(),
+            workspace_id: second,
+            parent_id: None,
+            kind: "profile".into(),
+            label: "Wrong".into(),
+            target_id: Some(profile_id),
+            position: 0,
+        });
+        assert!(data
+            .validate()
+            .unwrap_err()
+            .contains("cross-workspace sidebar"));
+        data.sidebar_nodes.clear();
+        data.favorites.push(Favorite {
+            id: Uuid::new_v4(),
+            workspace_id: first,
+            target_kind: "resource".into(),
+            target_id: Uuid::new_v4(),
+            position: 0,
+        });
+        assert!(data.validate().unwrap_err().contains("favorite target"));
+    }
+
+    #[test]
+    fn rejects_sidebar_parent_cycles() {
+        let mut data = AppData::seed();
+        let workspace_id = data.workspaces[0].id;
+        let first = Uuid::new_v4();
+        let second = Uuid::new_v4();
+        data.sidebar_nodes.push(SidebarNode {
+            id: first,
+            workspace_id,
+            parent_id: Some(second),
+            kind: "folder".into(),
+            label: "First".into(),
+            target_id: None,
+            position: 0,
+        });
+        data.sidebar_nodes.push(SidebarNode {
+            id: second,
+            workspace_id,
+            parent_id: Some(first),
+            kind: "folder".into(),
+            label: "Second".into(),
+            target_id: None,
+            position: 0,
+        });
+        assert_eq!(data.validate().unwrap_err(), "sidebar parent cycle");
     }
 }

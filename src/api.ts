@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import type { AppSnapshot, Workspace } from './types'
 
 const isTauri = () => '__TAURI_INTERNALS__' in window
 
@@ -11,13 +12,13 @@ export async function command<T>(name: string, args: Record<string, unknown> = {
 }
 
 export const nativeApi = {
-  workspaces: () => command<unknown[]>('workspace_list'),
-  createWorkspace: (name: string) => command('workspace_create', { name }),
-  createSession: (executable = 'powershell.exe', args: string[] = []) =>
+  snapshot: () => command<AppSnapshot>('app_snapshot'),
+  createWorkspace: (name: string) =>
+    command<Workspace>('workspace_create', { name, icon: null, color: null }),
+  createSession: (workspaceId: string, profileId: string) =>
     command<{ id: string }>('session_spawn', {
-      executable,
-      args,
-      workingDirectory: null,
+      workspaceId,
+      profileId,
       cols: 80,
       rows: 24,
     }),
@@ -28,4 +29,7 @@ export const nativeApi = {
   closeSession: (sessionId: string) => command<void>('session_close', { id: sessionId }),
   newWindow: () => command<void>('window_create'),
   lock: () => command<void>('app_lock'),
+  isLocked: () => command<boolean>('app_is_locked'),
+  unlock: (pin: string) => command<void>('app_unlock', { pin }),
+  setupPin: (pin: string) => command<void>('pin_configure', { pin }),
 }

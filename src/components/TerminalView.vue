@@ -55,10 +55,14 @@ onMounted(async () => {
   observer = new ResizeObserver(() => fit.fit())
   observer.observe(host.value!)
   if (nativeAvailable()) {
-    unlisten = await listen<{ sessionId: string; data: string }>(
+    unlisten = await listen<{ sessionId: string; dataBase64: string }>(
       'terminal-output',
       ({ payload }) => {
-        if (payload.sessionId === props.sessionId) term.write(payload.data)
+        if (payload.sessionId === props.sessionId) {
+          const binary = atob(payload.dataBase64)
+          const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0))
+          term.write(bytes)
+        }
       },
     )
   } else {

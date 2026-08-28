@@ -310,6 +310,32 @@ kbd {
   display: flex;
   flex-direction: column;
 }
+.terminal-panes {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+.terminal-panes.split-vertical {
+  flex-direction: row;
+}
+.terminal-panes.split-horizontal {
+  flex-direction: column;
+}
+.terminal-panes > .terminal-host {
+  min-width: 0;
+}
+.terminal-panes > .terminal-host + .terminal-host {
+  border-inline-start: 1px solid var(--border);
+}
+.terminal-panes.split-horizontal > .terminal-host + .terminal-host {
+  border-inline-start: 0;
+  border-block-start: 1px solid var(--border);
+}
+.pin-setup {
+  display: flex;
+  gap: 8px;
+}
 .terminal-toolbar {
   height: 34px;
   padding: 0 16px;

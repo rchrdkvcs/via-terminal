@@ -78,7 +78,11 @@ function onWheel(event: WheelEvent) {
             class="notification-dot"
           />
         </button>
-        <button class="workspace-icon" aria-label="Créer un workspace">
+        <button
+          class="workspace-icon"
+          aria-label="Créer un workspace"
+          @click="store.createWorkspace()"
+        >
           <IconGlyph name="Plus" />
         </button>
       </div>

@@ -9,6 +9,46 @@ export interface Workspace {
   color: string
   position: number
   activity?: boolean
+  defaultProfileId?: string | null
+}
+export interface LocalProfile {
+  id: string
+  workspaceId: string
+  name: string
+  executable: string
+  args: string[]
+  workingDirectory?: string | null
+}
+export interface Resource {
+  id: string
+  workspaceId: string
+  name: string
+  sshAlias?: string | null
+  host?: string | null
+  port?: number | null
+  identityId?: string | null
+}
+export interface AppSnapshot {
+  workspaces: Workspace[]
+  profiles: LocalProfile[]
+  resources: Resource[]
+  sidebarNodes: Array<{
+    id: string
+    workspaceId: string
+    parentId?: string | null
+    kind: string
+    label: string
+    targetId?: string | null
+    position: number
+  }>
+  favorites: Array<{
+    id: string
+    workspaceId: string
+    targetKind: string
+    targetId: string
+    position: number
+  }>
+  settings: Partial<Settings> & { restoreLocalSessions?: boolean }
 }
 export interface Favorite {
   id: string
@@ -38,6 +78,8 @@ export interface Tab {
   name: string
   workspaceId: string
   sessionId?: string
+  secondarySessionId?: string
+  split?: 'horizontal' | 'vertical'
 }
 export interface Settings {
   theme: 'dark' | 'light' | 'system'

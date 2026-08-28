@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import AppSidebar from './components/AppSidebar.vue'
 import CommandPalette from './components/CommandPalette.vue'
 import IconGlyph from './components/IconGlyph.vue'
@@ -8,6 +9,7 @@ import SettingsPanel from './components/SettingsPanel.vue'
 import TerminalView from './components/TerminalView.vue'
 import { useAppStore } from './stores/app'
 const store = useAppStore()
+let unlistenLock: UnlistenFn | undefined
 function shortcuts(event: KeyboardEvent) {
   if (event.ctrlKey && event.key.toLowerCase() === 'k') {
     event.preventDefault()
@@ -19,13 +21,21 @@ function shortcuts(event: KeyboardEvent) {
   }
   if (event.altKey && /^[1-9]$/.test(event.key))
     store.switchWorkspace(store.workspaces[Number(event.key) - 1]?.id ?? '')
-  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'l') store.locked = true
+  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'l') void store.lock()
 }
-onMounted(() => {
+onMounted(async () => {
   void store.initialize()
+  if ('__TAURI_INTERNALS__' in window) {
+    unlistenLock = await listen<boolean>('app-lock-changed', ({ payload }) => {
+      store.locked = payload
+    })
+  }
   window.addEventListener('keydown', shortcuts)
 })
-onUnmounted(() => window.removeEventListener('keydown', shortcuts))
+onUnmounted(() => {
+  unlistenLock?.()
+  window.removeEventListener('keydown', shortcuts)
+})
 </script>
 <template>
   <main
@@ -69,7 +79,8 @@ onUnmounted(() => window.removeEventListener('keydown', shortcuts))
         <div class="window-actions">
           <button title="Nouveau terminal" @click="store.createTerminal()">
             <IconGlyph name="Plus" /></button
-          ><button title="Diviser"><IconGlyph name="Columns2" /></button
+          ><button title="Diviser" @click="store.splitActiveTab('vertical')">
+            <IconGlyph name="Columns2" /></button
           ><button title="Réglages" @click="store.settingsOpen = true">
             <IconGlyph name="Settings" />
           </button>
@@ -80,7 +91,17 @@ onUnmounted(() => window.removeEventListener('keydown', shortcuts))
           <span><i class="status-light" />{{ store.activeSession.name }}</span
           ><span class="muted">Local · {{ store.activeWorkspace?.name }}</span>
         </div>
-        <TerminalView :key="store.activeSession.id" :session-id="store.activeSession.id" />
+        <div
+          class="terminal-panes"
+          :class="`split-${store.tabs.find((tab) => tab.id === store.activeTabId)?.split ?? 'none'}`"
+        >
+          <TerminalView :key="store.activeSession.id" :session-id="store.activeSession.id" />
+          <TerminalView
+            v-if="store.tabs.find((tab) => tab.id === store.activeTabId)?.secondarySessionId"
+            :key="store.tabs.find((tab) => tab.id === store.activeTabId)?.secondarySessionId"
+            :session-id="store.tabs.find((tab) => tab.id === store.activeTabId)?.secondarySessionId"
+          />
+        </div>
       </div>
       <div v-else class="empty-state">
         <span class="empty-icon"><IconGlyph name="Terminal" :size="30" /></span>

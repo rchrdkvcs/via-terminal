@@ -4,13 +4,17 @@ import { useAppStore } from '../stores/app'
 import IconGlyph from './IconGlyph.vue'
 const store = useAppStore()
 const pin = ref('')
-const error = ref(false)
-function unlock() {
-  if (pin.value.length >= 4) {
-    store.locked = false
-    pin.value = ''
-    error.value = false
-  } else error.value = true
+const error = ref('')
+async function unlock() {
+  if (/^\d{4,}$/.test(pin.value)) {
+    try {
+      await store.unlock(pin.value)
+      pin.value = ''
+      error.value = ''
+    } catch {
+      error.value = 'Code PIN incorrect.'
+    }
+  } else error.value = 'Saisissez au moins 4 chiffres.'
 }
 </script>
 <template>
@@ -29,7 +33,7 @@ function unlock() {
           autocomplete="current-password"
           autofocus
           placeholder="••••"
-        /><span v-if="error" role="alert">Saisissez au moins 4 chiffres.</span
+        /><span v-if="error" role="alert">{{ error }}</span
         ><button class="primary">Déverrouiller</button>
       </form>
     </div></Transition

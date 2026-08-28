@@ -44,4 +44,14 @@ describe('terminal tabs', () => {
     expect(store.tabs.some((tab) => tab.id === firstId)).toBe(false)
     expect(store.visibleTabs).toHaveLength(1)
   })
+
+  it('splits the active tab without replacing its first session', async () => {
+    const store = useAppStore()
+    const firstSessionId = store.activeSession?.id
+    await store.splitActiveTab('vertical')
+    const tab = store.tabs.find((item) => item.id === store.activeTabId)
+    expect(tab).toMatchObject({ sessionId: firstSessionId, split: 'vertical' })
+    expect(tab?.secondarySessionId).toBeTruthy()
+    expect(store.sessions).toHaveLength(2)
+  })
 })

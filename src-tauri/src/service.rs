@@ -18,6 +18,32 @@ impl DomainService {
             .load()?
             .ok_or("app data unavailable".into())
     }
+    /// Resolve a launch profile from persisted state and prove that it belongs
+    /// to the workspace selected by the caller. Process launch code must use
+    /// this instead of accepting an executable from the webview.
+    pub fn local_profile(&self, workspace_id: Id, profile_id: Id) -> Result<LocalProfile, String> {
+        let data = self.snapshot()?;
+        if !data
+            .workspaces
+            .iter()
+            .any(|workspace| workspace.id == workspace_id)
+        {
+            return Err("workspace not found".into());
+        }
+        data.profiles
+            .into_iter()
+            .find(|profile| profile.id == profile_id && profile.workspace_id == workspace_id)
+            .ok_or_else(|| "profile not found in workspace".into())
+    }
+    pub fn pin_hash(&self) -> Result<Option<String>, String> {
+        self.repo.lock().unwrap().private_setting("pin_hash")
+    }
+    pub fn set_pin_hash(&self, value: &str) -> Result<(), String> {
+        self.repo
+            .lock()
+            .unwrap()
+            .set_private_setting("pin_hash", value)
+    }
     fn mutate<T>(&self, f: impl FnOnce(&mut AppData) -> Result<T, String>) -> Result<T, String> {
         let repo = self.repo.lock().unwrap();
         let mut data = repo.load()?.ok_or("app data unavailable")?;
@@ -33,14 +59,24 @@ impl DomainService {
         color: String,
     ) -> Result<Workspace, String> {
         self.mutate(|d| {
+            let workspace_id = Uuid::new_v4();
+            let profile_id = Uuid::new_v4();
             let w = Workspace {
-                id: Uuid::new_v4(),
+                id: workspace_id,
                 name,
                 icon,
                 color,
                 position: d.workspaces.len() as i64,
-                default_profile_id: None,
+                default_profile_id: Some(profile_id),
             };
+            d.profiles.push(LocalProfile {
+                id: profile_id,
+                workspace_id,
+                name: "PowerShell".into(),
+                executable: crate::domain::default_shell(),
+                args: vec![],
+                working_directory: None,
+            });
             d.workspaces.push(w.clone());
             Ok(w)
         })
@@ -67,6 +103,79 @@ impl DomainService {
                 p.workspace_id = new_id;
                 profile_map.insert(old, p.id);
                 d.profiles.push(p)
+            }
+            let mut identity_map = std::collections::HashMap::new();
+            for mut identity in d
+                .identities
+                .iter()
+                .filter(|item| item.workspace_id == id)
+                .cloned()
+                .collect::<Vec<_>>()
+            {
+                let old = identity.id;
+                identity.id = Uuid::new_v4();
+                identity.workspace_id = new_id;
+                identity_map.insert(old, identity.id);
+                d.identities.push(identity);
+            }
+            let mut resource_map = std::collections::HashMap::new();
+            for mut resource in d
+                .resources
+                .iter()
+                .filter(|item| item.workspace_id == id)
+                .cloned()
+                .collect::<Vec<_>>()
+            {
+                let old = resource.id;
+                resource.id = Uuid::new_v4();
+                resource.workspace_id = new_id;
+                resource.identity_id = resource
+                    .identity_id
+                    .and_then(|identity_id| identity_map.get(&identity_id).copied());
+                resource_map.insert(old, resource.id);
+                d.resources.push(resource);
+            }
+            let mut node_map = std::collections::HashMap::new();
+            let mut copied_nodes = d
+                .sidebar_nodes
+                .iter()
+                .filter(|item| item.workspace_id == id)
+                .cloned()
+                .collect::<Vec<_>>();
+            for node in &mut copied_nodes {
+                let old = node.id;
+                node.id = Uuid::new_v4();
+                node.workspace_id = new_id;
+                node_map.insert(old, node.id);
+            }
+            for node in &mut copied_nodes {
+                node.parent_id = node
+                    .parent_id
+                    .and_then(|parent_id| node_map.get(&parent_id).copied());
+                node.target_id = node
+                    .target_id
+                    .and_then(|target_id| match node.kind.as_str() {
+                        "profile" => profile_map.get(&target_id).copied(),
+                        "resource" => resource_map.get(&target_id).copied(),
+                        _ => None,
+                    });
+            }
+            d.sidebar_nodes.extend(copied_nodes);
+            for mut favorite in d
+                .favorites
+                .iter()
+                .filter(|item| item.workspace_id == id)
+                .cloned()
+                .collect::<Vec<_>>()
+            {
+                favorite.id = Uuid::new_v4();
+                favorite.workspace_id = new_id;
+                favorite.target_id = match favorite.target_kind.as_str() {
+                    "profile" => profile_map[&favorite.target_id],
+                    "resource" => resource_map[&favorite.target_id],
+                    _ => unreachable!("validated favorite kind"),
+                };
+                d.favorites.push(favorite);
             }
             let w = Workspace {
                 id: new_id,
@@ -176,13 +285,38 @@ fn remap_ids(data: &mut AppData) {
         i.workspace_id = ws[&i.workspace_id];
         identities.insert(old, i.id);
     }
+    let mut resources = std::collections::HashMap::new();
     for r in &mut data.resources {
+        let old = r.id;
         r.id = Uuid::new_v4();
         r.workspace_id = ws[&r.workspace_id];
-        r.identity_id = r.identity_id.and_then(|i| identities.get(&i).copied())
+        r.identity_id = r.identity_id.and_then(|i| identities.get(&i).copied());
+        resources.insert(old, r.id);
     }
-    data.sidebar_nodes.clear();
-    data.favorites.clear()
+    let mut nodes = std::collections::HashMap::new();
+    for node in &mut data.sidebar_nodes {
+        let old = node.id;
+        node.id = Uuid::new_v4();
+        node.workspace_id = ws[&node.workspace_id];
+        nodes.insert(old, node.id);
+    }
+    for node in &mut data.sidebar_nodes {
+        node.parent_id = node.parent_id.and_then(|id| nodes.get(&id).copied());
+        node.target_id = node.target_id.and_then(|id| match node.kind.as_str() {
+            "profile" => profiles.get(&id).copied(),
+            "resource" => resources.get(&id).copied(),
+            _ => None,
+        });
+    }
+    for favorite in &mut data.favorites {
+        favorite.id = Uuid::new_v4();
+        favorite.workspace_id = ws[&favorite.workspace_id];
+        favorite.target_id = match favorite.target_kind.as_str() {
+            "profile" => profiles[&favorite.target_id],
+            "resource" => resources[&favorite.target_id],
+            _ => unreachable!("validated favorite kind"),
+        };
+    }
 }
 #[cfg(test)]
 mod tests {
@@ -201,5 +335,159 @@ mod tests {
         let original = s.snapshot().unwrap().workspaces[0].id;
         let imported = s.import_json(&s.export_json().unwrap()).unwrap();
         assert_ne!(original, imported.workspaces[0].id)
+    }
+
+    fn organized_data() -> AppData {
+        let mut data = AppData::seed();
+        let workspace_id = data.workspaces[0].id;
+        let profile_id = data.profiles[0].id;
+        let identity_id = Uuid::new_v4();
+        let resource_id = Uuid::new_v4();
+        let folder_id = Uuid::new_v4();
+        data.identities.push(Identity {
+            id: identity_id,
+            workspace_id,
+            name: "Admin".into(),
+            username: "root".into(),
+            identity_file: Some("admin_key".into()),
+        });
+        data.resources.push(Resource {
+            id: resource_id,
+            workspace_id,
+            name: "Server".into(),
+            ssh_alias: Some("server".into()),
+            host: None,
+            port: Some(22),
+            identity_id: Some(identity_id),
+        });
+        data.sidebar_nodes.push(SidebarNode {
+            id: folder_id,
+            workspace_id,
+            parent_id: None,
+            kind: "folder".into(),
+            label: "Production".into(),
+            target_id: None,
+            position: 0,
+        });
+        data.sidebar_nodes.push(SidebarNode {
+            id: Uuid::new_v4(),
+            workspace_id,
+            parent_id: Some(folder_id),
+            kind: "resource".into(),
+            label: "Server".into(),
+            target_id: Some(resource_id),
+            position: 0,
+        });
+        data.favorites.push(Favorite {
+            id: Uuid::new_v4(),
+            workspace_id,
+            target_kind: "profile".into(),
+            target_id: profile_id,
+            position: 0,
+        });
+        data
+    }
+
+    #[test]
+    fn duplicate_workspace_copies_complete_organization_with_independent_ids() {
+        let repo = Repository::memory().unwrap();
+        repo.save(&organized_data()).unwrap();
+        let service = DomainService::new(repo);
+        let source = service.snapshot().unwrap().workspaces[0].id;
+        let copy = service.duplicate_workspace(source, "Copy".into()).unwrap();
+        let snapshot = service.snapshot().unwrap();
+        assert_eq!(
+            snapshot
+                .identities
+                .iter()
+                .filter(|x| x.workspace_id == copy.id)
+                .count(),
+            1
+        );
+        assert_eq!(
+            snapshot
+                .resources
+                .iter()
+                .filter(|x| x.workspace_id == copy.id)
+                .count(),
+            1
+        );
+        assert_eq!(
+            snapshot
+                .sidebar_nodes
+                .iter()
+                .filter(|x| x.workspace_id == copy.id)
+                .count(),
+            2
+        );
+        assert_eq!(
+            snapshot
+                .favorites
+                .iter()
+                .filter(|x| x.workspace_id == copy.id)
+                .count(),
+            1
+        );
+        let copied_resource = snapshot
+            .resources
+            .iter()
+            .find(|x| x.workspace_id == copy.id)
+            .unwrap();
+        let copied_identity = snapshot
+            .identities
+            .iter()
+            .find(|x| x.workspace_id == copy.id)
+            .unwrap();
+        assert_eq!(copied_resource.identity_id, Some(copied_identity.id));
+        assert!(snapshot.validate().is_ok());
+    }
+
+    #[test]
+    fn import_preserves_organization_and_remaps_every_reference() {
+        let service = DomainService::new(Repository::memory().unwrap());
+        let incoming = organized_data();
+        let old_workspace = incoming.workspaces[0].id;
+        let old_node_ids: Vec<_> = incoming.sidebar_nodes.iter().map(|x| x.id).collect();
+        let imported = service
+            .import_json(&serde_json::to_string(&incoming).unwrap())
+            .unwrap();
+        assert_ne!(imported.workspaces[0].id, old_workspace);
+        assert_eq!(imported.sidebar_nodes.len(), 2);
+        assert_eq!(imported.favorites.len(), 1);
+        assert!(imported
+            .sidebar_nodes
+            .iter()
+            .all(|x| !old_node_ids.contains(&x.id)));
+        let folder = imported
+            .sidebar_nodes
+            .iter()
+            .find(|x| x.kind == "folder")
+            .unwrap();
+        let child = imported
+            .sidebar_nodes
+            .iter()
+            .find(|x| x.kind == "resource")
+            .unwrap();
+        assert_eq!(child.parent_id, Some(folder.id));
+        assert_eq!(child.target_id, Some(imported.resources[0].id));
+        assert_eq!(imported.favorites[0].target_id, imported.profiles[0].id);
+        assert!(imported.validate().is_ok());
+    }
+    #[test]
+    fn profile_cannot_be_resolved_through_another_workspace() {
+        let s = DomainService::new(Repository::memory().unwrap());
+        let data = s.snapshot().unwrap();
+        let profile = &data.profiles[0];
+        assert!(s.local_profile(Uuid::new_v4(), profile.id).is_err());
+    }
+    #[test]
+    fn pin_hash_is_private_and_persistent() {
+        let s = DomainService::new(Repository::memory().unwrap());
+        s.set_pin_hash("encoded-secret-verifier").unwrap();
+        assert_eq!(
+            s.pin_hash().unwrap().as_deref(),
+            Some("encoded-secret-verifier")
+        );
+        assert!(!s.export_json().unwrap().contains("encoded-secret-verifier"));
     }
 }
