@@ -180,6 +180,15 @@
     overscroll-behavior: none;
   }
 
+  .tab-sortable-ghost {
+    opacity: 0.25;
+  }
+
+  .tab-sortable-chosen,
+  .tab-sortable-drag {
+    cursor: grabbing !important;
+  }
+
   /* The terminal is the only surface where a text caret belongs. */
   button,
   [role='button'],

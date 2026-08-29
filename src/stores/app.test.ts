@@ -128,6 +128,7 @@ vi.mock('@/terminal/registry', () => ({
 }))
 
 const { useAppStore } = await import('./app')
+const { finishTabMove } = await import('@/lib/tab-dnd')
 
 const WORKSPACE_A = 'ws-a'
 const WORKSPACE_B = 'ws-b'
@@ -589,20 +590,24 @@ describe('desktop shell regressions', () => {
   it('keeps a single pinned section above the divider and open tabs below it', () => {
     const sidebar = readFileSync('src/components/sidebar/AppSidebar.vue', 'utf8')
     const rows = readFileSync('src/components/sidebar/SessionRows.vue', 'utf8')
+    const tabRow = readFileSync('src/components/sidebar/TabRow.vue', 'utf8')
     const markup = sidebar.slice(sidebar.indexOf('<template>'))
     expect(markup.indexOf('<SessionRows pinned')).toBeLessThan(markup.indexOf('<SidebarSeparator'))
     expect(markup.indexOf('<SidebarSeparator')).toBeLessThan(markup.lastIndexOf('<SessionRows'))
     expect(markup).not.toContain('store.favorites')
     expect(markup).toContain('store.tree')
-    expect(rows).toContain('bg-state-online')
+    expect(tabRow).toContain('bg-state-online')
     const tree = readFileSync('src/components/sidebar/SidebarTree.vue', 'utf8')
     expect(tree).toContain('uniqueTabForTarget')
     expect(tree).toContain('reuse: !(event.ctrlKey || event.shiftKey)')
     expect(tree).toContain('Fermer')
     expect(tree).not.toContain('MoreHorizontal')
     expect(rows).toContain('Nouveau terminal')
-    expect(rows).toContain('Épingler')
-    expect(rows).toContain('Détacher')
+    expect(rows).toContain('v-draggable="[rows, tabSortableOptions()]"')
+    expect(rows).toContain('<TabRow')
+    expect(tree).toContain('<TabRow')
+    expect(tabRow).toContain('Épingler')
+    expect(tabRow).toContain('Détacher')
     expect(rows).not.toContain('Épingler dans l’espace')
     expect(rows).not.toContain('Épingler en haut')
     expect(rows).not.toContain('row.panes')
@@ -752,6 +757,53 @@ describe('restorable layout', () => {
 })
 
 describe('sidebar drag and drop', () => {
+  it('moves the same terminal tab through the SortableJS folder container', async () => {
+    const store = await bootedStore()
+    await store.createTerminal()
+    const tabId = store.activeTabId
+    const container = document.createElement('ul')
+    container.dataset.tabContainer = 'folder'
+    container.dataset.folderId = 'node-folder'
+    const row = document.createElement('li')
+    row.className = 'terminal-tab'
+    row.dataset.tabId = tabId
+    container.append(row)
+
+    finishTabMove({ item: row, to: container } as never)
+
+    expect(store.tree[0].children.some((child) => child.tabId === tabId)).toBe(true)
+    expect(store.unfavoritedTabs.some((tab) => tab.id === tabId)).toBe(false)
+  })
+
+  it('moves an SSH-backed terminal into the same pinned tab list', async () => {
+    const store = await bootedStore()
+    await store.openTarget('resource', RESOURCE_A)
+    const tabId = store.activeTabId
+
+    await store.pinTab(tabId)
+
+    expect(store.pinnedTabs.map((tab) => tab.id)).toEqual([tabId])
+    expect(store.tree.flatMap((node) => node.children).some((node) => node.tabId === tabId)).toBe(
+      false,
+    )
+  })
+
+  it('persists the order of terminal tabs inside a folder', async () => {
+    const store = await bootedStore()
+    await store.createTerminal()
+    const first = store.activeTabId
+    await store.createTerminal()
+    const second = store.activeTabId
+    await store.placeTab(first, 'node-folder', null)
+    await store.placeTab(second, 'node-folder', first)
+
+    const folder = store.tree.find((node) => node.id === 'node-folder')!
+    expect(folder.children.filter((node) => node.tabId).map((node) => node.tabId)).toEqual([
+      second,
+      first,
+    ])
+  })
+
   /**
    * `move_sidebar_node` and `favorite_move` insert into the sibling list with
    * the moved row already taken out. A drop names the row to land before, so

@@ -34,28 +34,10 @@ function draggingTab() {
   return activeDrag.value?.type === 'tab'
 }
 
-function overGroup(event: DragEvent, key: 'pinned' | 'open' | 'tree') {
-  if (key !== 'tree' && !draggingTab()) return
-  if (key === 'tree' && !activeDrag.value) return
+function overTree(event: DragEvent) {
+  if (!activeDrag.value || activeDrag.value.type === 'tab') return
   acceptDrop(event)
-  dropHint.value = `${key}:into`
-}
-
-function dropOnSection(event: DragEvent, pinned: boolean) {
-  event.preventDefault()
-  const drag = readSidebarDrag(event)
-  endSidebarDrag()
-  if (drag?.type !== 'tab') return
-  if (pinned) void store.pinTab(drag.id)
-  else void store.unpinTab(drag.id)
-}
-
-function firstFolder(nodes: typeof store.tree): (typeof store.tree)[number] | undefined {
-  for (const node of nodes) {
-    if (node.kind === 'folder') return node
-    const nested = firstFolder(node.children)
-    if (nested) return nested
-  }
+  dropHint.value = 'tree:into'
 }
 
 function dropAtRoot(event: DragEvent) {
@@ -67,14 +49,10 @@ function dropAtRoot(event: DragEvent) {
     void store.reparentNode(drag.id, null, null)
     return
   }
-  if (drag.type === 'tab') {
-    const folder = firstFolder(store.tree)
-    if (folder) void store.placeTab(drag.id, folder.id, null)
-  }
 }
 
-function groupHint(key: 'pinned' | 'open' | 'tree') {
-  return dropHint.value === `${key}:into` ? 'rounded-md ring-2 ring-sidebar-ring ring-inset' : ''
+function treeHint() {
+  return dropHint.value === 'tree:into' ? 'rounded-md ring-2 ring-sidebar-ring ring-inset' : ''
 }
 
 /** Leaving the sidebar entirely must not leave a drop marker behind. */
@@ -124,13 +102,13 @@ function onLeave(event: DragEvent) {
       >
         <div v-if="!store.workspaceContentCollapsed" id="workspace-sidebar-content">
           <SidebarGroup
-            v-if="store.pinnedTabs.length || draggingTab()"
-            class="p-2 py-1 transition-colors"
-            :class="[groupHint('pinned'), store.pinnedTabs.length ? '' : 'min-h-12']"
+            class="transition-colors"
+            :class="[
+              store.pinnedTabs.length || draggingTab()
+                ? 'min-h-12 p-2 py-1'
+                : 'h-0 overflow-hidden',
+            ]"
             aria-label="Onglets épinglés"
-            @dragenter="overGroup($event, 'pinned')"
-            @dragover="overGroup($event, 'pinned')"
-            @drop="dropOnSection($event, true)"
           >
             <SessionRows pinned />
             <div
@@ -143,10 +121,10 @@ function onLeave(event: DragEvent) {
           <SidebarGroup
             v-if="store.tree.length"
             class="p-2 py-1"
-            :class="groupHint('tree')"
+            :class="treeHint()"
             aria-label="Dossiers"
-            @dragenter="overGroup($event, 'tree')"
-            @dragover="overGroup($event, 'tree')"
+            @dragenter="overTree"
+            @dragover="overTree"
             @drop="dropAtRoot"
           >
             <SidebarTree :nodes="store.tree" />
@@ -158,14 +136,7 @@ function onLeave(event: DragEvent) {
         </div>
       </Transition>
 
-      <SidebarGroup
-        class="p-2 py-1"
-        :class="groupHint('open')"
-        aria-label="Sessions ouvertes"
-        @dragenter="overGroup($event, 'open')"
-        @dragover="overGroup($event, 'open')"
-        @drop="dropOnSection($event, false)"
-      >
+      <SidebarGroup class="p-2 py-1" aria-label="Sessions ouvertes">
         <SessionRows />
       </SidebarGroup>
     </SidebarContent>

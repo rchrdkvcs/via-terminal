@@ -203,6 +203,13 @@ export const useAppStore = defineStore('app', () => {
   })
 
   const tree = computed<TreeNode[]>(() => {
+    const openTabByTarget = new Map<Id, RuntimeTab>()
+    for (const tab of [...tabs.value].sort((a, b) => a.position - b.position)) {
+      if (tab.workspaceId !== activeWorkspaceId.value) continue
+      const sessionId = paneSessionIds(tab.root)[0]
+      const targetId = sessions.value.find((session) => session.id === sessionId)?.targetId
+      if (targetId && !openTabByTarget.has(targetId)) openTabByTarget.set(targetId, tab)
+    }
     const favoriteTargetIds = new Set(
       favoriteRecords.value
         .filter((item) => item.workspaceId === activeWorkspaceId.value)
@@ -213,21 +220,28 @@ export const useAppStore = defineStore('app', () => {
       .filter((node) => node.workspaceId === activeWorkspaceId.value)
       .filter((node) => node.kind !== 'profile')
       .filter((node) => !node.targetId || !favoriteTargetIds.has(node.targetId))
+      .filter((node) => {
+        const tab = node.targetId ? openTabByTarget.get(node.targetId) : undefined
+        return !tab?.organized && !tab?.folderId
+      })
       .sort((a, b) => a.position - b.position)
 
     const byId = new Map<Id, TreeNode>()
     for (const record of records) {
+      const tab = record.targetId ? openTabByTarget.get(record.targetId) : undefined
       byId.set(record.id, {
         id: record.id,
         parentId: record.parentId,
         kind: record.kind,
         label:
+          tab?.name ||
           (record.targetId && targetName(recordTargetKind(record), record.targetId)) ||
           record.label,
         targetId: record.targetId,
         depth: 0,
         children: [],
         sessionIds: record.targetId ? (sessionsByTarget.value.get(record.targetId) ?? []) : [],
+        tabId: tab?.id,
       })
     }
 
@@ -257,7 +271,7 @@ export const useAppStore = defineStore('app', () => {
         if (nested) return nested
       }
     }
-    for (const tab of tabs.value) {
+    for (const tab of [...tabs.value].sort((a, b) => a.position - b.position)) {
       if (tab.workspaceId !== activeWorkspaceId.value || !tab.folderId) continue
       const folder = findNode(roots, tab.folderId)
       if (!folder || folder.kind !== 'folder') continue
@@ -341,6 +355,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function isTreeUniqueTab(tab: RuntimeTab): boolean {
+    if (tab.organized || tab.folderId) return false
     const targetId = primaryTargetId(tab)
     if (!targetId || !treeTargetIds.value.has(targetId)) return false
     return uniqueTabForTarget(targetId)?.id === tab.id
@@ -1426,13 +1441,6 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  function tabTarget(tabId: Id) {
-    const tab = tabs.value.find((item) => item.id === tabId)
-    if (!tab) return null
-    const session = sessionById.value.get(paneSessionIds(tab.root)[0])
-    return session ? { kind: session.targetKind, id: session.targetId } : null
-  }
-
   async function placeTarget(targetId: Id, parentId: Id | null, beforeId: Id | null) {
     if (profiles.value.some((item) => item.id === targetId)) return false
     const workspaceId = activeWorkspaceId.value
@@ -1486,25 +1494,25 @@ export const useAppStore = defineStore('app', () => {
   async function placeTab(tabId: Id, parentId: Id | null, beforeId: Id | null) {
     const tab = tabs.value.find((item) => item.id === tabId)
     if (!tab) return
-    const target = tabTarget(tabId)
-    const isLocal = Boolean(target && profiles.value.some((item) => item.id === target.id))
-    const isCanonicalSsh = Boolean(
-      target && !isLocal && uniqueTabForTarget(target.id)?.id === tab.id,
-    )
-    if (isCanonicalSsh && target) {
-      if (!(await placeTarget(target.id, parentId, beforeId))) return
-      tab.organized = false
-      tab.folderId = null
-      scheduleLayoutSave(tab.id)
-      return
-    }
     if (!parentId) return
     const parent = sidebarNodes.value.find((item) => item.id === parentId)
     if (!parent || parent.kind !== 'folder') return
     setFolderCollapsed(parentId, false)
     tab.folderId = parentId
     tab.organized = false
-    scheduleLayoutSave(tab.id)
+    await reorderTabInFolder(tab.id, beforeId)
+  }
+
+  async function reorderTabInFolder(tabId: Id, beforeTabId: Id | null) {
+    const tab = tabs.value.find((item) => item.id === tabId)
+    if (!tab?.folderId || tabId === beforeTabId) return
+    const ordered = [...tabs.value].sort((a, b) => a.position - b.position)
+    const current = ordered.findIndex((item) => item.id === tabId)
+    ordered.splice(current, 1)
+    const anchor = beforeTabId ? ordered.findIndex((item) => item.id === beforeTabId) : -1
+    ordered.splice(anchor >= 0 ? anchor : ordered.length, 0, tab)
+    ordered.forEach((item, position) => (item.position = position))
+    await Promise.all(ordered.map((item) => persistTab(item.id)))
   }
 
   async function pinTarget(targetId: Id, beforeFavoriteId: Id | null) {
@@ -1752,6 +1760,7 @@ export const useAppStore = defineStore('app', () => {
     pinTab,
     unpinTab,
     reorderTab,
+    reorderTabInFolder,
     toggleFavorite,
     openWindow,
     persistWindowState,
