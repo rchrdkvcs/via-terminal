@@ -104,30 +104,24 @@ function onLeave(event: DragEvent) {
           <SidebarGroup
             class="transition-colors"
             :class="[
-              store.pinnedTabs.length || draggingTab()
+              store.pinnedTabs.length || store.tree.length || draggingTab()
                 ? 'min-h-12 p-2 py-1'
                 : 'h-0 overflow-hidden',
+              treeHint(),
             ]"
-            aria-label="Onglets épinglés"
-          >
-            <SessionRows pinned />
-            <div
-              v-if="draggingTab() && !store.pinnedTabs.length"
-              class="pointer-events-none flex h-8 items-center justify-center rounded-md border border-dashed border-sidebar-border text-xs text-sidebar-foreground/50"
-            >
-              Déposer ici pour épingler
-            </div>
-          </SidebarGroup>
-          <SidebarGroup
-            v-if="store.tree.length"
-            class="p-2 py-1"
-            :class="treeHint()"
-            aria-label="Dossiers"
+            aria-label="Épinglés et dossiers"
             @dragenter="overTree"
             @dragover="overTree"
             @drop="dropAtRoot"
           >
-            <SidebarTree :nodes="store.tree" />
+            <SessionRows pinned />
+            <SidebarTree v-if="store.tree.length" :nodes="store.tree" />
+            <div
+              v-if="draggingTab() && !store.pinnedTabs.length && !store.tree.length"
+              class="pointer-events-none flex h-8 items-center justify-center rounded-md border border-dashed border-sidebar-border text-xs text-sidebar-foreground/50"
+            >
+              Déposer ici pour épingler
+            </div>
           </SidebarGroup>
           <SidebarSeparator
             v-if="store.pinnedTabs.length || store.tree.length || draggingTab()"

@@ -56,7 +56,7 @@ function commitRename() {
       :is-active="id === store.activeTabId"
       :title="detail || label"
       :style="{ paddingInlineStart: `${8 + (depth ?? 0) * 12}px` }"
-      class="cursor-grab touch-none active:cursor-grabbing"
+      class="touch-none"
       @click="store.selectTab(id)"
       @auxclick.middle.prevent="store.closeTab(id)"
       @keydown.alt.up.prevent="emit('move', -1)"

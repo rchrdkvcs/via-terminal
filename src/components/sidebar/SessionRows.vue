@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Plus } from '@lucide/vue'
-import { vDraggable } from 'vue-draggable-plus'
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import { useDraggable } from 'vue-draggable-plus'
+import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { useAppStore } from '@/stores/app'
 import { tabSortableOptions } from '@/lib/tab-dnd'
 import TabRow from './TabRow.vue'
 
 const props = withDefaults(defineProps<{ pinned?: boolean }>(), { pinned: false })
 const store = useAppStore()
+const list = ref<HTMLElement | null>(null)
+useDraggable(list, tabSortableOptions())
 
 const rows = computed(() =>
   (props.pinned ? store.pinnedTabs : store.unfavoritedTabs).map((tab) => {
@@ -41,8 +43,9 @@ function moveByKey(index: number, direction: -1 | 1) {
 </script>
 
 <template>
-  <SidebarMenu
-    v-draggable="[rows, tabSortableOptions()]"
+  <ul
+    ref="list"
+    class="flex w-full min-w-0 flex-col gap-1"
     role="tablist"
     :aria-label="props.pinned ? 'Onglets épinglés' : 'Sessions ouvertes'"
     aria-orientation="vertical"
@@ -70,5 +73,5 @@ function moveByKey(index: number, direction: -1 | 1) {
         </kbd>
       </SidebarMenuButton>
     </SidebarMenuItem>
-  </SidebarMenu>
+  </ul>
 </template>

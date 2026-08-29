@@ -603,7 +603,7 @@ describe('desktop shell regressions', () => {
     expect(tree).toContain('Fermer')
     expect(tree).not.toContain('MoreHorizontal')
     expect(rows).toContain('Nouveau terminal')
-    expect(rows).toContain('v-draggable="[rows, tabSortableOptions()]"')
+    expect(rows).toContain('useDraggable(list, tabSortableOptions())')
     expect(rows).toContain('<TabRow')
     expect(tree).toContain('<TabRow')
     expect(tabRow).toContain('Épingler')
@@ -786,6 +786,18 @@ describe('sidebar drag and drop', () => {
     expect(store.tree.flatMap((node) => node.children).some((node) => node.tabId === tabId)).toBe(
       false,
     )
+  })
+
+  it('moves a pinned tab back to open without duplicating it', async () => {
+    const store = await bootedStore()
+    await store.createTerminal()
+    const tabId = store.activeTabId
+    await store.pinTab(tabId)
+    await store.unpinTab(tabId)
+
+    expect(store.visibleTabs.filter((tab) => tab.id === tabId)).toHaveLength(1)
+    expect(store.pinnedTabs.filter((tab) => tab.id === tabId)).toHaveLength(0)
+    expect(store.unfavoritedTabs.filter((tab) => tab.id === tabId)).toHaveLength(1)
   })
 
   it('persists the order of terminal tabs inside a folder', async () => {

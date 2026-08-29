@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { vDraggable } from 'vue-draggable-plus'
+import { useDraggable } from 'vue-draggable-plus'
 import { Pencil, Trash2, X } from '@lucide/vue'
 import {
   DropdownMenu,
@@ -10,12 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import {
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from '@/components/ui/sidebar'
+import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { nodeIcon } from '@/lib/icons'
 import type { TreeNode } from '@/stores/app'
 import { useAppStore } from '@/stores/app'
@@ -41,6 +36,8 @@ const props = withDefaults(
 )
 
 const store = useAppStore()
+const list = ref<HTMLElement | null>(null)
+useDraggable(list, tabSortableOptions(Boolean(props.parentId)))
 const collapsed = computed(() => ({ has: (id: string) => store.isFolderCollapsed(id) }))
 const editing = ref<string | null>(null)
 const draft = ref('')
@@ -246,8 +243,9 @@ function pin(drag: SidebarDrag, beforeId: string | null) {
 </script>
 
 <template>
-  <SidebarMenu
-    v-draggable="[nodes, tabSortableOptions(Boolean(props.parentId))]"
+  <ul
+    ref="list"
+    class="flex w-full min-w-0 flex-col gap-1"
     :data-tab-container="props.parentId ? 'folder' : undefined"
     :data-folder-id="props.parentId ?? undefined"
     :class="props.parentId && activeDrag?.type === 'tab' ? 'min-h-8' : ''"
@@ -365,5 +363,5 @@ function pin(drag: SidebarDrag, beforeId: string | null) {
         />
       </SidebarMenuItem>
     </template>
-  </SidebarMenu>
+  </ul>
 </template>

@@ -184,9 +184,8 @@
     opacity: 0.25;
   }
 
-  .tab-sortable-chosen,
   .tab-sortable-drag {
-    cursor: grabbing !important;
+    cursor: default !important;
   }
 
   /* The terminal is the only surface where a text caret belongs. */
