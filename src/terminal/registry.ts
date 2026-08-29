@@ -19,6 +19,7 @@ export interface TerminalPresentation {
   cursorBlink: boolean
   /** xterm keeps a live DOM mirror of the viewport; costly, so it is opt-in. */
   screenReaderMode: boolean
+  scrollback: number
   appearance: 'dark' | 'light'
 }
 
@@ -60,6 +61,7 @@ class TerminalRegistry {
     cursorStyle: 'bar',
     cursorBlink: true,
     screenReaderMode: false,
+    scrollback: 10_000,
     appearance: 'dark',
   }
 
@@ -108,6 +110,7 @@ class TerminalRegistry {
       terminal.options.cursorStyle = presentation.cursorStyle
       terminal.options.cursorBlink = presentation.cursorBlink
       terminal.options.screenReaderMode = presentation.screenReaderMode
+      terminal.options.scrollback = presentation.scrollback
       terminal.options.theme = terminalTheme(presentation.appearance)
       this.scheduleFit(entry)
     }
@@ -219,7 +222,7 @@ class TerminalRegistry {
       lineHeight: 1.2,
       macOptionIsMeta: true,
       minimumContrastRatio: 1,
-      scrollback: 10_000,
+      scrollback: this.presentation.scrollback,
       screenReaderMode: this.presentation.screenReaderMode,
       theme: terminalTheme(this.presentation.appearance),
     })

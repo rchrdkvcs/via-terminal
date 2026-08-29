@@ -4,78 +4,83 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
-  Terminarr ships no webfont. The Tauri CSP forbids remote stylesheets and
-  PRODUCT.md requires the core experience to work fully offline, so the stack
-  below resolves to a real font on every supported platform.
+  Stock shadcn "neutral" theme, unmodified. Every value below is the Tailwind
+  neutral scale, so the interface stays black, white and gray; the only colour
+  in the window comes from the shell's own ANSI output and from the three
+  session-state dots declared further down.
+
+  Terminarr ships no webfont: the Tauri CSP forbids remote stylesheets and
+  PRODUCT.md requires the core experience to work fully offline.
 */
 :root {
   --radius: 0.625rem;
 
-  --background: oklch(0.985 0.002 285);
-  --foreground: oklch(0.18 0.006 285);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.006 285);
+  --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.006 285);
-  --primary: oklch(0.52 0.19 295);
-  --primary-foreground: oklch(0.99 0.002 295);
-  --secondary: oklch(0.955 0.003 285);
-  --secondary-foreground: oklch(0.22 0.006 285);
-  --muted: oklch(0.955 0.003 285);
-  --muted-foreground: oklch(0.48 0.01 285);
-  --accent: oklch(0.945 0.004 285);
-  --accent-foreground: oklch(0.2 0.006 285);
-  --destructive: oklch(0.55 0.21 25);
-  --success: oklch(0.55 0.15 155);
-  --warning: oklch(0.62 0.14 70);
-  --border: oklch(0.18 0.006 285 / 11%);
-  --input: oklch(0.18 0.006 285 / 16%);
-  --ring: oklch(0.52 0.19 295);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
 
-  --sidebar: oklch(0.965 0.003 288);
-  --sidebar-foreground: oklch(0.24 0.006 285);
-  --sidebar-border: oklch(0.18 0.006 285 / 9%);
-  --sidebar-accent: oklch(0.18 0.006 285 / 6%);
-  --sidebar-accent-foreground: oklch(0.16 0.006 285);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 
-  --terminal-background: oklch(1 0 0);
-  --terminal-foreground: oklch(0.24 0.006 285);
-  --terminal-cursor: oklch(0.52 0.19 295);
-  --terminal-selection: oklch(0.52 0.19 295 / 22%);
+  /* The only saturated tokens: a session state must read at a glance. */
+  --state-online: oklch(0.62 0.16 150);
+  --state-pending: oklch(0.75 0.14 80);
+  --state-offline: oklch(0.577 0.245 27.325);
 }
 
 .dark {
-  --background: oklch(0.145 0.005 285);
-  --foreground: oklch(0.955 0.004 285);
-  --card: oklch(0.185 0.006 285);
-  --card-foreground: oklch(0.955 0.004 285);
-  --popover: oklch(0.195 0.007 285);
-  --popover-foreground: oklch(0.955 0.004 285);
-  --primary: oklch(0.72 0.16 295);
-  --primary-foreground: oklch(0.16 0.02 295);
-  --secondary: oklch(0.25 0.008 285);
-  --secondary-foreground: oklch(0.955 0.004 285);
-  --muted: oklch(0.25 0.008 285);
-  --muted-foreground: oklch(0.68 0.01 285);
-  --accent: oklch(0.28 0.012 285);
-  --accent-foreground: oklch(0.97 0.004 285);
-  --destructive: oklch(0.65 0.19 22);
-  --success: oklch(0.72 0.16 155);
-  --warning: oklch(0.78 0.14 80);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.72 0.16 295);
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
 
-  --sidebar: oklch(0.175 0.008 288);
-  --sidebar-foreground: oklch(0.92 0.004 285);
-  --sidebar-border: oklch(1 0 0 / 7%);
-  --sidebar-accent: oklch(1 0 0 / 6%);
-  --sidebar-accent-foreground: oklch(0.98 0.004 285);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 
-  --terminal-background: oklch(0.145 0.005 285);
-  --terminal-foreground: oklch(0.93 0.004 285);
-  --terminal-cursor: oklch(0.78 0.14 295);
-  --terminal-selection: oklch(0.72 0.16 295 / 28%);
+  --state-online: oklch(0.72 0.16 150);
+  --state-pending: oklch(0.8 0.14 80);
+  --state-offline: oklch(0.704 0.191 22.216);
 }
 
 @theme inline {
@@ -94,18 +99,22 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-terminal-background: var(--terminal-background);
-  --color-terminal-foreground: var(--terminal-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-state-online: var(--state-online);
+  --color-state-pending: var(--state-pending);
+  --color-state-offline: var(--state-offline);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -149,7 +158,7 @@
   metrics without prop drilling.
 */
 [data-density='comfortable'] {
-  --row-height: 2.125rem;
+  --row-height: 2rem;
 }
 
 [data-density='compact'] {
@@ -162,16 +171,51 @@
 */
 .terminal-surface {
   contain: strict;
+  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
 }
 
 .terminal-surface .xterm {
   height: 100%;
-  padding: 0.5rem 0.75rem;
 }
 
+/*
+  xterm 6 keeps an empty legacy .xterm-viewport with overflow: scroll and draws
+  its real scrollbar inside .xterm-scrollable-element. Left alone the legacy
+  element paints an empty native track along every pane.
+*/
+/*
+  The viewport is taller than the row grid, and xterm paints it pure black,
+  which left a band under the last row that did not match the surface.
+*/
 .terminal-surface .xterm-viewport {
+  scrollbar-width: none;
+  background-color: transparent !important;
+}
+
+.terminal-surface .xterm-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.terminal-surface .xterm-scrollable-element {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+}
+
+/* Used by the sidebar and the settings rail; the platform bar is too wide. */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* Compact navigation and terminal regions scroll without native chrome. */
+.no-scrollbar,
+.terminal-surface .xterm-scrollable-element {
+  scrollbar-width: none !important;
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.terminal-surface .xterm-scrollable-element::-webkit-scrollbar {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

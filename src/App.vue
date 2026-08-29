@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { PanelLeftOpen, Terminal } from '@lucide/vue'
+import { Terminal } from '@lucide/vue'
 import AppSidebar from '@/components/sidebar/AppSidebar.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
 import LockScreen from '@/components/LockScreen.vue'
 import PaneLayout from '@/components/workspace/PaneLayout.vue'
-import SettingsDialog from '@/components/SettingsDialog.vue'
-import TabBar from '@/components/workspace/TabBar.vue'
+import SettingsPage from '@/components/settings/SettingsPage.vue'
 import TargetDialog from '@/components/TargetDialog.vue'
 import TerminalSearch from '@/components/TerminalSearch.vue'
+import TopBar from '@/components/workspace/TopBar.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { useAppearance } from '@/composables/useAppearance'
 import { useShortcuts } from '@/composables/useShortcuts'
@@ -32,7 +33,8 @@ useAppearance()
 useShortcuts()
 
 const targetDialog = ref<'profile' | 'resource' | null>(null)
-const revealTimer = ref<ReturnType<typeof setTimeout>>()
+let revealTimer: ReturnType<typeof setTimeout> | undefined
+let hideTimer: ReturnType<typeof setTimeout> | undefined
 let unbind: (() => void) | undefined
 
 const closingTab = computed(
@@ -40,18 +42,32 @@ const closingTab = computed(
 )
 
 /**
- * PRODUCT.md asks for a delayed edge reveal so a pointer crossing the window
- * edge does not flash the sidebar back open.
+ * The 8 px strip is the only affordance for a hidden sidebar. The pointer has
+ * to rest on it, so crossing the window edge on the way somewhere else does not
+ * flash the panel open.
  */
 function armReveal() {
-  clearTimeout(revealTimer.value)
-  revealTimer.value = setTimeout(() => {
-    store.sidebarVisible = true
+  clearTimeout(hideTimer)
+  clearTimeout(revealTimer)
+  revealTimer = setTimeout(() => {
+    store.sidebarPeek = true
   }, store.preferences.sidebarRevealDelay)
 }
 
 function cancelReveal() {
-  clearTimeout(revealTimer.value)
+  clearTimeout(revealTimer)
+}
+
+/** A short grace period lets the pointer travel from the strip onto the panel. */
+function armHide() {
+  clearTimeout(hideTimer)
+  hideTimer = setTimeout(() => {
+    store.sidebarPeek = false
+  }, 220)
+}
+
+function keepOpen() {
+  clearTimeout(hideTimer)
 }
 
 // Notices surface as toasts so they never displace the terminal below them.
@@ -67,13 +83,22 @@ watch(
   },
 )
 
+// Pinning the sidebar again ends any peek, so the two states never overlap.
+watch(
+  () => store.sidebarPinned,
+  () => {
+    store.sidebarPeek = false
+  },
+)
+
 onMounted(async () => {
   unbind = store.bindNativeEvents()
   await store.initialize()
 })
 
 onBeforeUnmount(() => {
-  clearTimeout(revealTimer.value)
+  clearTimeout(revealTimer)
+  clearTimeout(hideTimer)
   unbind?.()
 })
 
@@ -85,76 +110,118 @@ window.addEventListener('beforeunload', () => {
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 overflow-hidden bg-background text-foreground">
-    <Transition
-      enter-active-class="transition-[opacity] duration-150 ease-out"
-      enter-from-class="opacity-0"
-      leave-active-class="transition-[opacity] duration-150 ease-out"
-      leave-to-class="opacity-0"
-    >
-      <AppSidebar
-        v-if="store.sidebarVisible"
-        @add-profile="targetDialog = 'profile'"
-        @add-resource="targetDialog = 'resource'"
-      />
-    </Transition>
+  <SidebarProvider
+    :open="store.sidebarPinned"
+    class="flex h-full !min-h-0 flex-col overflow-hidden bg-background"
+    @update:open="store.sidebarPinned = $event"
+  >
+    <TopBar />
 
-    <!-- Edge strip: the only affordance for a hidden sidebar, hence its tooltip. -->
-    <button
-      v-if="!store.sidebarVisible"
-      class="group absolute inset-y-0 start-0 z-20 w-2 cursor-e-resize"
-      aria-label="Afficher la barre latérale"
-      @mouseenter="armReveal"
-      @mouseleave="cancelReveal"
-      @focus="store.sidebarVisible = true"
-      @click="store.sidebarVisible = true"
-    >
-      <span
-        class="absolute inset-y-0 start-0 w-0.5 bg-primary/0 transition-colors duration-150 group-hover:bg-primary/60"
-      />
-      <PanelLeftOpen class="sr-only" />
-    </button>
+    <div class="relative flex min-h-0 flex-1 gap-2 px-2 pb-2">
+      <!-- Pinned: the panel sits in the flow and the terminal gives up the space. -->
+      <Transition
+        enter-active-class="transition-[width] duration-200 ease-out"
+        enter-from-class="!w-0"
+        leave-active-class="transition-[width] duration-200 ease-out"
+        leave-to-class="!w-0"
+      >
+        <div
+          v-if="store.sidebarPinned && store.route === 'workspace'"
+          class="h-full w-64 shrink-0 overflow-hidden"
+        >
+          <AppSidebar
+            @add-profile="targetDialog = 'profile'"
+            @add-resource="targetDialog = 'resource'"
+          />
+        </div>
+      </Transition>
 
-    <main class="relative flex min-h-0 min-w-0 flex-1 flex-col">
-      <TabBar />
-      <TerminalSearch />
+      <!--
+      Unpinned: an 8 px hover strip plus a floating panel. The panel overlays the
+      terminal rather than pushing it, so peeking never reflows xterm.
+    -->
+      <template v-if="!store.sidebarPinned && store.route === 'workspace'">
+        <div
+          class="group h-full w-2 shrink-0 cursor-e-resize rounded-full"
+          @mouseenter="armReveal"
+          @mouseleave="cancelReveal"
+        >
+          <div
+            class="h-full w-full rounded-full bg-transparent transition-colors duration-150 group-hover:bg-neutral-900"
+          />
+        </div>
 
-      <div v-if="store.activeTab" class="flex min-h-0 flex-1">
-        <PaneLayout
-          :key="store.activeTab.id"
-          :node="store.activeTab.root"
-          :closable="store.activeTab.root.kind === 'split'"
+        <Transition
+          enter-active-class="transition-[translate,opacity] duration-200 ease-out"
+          enter-from-class="-translate-x-full opacity-0"
+          leave-active-class="transition-[translate,opacity] duration-150 ease-out"
+          leave-to-class="-translate-x-full opacity-0"
+        >
+          <div
+            v-if="store.sidebarPeek"
+            class="absolute inset-y-0 start-2 z-30 w-64 overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950 shadow-2xl"
+            @mouseenter="keepOpen"
+            @mouseleave="armHide"
+          >
+            <AppSidebar
+              @add-profile="targetDialog = 'profile'"
+              @add-resource="targetDialog = 'resource'"
+            />
+          </div>
+        </Transition>
+      </template>
+
+      <main
+        class="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card"
+      >
+        <SettingsPage
+          v-if="store.route === 'settings'"
+          @add-profile="targetDialog = 'profile'"
+          @add-resource="targetDialog = 'resource'"
         />
-      </div>
 
-      <div v-else class="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 p-8">
-        <span class="grid size-16 place-items-center rounded-2xl bg-accent text-primary shadow-lg">
-          <Terminal :size="28" :stroke-width="1.5" />
-        </span>
-        <div class="max-w-sm space-y-2 text-center">
-          <h1 class="text-2xl font-semibold tracking-tight">Prêt quand vous l’êtes.</h1>
-          <p class="text-sm leading-relaxed text-muted-foreground">
-            Ouvrez un terminal local ou reprenez une ressource depuis la barre latérale.
-          </p>
-        </div>
-        <div class="flex items-center gap-3">
-          <Button class="gap-2 active:scale-[0.96]" @click="store.createTerminal()">
-            <Terminal :size="15" :stroke-width="1.5" />
-            Nouveau terminal
-          </Button>
-          <kbd class="rounded border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
-            Ctrl T
-          </kbd>
-        </div>
-        <p v-if="!isNative()" class="text-xs text-muted-foreground">
-          Aperçu navigateur : lancez <code class="font-mono">pnpm tauri dev</code> pour des
-          terminaux réels.
-        </p>
-      </div>
-    </main>
+        <template v-else>
+          <TerminalSearch />
+
+          <div v-if="store.activeTab" class="flex min-h-0 flex-1 overflow-hidden">
+            <PaneLayout
+              :key="store.activeTab.id"
+              :node="store.activeTab.root"
+              :closable="store.activeTab.root.kind === 'split'"
+            />
+          </div>
+
+          <div v-else class="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 p-8">
+            <span
+              class="grid size-14 place-items-center rounded-xl border bg-card text-muted-foreground"
+            >
+              <Terminal :size="24" :stroke-width="1.5" />
+            </span>
+            <div class="max-w-sm space-y-2 text-center">
+              <h1 class="text-xl font-semibold tracking-tight">Prêt quand vous l’êtes.</h1>
+              <p class="text-sm leading-relaxed text-muted-foreground">
+                Ouvrez un terminal local ou reprenez une ressource depuis la barre latérale.
+              </p>
+            </div>
+            <div class="flex items-center gap-3">
+              <Button class="gap-2 active:scale-[0.96]" @click="store.createTerminal()">
+                <Terminal :size="15" :stroke-width="1.5" />
+                Nouveau terminal
+              </Button>
+              <kbd class="rounded border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                Ctrl T
+              </kbd>
+            </div>
+            <p v-if="!isNative()" class="text-xs text-muted-foreground">
+              Aperçu navigateur : lancez <code class="font-mono">pnpm tauri dev</code> pour des
+              terminaux réels.
+            </p>
+          </div>
+        </template>
+      </main>
+    </div>
 
     <CommandPalette />
-    <SettingsDialog />
     <TargetDialog :mode="targetDialog" @close="targetDialog = null" />
     <LockScreen />
     <Toaster position="bottom-right" :duration="6000" close-button />
@@ -198,5 +265,5 @@ window.addEventListener('beforeunload', () => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  </div>
+  </SidebarProvider>
 </template>

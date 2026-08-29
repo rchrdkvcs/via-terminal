@@ -11,6 +11,10 @@ export interface LocalPreferences {
   screenReaderMode: boolean
   /** Milliseconds the pointer must rest on the edge before the sidebar returns. */
   sidebarRevealDelay: number
+  /** Lines xterm keeps per session. */
+  scrollback: number
+  /** Ask before closing a tab that still owns a live session. */
+  confirmOnClose: boolean
   systemPrefersDark: boolean
 }
 
@@ -20,7 +24,9 @@ const fallback: LocalPreferences = {
   cursorStyle: 'bar',
   cursorBlink: true,
   screenReaderMode: false,
-  sidebarRevealDelay: 220,
+  sidebarRevealDelay: 180,
+  scrollback: 10000,
+  confirmOnClose: true,
   systemPrefersDark: true,
 }
 

@@ -77,6 +77,17 @@ impl DomainService {
                 args: vec![],
                 working_directory: None,
             });
+            // Without a node the default profile exists but never appears in
+            // the sidebar, so a fresh workspace would look empty.
+            d.sidebar_nodes.push(SidebarNode {
+                id: Uuid::new_v4(),
+                workspace_id,
+                parent_id: None,
+                kind: "profile".into(),
+                label: "PowerShell".into(),
+                target_id: Some(profile_id),
+                position: 0,
+            });
             d.workspaces.push(w.clone());
             Ok(w)
         })
@@ -864,7 +875,7 @@ mod tests {
                 .iter()
                 .filter(|x| x.workspace_id == copy.id)
                 .count(),
-            2
+            3
         );
         assert_eq!(
             snapshot
@@ -898,7 +909,7 @@ mod tests {
             .import_json(&serde_json::to_string(&incoming).unwrap())
             .unwrap();
         assert_ne!(imported.workspaces[0].id, old_workspace);
-        assert_eq!(imported.sidebar_nodes.len(), 2);
+        assert_eq!(imported.sidebar_nodes.len(), 3);
         assert_eq!(imported.favorites.len(), 1);
         assert!(imported
             .sidebar_nodes
@@ -1025,7 +1036,7 @@ mod tests {
 
         let data = service.snapshot().unwrap();
         assert!(data.profiles.iter().any(|item| item.id == profile.id));
-        assert_eq!(data.sidebar_nodes[0].id, node.id);
+        assert!(data.sidebar_nodes.iter().any(|item| item.id == node.id));
         assert!(service
             .local_profile(workspace, profile.id)
             .is_ok());
@@ -1072,13 +1083,15 @@ mod tests {
 
         let mut nodes = service.snapshot().unwrap().sidebar_nodes;
         nodes.sort_by_key(|node| node.position);
+        // The workspace default profile is a root sibling too, so the whole
+        // root list must come back renumbered without a gap.
         assert_eq!(
             nodes.iter().map(|node| node.label.as_str()).collect::<Vec<_>>(),
-            vec!["C", "A", "B"]
+            vec!["C", "PowerShell", "A", "B"]
         );
         assert_eq!(
             nodes.iter().map(|node| node.position).collect::<Vec<_>>(),
-            vec![0, 1, 2]
+            vec![0, 1, 2, 3]
         );
     }
 
@@ -1138,7 +1151,10 @@ mod tests {
         service.delete_sidebar_node(folder.id).unwrap();
 
         let data = service.snapshot().unwrap();
-        assert!(data.sidebar_nodes.is_empty(), "{:?}", node);
+        assert!(!data
+            .sidebar_nodes
+            .iter()
+            .any(|item| item.id == folder.id || item.id == node.id));
         assert!(data.resources.is_empty());
         assert!(data.favorites.is_empty());
         assert!(data.saved_sessions.is_empty());

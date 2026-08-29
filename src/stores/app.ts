@@ -129,9 +129,18 @@ export const useAppStore = defineStore('app', () => {
 
   /* ------------------------------------------------------------ shell state */
   const ready = ref(false)
-  const sidebarVisible = ref(true)
+  /** The user's own choice: the sidebar stays in the layout and pushes it. */
+  const sidebarPinned = ref(true)
+  /**
+   * A temporary reveal driven by the 8 px edge strip. It floats over the
+   * terminal instead of pushing it, so a peek never triggers a reflow and an
+   * xterm refit.
+   */
+  const sidebarPeek = ref(false)
+  const sidebarOpen = computed(() => sidebarPinned.value || sidebarPeek.value)
+  const route = ref<'workspace' | 'settings'>('workspace')
+  const settingsSection = ref('general')
   const paletteOpen = ref(false)
-  const settingsOpen = ref(false)
   const searchOpen = ref(false)
   const locked = ref(false)
   const pinConfigured = ref(false)
@@ -216,7 +225,11 @@ export const useAppStore = defineStore('app', () => {
     return record.kind === 'resource' ? 'resource' : 'profile'
   }
 
-  const favorites = computed(() =>
+  /**
+   * A favorite is shown as a pinned row above the tree rather than as a
+   * separate grid, so the sidebar keeps a single column of rows.
+   */
+  const favorites = computed<TreeNode[]>(() =>
     favoriteRecords.value
       .filter((item) => item.workspaceId === activeWorkspaceId.value)
       .sort((a, b) => a.position - b.position)
@@ -226,9 +239,12 @@ export const useAppStore = defineStore('app', () => {
         return [
           {
             id: favorite.id,
-            name,
-            targetKind: favorite.targetKind,
+            parentId: null,
+            kind: favorite.targetKind,
+            label: name,
             targetId: favorite.targetId,
+            depth: 0,
+            children: [],
             sessionIds: sessionsByTarget.value.get(favorite.targetId) ?? [],
           },
         ]
@@ -386,7 +402,7 @@ export const useAppStore = defineStore('app', () => {
         width: Math.round(window.innerWidth),
         height: Math.round(window.innerHeight),
         maximized: false,
-        sidebarHidden: !sidebarVisible.value,
+        sidebarHidden: !sidebarPinned.value,
       })
     } catch {
       // Window geometry is a convenience; never surface a failure for it.
@@ -416,6 +432,7 @@ export const useAppStore = defineStore('app', () => {
       cursorStyle: preferences.value.cursorStyle,
       cursorBlink: preferences.value.cursorBlink,
       screenReaderMode: preferences.value.screenReaderMode,
+      scrollback: preferences.value.scrollback,
       appearance: appearance.value,
     })
   }
@@ -455,10 +472,18 @@ export const useAppStore = defineStore('app', () => {
     const descriptors = new Map(savedSessions.value.map((item) => [item.id, item]))
     for (const saved of savedTabs.value) {
       if (!saved.root) continue
+      // `initialize` and an accepted recovery can both reach this point, and a
+      // dev reload runs it again; restoring a tab twice used to duplicate every
+      // pane and its placeholder session.
+      if (tabs.value.some((tab) => tab.id === saved.id)) continue
       const placeholders: SessionSummary[] = []
       const root = rebuildPane(saved.root, saved.workspaceId, descriptors, placeholders)
       if (!root) continue
-      sessions.value.push(...placeholders)
+      sessions.value.push(
+        ...placeholders.filter(
+          (placeholder) => !sessions.value.some((item) => item.id === placeholder.id),
+        ),
+      )
       const runtime: RuntimeTab = {
         id: saved.id,
         workspaceId: saved.workspaceId,
@@ -545,11 +570,11 @@ export const useAppStore = defineStore('app', () => {
     switchWorkspace(workspaces.value[next].id)
   }
 
-  async function createWorkspace(name: string) {
+  async function createWorkspace(name: string, icon = 'terminal') {
     const trimmed = name.trim()
     if (!trimmed) return
     try {
-      const workspace = await api.createWorkspace(trimmed)
+      const workspace = await api.createWorkspace(trimmed, icon)
       applySnapshot(await api.snapshot())
       switchWorkspace(workspace.id)
       notify('success', `Espace de travail « ${workspace.name} » créé.`)
@@ -812,7 +837,7 @@ export const useAppStore = defineStore('app', () => {
     const index = tabs.value.findIndex((item) => item.id === id)
     if (index < 0) return
     const tab = tabs.value[index]
-    if (!options.force && hasLiveSessions(tab)) {
+    if (!options.force && preferences.value.confirmOnClose && hasLiveSessions(tab)) {
       pendingTabClose.value = tab.id
       return
     }
@@ -1040,6 +1065,39 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  /**
+   * Deleting a profile or a resource goes through its sidebar node, because the
+   * Rust side cascades from there to favorites, saved sessions and tabs.
+   */
+  function nodeIdForTarget(targetId: Id): Id | null {
+    return sidebarNodes.value.find((node) => node.targetId === targetId)?.id ?? null
+  }
+
+  /** Section-scoped reset, so one page never silently clears another. */
+  function restoreDefaults(section: string) {
+    if (section === 'general') {
+      updateSettings({ density: defaultSettings.density, restoreLocalSessions: false })
+      updatePreferences({ sidebarRevealDelay: 180, confirmOnClose: true })
+    } else if (section === 'appearance') {
+      updateSettings({ theme: defaultSettings.theme })
+    } else if (section === 'terminal') {
+      updateSettings({
+        fontFamily: defaultSettings.fontFamily,
+        fontSize: defaultSettings.fontSize,
+      })
+      updatePreferences({
+        cursorStyle: 'bar',
+        cursorBlink: true,
+        scrollback: 10_000,
+        screenReaderMode: false,
+      })
+    } else {
+      notify('info', 'Cette section n’a pas de valeurs par défaut à rétablir.')
+      return
+    }
+    notify('success', 'Valeurs par défaut rétablies.')
+  }
+
   async function renameNode(id: Id, label: string) {
     if (!label.trim()) return
     try {
@@ -1162,9 +1220,12 @@ export const useAppStore = defineStore('app', () => {
     tabs,
     notices,
     ready,
-    sidebarVisible,
+    sidebarPinned,
+    sidebarPeek,
+    sidebarOpen,
+    route,
+    settingsSection,
     paletteOpen,
-    settingsOpen,
     searchOpen,
     locked,
     pinConfigured,
@@ -1222,6 +1283,8 @@ export const useAppStore = defineStore('app', () => {
     createFolder,
     createLocalProfile,
     createSshResource,
+    nodeIdForTarget,
+    restoreDefaults,
     renameNode,
     deleteNode,
     moveNode,

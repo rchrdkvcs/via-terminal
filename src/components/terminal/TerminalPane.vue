@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Plug, RotateCw, Terminal as TerminalIcon, X } from '@lucide/vue'
+import { Plug, Terminal as TerminalIcon } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { terminals } from '@/terminal/registry'
 import { useAppStore } from '@/stores/app'
@@ -15,7 +15,6 @@ const session = computed(() => store.sessionById.get(props.sessionId) ?? null)
 const isActive = computed(() => store.activeTab?.activePaneId === props.paneId)
 /** A restored pane holds no process until the user asks for one. */
 const isPlaceholder = computed(() => session.value?.status === 'restorable')
-const needsReconnect = computed(() => session.value?.status === 'failed')
 
 function mountTerminal() {
   if (!host.value || isPlaceholder.value) return
@@ -48,53 +47,11 @@ watch(isActive, (active) => {
 
 <template>
   <section
-    class="relative flex min-h-0 min-w-0 flex-1 flex-col bg-terminal-background transition-[box-shadow] duration-150"
+    class="relative flex min-h-0 min-w-0 flex-1 flex-col bg-card transition-[box-shadow] duration-150"
     :class="isActive ? 'shadow-[inset_0_0_0_1px_var(--ring)]' : ''"
     :aria-label="session?.name ?? 'Terminal'"
     @mousedown="store.selectPane(paneId)"
   >
-    <header
-      class="flex h-8 shrink-0 items-center gap-2 border-b bg-card/60 pe-1 ps-3 text-xs"
-      :class="isActive ? 'text-foreground' : 'text-muted-foreground'"
-    >
-      <span
-        class="size-1.5 shrink-0 rounded-full"
-        :class="{
-          'bg-success': session?.status === 'connected',
-          'bg-warning': session?.status === 'reconnecting' || session?.status === 'connecting',
-          'bg-destructive': session?.status === 'failed' || session?.status === 'disconnected',
-          'bg-muted-foreground': session?.status === 'restorable' || session?.status === 'closed',
-        }"
-        aria-hidden="true"
-      />
-      <span class="truncate font-medium">{{ session?.name ?? 'Session' }}</span>
-      <span class="truncate text-muted-foreground">{{ session?.detail }}</span>
-      <span v-if="session?.message" class="truncate text-warning">{{ session.message }}</span>
-
-      <div class="ms-auto flex items-center gap-1">
-        <Button
-          v-if="needsReconnect"
-          variant="ghost"
-          size="xs"
-          class="gap-1.5"
-          @click="store.reconnectSession(sessionId)"
-        >
-          <RotateCw :size="13" :stroke-width="1.5" />
-          Reconnecter
-        </Button>
-        <Button
-          v-if="closable"
-          variant="ghost"
-          size="icon-xs"
-          :aria-label="`Fermer le panneau ${session?.name ?? ''}`"
-          class="active:scale-[0.96]"
-          @click.stop="store.closePane(paneId)"
-        >
-          <X :size="13" :stroke-width="1.5" />
-        </Button>
-      </div>
-    </header>
-
     <!-- The registry appends its own element here; Vue never owns the xterm DOM. -->
     <div v-show="!isPlaceholder" ref="host" class="terminal-surface min-h-0 flex-1" />
 

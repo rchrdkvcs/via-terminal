@@ -224,6 +224,15 @@ impl AppData {
                 args: vec![],
                 working_directory: None,
             }],
+            sidebar_nodes: vec![SidebarNode {
+                id: Uuid::new_v4(),
+                workspace_id,
+                parent_id: None,
+                kind: "profile".into(),
+                label: "PowerShell".into(),
+                target_id: Some(profile_id),
+                position: 0,
+            }],
             settings: Settings::default(),
             ..Default::default()
         }

@@ -13,7 +13,7 @@ export function useShortcuts() {
   const store = useAppStore()
 
   function dialogOpen() {
-    return store.paletteOpen || store.settingsOpen || store.searchOpen
+    return store.paletteOpen || store.searchOpen
   }
 
   function handle(event: KeyboardEvent) {
@@ -53,17 +53,19 @@ export function useShortcuts() {
       return
     }
 
+    if (event.key === 'Escape' && store.route === 'settings') {
+      event.preventDefault()
+      store.route = 'workspace'
+      return
+    }
+
     if (control && !event.shiftKey && event.key.toLowerCase() === 'w') {
       event.preventDefault()
       if (store.activeTabId) void store.closeTab(store.activeTabId)
       return
     }
 
-    if (control && event.key === 'b') {
-      event.preventDefault()
-      store.sidebarVisible = !store.sidebarVisible
-      return
-    }
+    // Ctrl+B is owned by SidebarProvider, which keeps its own state in sync.
 
     if (control && event.shiftKey && event.key === '"') {
       event.preventDefault()

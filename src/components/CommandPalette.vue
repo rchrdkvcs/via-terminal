@@ -89,7 +89,7 @@ const commands = computed<Action[]>(() => [
     detail: 'Apparence, terminal, sécurité',
     icon: Settings,
     run: () => {
-      store.settingsOpen = true
+      store.route = 'settings'
     },
   },
   {

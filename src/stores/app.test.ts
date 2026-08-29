@@ -222,10 +222,16 @@ describe('snapshot ingestion', () => {
     expect(store.tree).toEqual([])
   })
 
-  it('resolves favorites through their target record', async () => {
+  it('exposes a favorite as a pinned row above the tree', async () => {
     const store = await bootedStore()
     expect(store.favorites).toHaveLength(1)
-    expect(store.favorites[0]).toMatchObject({ name: 'PowerShell', targetKind: 'profile' })
+    expect(store.favorites[0]).toMatchObject({
+      label: 'PowerShell',
+      kind: 'profile',
+      targetId: PROFILE_A,
+      depth: 0,
+    })
+    expect(store.isFavorite(PROFILE_A)).toBe(true)
   })
 })
 
@@ -415,6 +421,11 @@ describe('restorable layout', () => {
     expect(spawned).toEqual([])
     expect(store.visibleTabs).toHaveLength(1)
     expect(store.activeSession).toMatchObject({ status: 'restorable', name: 'Production' })
+
+    // Recovery and a dev reload both call restoreLayout; it must be idempotent.
+    await store.dismissRecovery(true)
+    expect(store.visibleTabs).toHaveLength(1)
+    expect(store.sessions).toHaveLength(1)
 
     await store.activateRestorableSession('saved-1')
     expect(spawned).toHaveLength(1)
