@@ -484,7 +484,9 @@ impl DomainService {
                 .sidebar_nodes
                 .iter()
                 .filter(|node| {
-                    node.workspace_id == workspace_id && node.parent_id == parent_id && node.id != id
+                    node.workspace_id == workspace_id
+                        && node.parent_id == parent_id
+                        && node.id != id
                 })
                 .map(|node| (node.position, node.id))
                 .collect::<std::collections::BTreeSet<_>>()
@@ -531,7 +533,8 @@ impl DomainService {
             d.sidebar_nodes.retain(|node| !removed.contains(&node.id));
             d.profiles.retain(|item| !targets.contains(&item.id));
             d.resources.retain(|item| !targets.contains(&item.id));
-            d.favorites.retain(|item| !targets.contains(&item.target_id));
+            d.favorites
+                .retain(|item| !targets.contains(&item.target_id));
             for workspace in &mut d.workspaces {
                 if workspace
                     .default_profile_id
@@ -582,6 +585,34 @@ impl DomainService {
                     target_id,
                     position,
                 });
+            }
+            Ok(())
+        })
+    }
+
+    pub fn move_favorite(&self, id: Id, position: i64) -> Result<(), String> {
+        self.mutate(|d| {
+            let workspace_id = d
+                .favorites
+                .iter()
+                .find(|item| item.id == id)
+                .map(|item| item.workspace_id)
+                .ok_or("favorite not found")?;
+            let mut ids: Vec<Id> = d
+                .favorites
+                .iter()
+                .filter(|item| item.workspace_id == workspace_id && item.id != id)
+                .map(|item| (item.position, item.id))
+                .collect::<std::collections::BTreeSet<_>>()
+                .into_iter()
+                .map(|(_, id)| id)
+                .collect();
+            let index = position.clamp(0, ids.len() as i64) as usize;
+            ids.insert(index, id);
+            for (position, favorite_id) in ids.into_iter().enumerate() {
+                if let Some(item) = d.favorites.iter_mut().find(|item| item.id == favorite_id) {
+                    item.position = position as i64;
+                }
             }
             Ok(())
         })
@@ -1016,13 +1047,7 @@ mod tests {
         let workspace = service.snapshot().unwrap().workspaces[0].id;
 
         let profile = service
-            .create_profile(
-                workspace,
-                "CMD".into(),
-                "cmd.exe".into(),
-                vec![],
-                None,
-            )
+            .create_profile(workspace, "CMD".into(), "cmd.exe".into(), vec![], None)
             .unwrap();
         let node = service
             .create_sidebar_node(
@@ -1037,9 +1062,7 @@ mod tests {
         let data = service.snapshot().unwrap();
         assert!(data.profiles.iter().any(|item| item.id == profile.id));
         assert!(data.sidebar_nodes.iter().any(|item| item.id == node.id));
-        assert!(service
-            .local_profile(workspace, profile.id)
-            .is_ok());
+        assert!(service.local_profile(workspace, profile.id).is_ok());
     }
 
     #[test]
@@ -1086,7 +1109,10 @@ mod tests {
         // The workspace default profile is a root sibling too, so the whole
         // root list must come back renumbered without a gap.
         assert_eq!(
-            nodes.iter().map(|node| node.label.as_str()).collect::<Vec<_>>(),
+            nodes
+                .iter()
+                .map(|node| node.label.as_str())
+                .collect::<Vec<_>>(),
             vec!["C", "PowerShell", "A", "B"]
         );
         assert_eq!(
@@ -1180,6 +1206,50 @@ mod tests {
             .set_favorite(workspace, "profile".into(), profile, false)
             .unwrap();
         assert!(service.snapshot().unwrap().favorites.is_empty());
+    }
+
+    #[test]
+    fn moving_a_favorite_renumbers_the_list() {
+        let service = DomainService::new(Repository::memory().unwrap());
+        let data = service.snapshot().unwrap();
+        let workspace = data.workspaces[0].id;
+        let first = data.profiles[0].id;
+        let second = service
+            .create_profile(workspace, "Second".into(), "cmd.exe".into(), vec![], None)
+            .unwrap()
+            .id;
+        service
+            .set_favorite(workspace, "profile".into(), first, true)
+            .unwrap();
+        service
+            .set_favorite(workspace, "profile".into(), second, true)
+            .unwrap();
+        let favorite = service
+            .snapshot()
+            .unwrap()
+            .favorites
+            .into_iter()
+            .find(|item| item.target_id == second)
+            .unwrap();
+
+        service.move_favorite(favorite.id, 0).unwrap();
+
+        let mut favorites = service.snapshot().unwrap().favorites;
+        favorites.sort_by_key(|item| item.position);
+        assert_eq!(
+            favorites
+                .iter()
+                .map(|item| item.target_id)
+                .collect::<Vec<_>>(),
+            vec![second, first]
+        );
+        assert_eq!(
+            favorites
+                .iter()
+                .map(|item| item.position)
+                .collect::<Vec<_>>(),
+            vec![0, 1]
+        );
     }
 
     #[test]

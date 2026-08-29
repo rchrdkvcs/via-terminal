@@ -102,6 +102,7 @@ export const api = {
   deleteSidebarNode: (id: Id) => call<void>('sidebar_node_delete', { id }),
   setFavorite: (workspaceId: Id, targetKind: TargetKind, targetId: Id, pinned: boolean) =>
     call<void>('favorite_set', { workspaceId, targetKind, targetId, pinned }),
+  moveFavorite: (id: Id, position: number) => call<void>('favorite_move', { id, position }),
 
   /* ---------------------------------------------------------------- layout */
   saveTab: (tab: Tab, sessions: SavedSession[]) => call<Tab>('tab_save', { tab, sessions }),

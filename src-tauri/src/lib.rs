@@ -576,6 +576,11 @@ fn favorite_set(
         .set_favorite(workspace_id, target_kind, target_id, pinned)
 }
 #[tauri::command]
+fn favorite_move(state: State<BackendState>, id: Uuid, position: i64) -> Result<(), String> {
+    state.require_unlocked()?;
+    state.domain.move_favorite(id, position)
+}
+#[tauri::command]
 fn tab_delete(state: State<BackendState>, id: Uuid) -> Result<(), String> {
     state.require_unlocked()?;
     state.domain.delete_tab(id)
@@ -688,6 +693,7 @@ pub fn run() {
             sidebar_node_move,
             sidebar_node_delete,
             favorite_set,
+            favorite_move,
             tab_delete,
             settings_get,
             settings_update,

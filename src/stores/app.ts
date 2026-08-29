@@ -1161,6 +1161,105 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  function tabTarget(tabId: Id) {
+    const tab = tabs.value.find((item) => item.id === tabId)
+    if (!tab) return null
+    const session = sessionById.value.get(paneSessionIds(tab.root)[0])
+    return session ? { kind: session.targetKind, id: session.targetId } : null
+  }
+
+  async function placeTarget(targetId: Id, parentId: Id | null, position: number) {
+    const favorite = favoriteRecords.value.find(
+      (item) => item.workspaceId === activeWorkspaceId.value && item.targetId === targetId,
+    )
+    let node = sidebarNodes.value.find(
+      (item) => item.workspaceId === activeWorkspaceId.value && item.targetId === targetId,
+    )
+    try {
+      if (favorite)
+        await api.setFavorite(activeWorkspaceId.value, favorite.targetKind, targetId, false)
+      if (!node) {
+        const profile = profiles.value.find((item) => item.id === targetId)
+        const resource = resources.value.find((item) => item.id === targetId)
+        const target = profile ?? resource
+        if (!target) return
+        node = await api.createSidebarNode(
+          activeWorkspaceId.value,
+          profile ? 'profile' : 'resource',
+          target.name,
+          parentId,
+          targetId,
+        )
+        await refresh()
+        return
+      }
+      if (node.parentId === parentId) {
+        const siblings = sidebarNodes.value
+          .filter((item) => item.parentId === parentId && item.workspaceId === node!.workspaceId)
+          .sort((a, b) => a.position - b.position)
+        if (siblings.findIndex((item) => item.id === node!.id) < position) position -= 1
+      }
+      await api.moveSidebarNode(node.id, parentId, position)
+      await refresh()
+    } catch (error) {
+      report('Déplacement impossible', error)
+    }
+  }
+
+  async function placeTab(tabId: Id, parentId: Id | null, position: number) {
+    const target = tabTarget(tabId)
+    if (target) await placeTarget(target.id, parentId, position)
+  }
+
+  async function pinTarget(targetId: Id, position: number) {
+    const target =
+      favoriteRecords.value.find((item) => item.targetId === targetId) ??
+      (() => {
+        const node = sidebarNodes.value.find((item) => item.targetId === targetId)
+        if (node) return { targetKind: recordTargetKind(node), targetId: node.targetId! }
+        if (profiles.value.some((item) => item.id === targetId))
+          return { targetKind: 'profile' as const, targetId }
+        if (resources.value.some((item) => item.id === targetId))
+          return { targetKind: 'resource' as const, targetId }
+        return null
+      })()
+    if (!target || !activeWorkspaceId.value) return
+    try {
+      let favorite = favoriteRecords.value.find((item) => item.targetId === targetId)
+      if (!favorite) {
+        await api.setFavorite(activeWorkspaceId.value, target.targetKind, targetId, true)
+        await refresh()
+        favorite = favoriteRecords.value.find((item) => item.targetId === targetId)
+      }
+      if (favorite) {
+        const ordered = favoriteRecords.value
+          .filter((item) => item.workspaceId === activeWorkspaceId.value)
+          .sort((a, b) => a.position - b.position)
+        if (ordered.findIndex((item) => item.id === favorite!.id) < position) position -= 1
+        await api.moveFavorite(favorite.id, position)
+      }
+      await refresh()
+    } catch (error) {
+      report('Favori non enregistré', error)
+    }
+  }
+
+  async function pinTab(tabId: Id, position: number) {
+    const target = tabTarget(tabId)
+    if (target) await pinTarget(target.id, position)
+  }
+
+  async function reorderTab(tabId: Id, position: number) {
+    const tab = tabs.value.find((item) => item.id === tabId)
+    if (!tab) return
+    const ordered = tabs.value
+      .filter((item) => item.workspaceId === tab.workspaceId && item.id !== tabId)
+      .sort((a, b) => a.position - b.position)
+    ordered.splice(Math.max(0, Math.min(position, ordered.length)), 0, tab)
+    ordered.forEach((item, index) => (item.position = index))
+    await Promise.all(ordered.map((item) => persistTab(item.id)))
+  }
+
   const isFavorite = computed(() => {
     const pinned = new Set(
       favoriteRecords.value
@@ -1305,6 +1404,11 @@ export const useAppStore = defineStore('app', () => {
     deleteNode,
     moveNode,
     reparentNode,
+    placeTarget,
+    placeTab,
+    pinTarget,
+    pinTab,
+    reorderTab,
     toggleFavorite,
     openWindow,
     persistWindowState,

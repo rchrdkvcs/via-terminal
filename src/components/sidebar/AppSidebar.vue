@@ -12,6 +12,7 @@ import SessionRows from './SessionRows.vue'
 import SidebarTree from './SidebarTree.vue'
 import WorkspaceBar from './WorkspaceBar.vue'
 import { useAppStore } from '@/stores/app'
+import { readSidebarDrag } from '@/lib/sidebar-dnd'
 
 const emit = defineEmits<{ addProfile: []; addResource: [] }>()
 
@@ -21,6 +22,28 @@ function onWheel(event: WheelEvent) {
   if (!event.ctrlKey) return
   event.preventDefault()
   store.cycleWorkspace(event.deltaY > 0 ? 1 : -1)
+}
+
+function dropAtRoot(event: DragEvent) {
+  const drag = readSidebarDrag(event)
+  if (!drag) return
+  const position = store.sidebarNodes.filter(
+    (node) => node.workspaceId === store.activeWorkspaceId && node.parentId === null,
+  ).length
+  if (drag.type === 'node') void store.reparentNode(drag.id, null, position)
+  else if (drag.type === 'tab') void store.placeTab(drag.id, null, position)
+  else void store.placeTarget(drag.targetId, null, position)
+}
+
+function dropInFavorites(event: DragEvent) {
+  const drag = readSidebarDrag(event)
+  if (!drag) return
+  if (drag.type === 'favorite') void store.pinTarget(drag.targetId, store.favorites.length)
+  else if (drag.type === 'tab') void store.pinTab(drag.id, store.favorites.length)
+  else {
+    const targetId = store.sidebarNodes.find((node) => node.id === drag.id)?.targetId
+    if (targetId) void store.pinTarget(targetId, store.favorites.length)
+  }
 }
 </script>
 
@@ -41,11 +64,16 @@ function onWheel(event: WheelEvent) {
 
     <SidebarContent class="thin-scrollbar gap-0 overflow-x-hidden">
       <!-- Pinned favorites first, then the saved organization. -->
-      <SidebarGroup v-if="store.favorites.length" class="p-2 py-1">
+      <SidebarGroup
+        class="min-h-8 p-2 py-1"
+        aria-label="Favoris — déposez ici pour épingler"
+        @dragover.prevent
+        @drop.prevent="dropInFavorites"
+      >
         <SidebarTree :nodes="store.favorites" pinned />
       </SidebarGroup>
 
-      <SidebarGroup class="p-2 py-1">
+      <SidebarGroup class="min-h-10 p-2 py-1" @dragover.prevent @drop.prevent="dropAtRoot">
         <SidebarTree :nodes="store.tree" />
         <p
           v-if="!store.tree.length && !store.favorites.length"
