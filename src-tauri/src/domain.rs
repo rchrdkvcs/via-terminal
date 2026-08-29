@@ -171,6 +171,9 @@ pub struct Settings {
     pub font_family: String,
     pub font_size: u16,
     pub restore_local_sessions: bool,
+    /// Executable used by every workspace default launch profile.
+    #[serde(default = "default_shell")]
+    pub default_shell: String,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -180,6 +183,7 @@ impl Default for Settings {
             font_family: "Cascadia Mono".into(),
             font_size: 14,
             restore_local_sessions: false,
+            default_shell: default_shell(),
         }
     }
 }
@@ -225,19 +229,10 @@ impl AppData {
             profiles: vec![LocalProfile {
                 id: profile_id,
                 workspace_id,
-                name: "PowerShell".into(),
+                name: shell_label(&default_shell()),
                 executable: default_shell(),
                 args: vec![],
                 working_directory: None,
-            }],
-            sidebar_nodes: vec![SidebarNode {
-                id: Uuid::new_v4(),
-                workspace_id,
-                parent_id: None,
-                kind: "profile".into(),
-                label: "PowerShell".into(),
-                target_id: Some(profile_id),
-                position: 0,
             }],
             settings: Settings::default(),
             ..Default::default()
@@ -467,6 +462,23 @@ pub(crate) fn default_shell() -> String {
         "powershell.exe".into()
     } else {
         std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into())
+    }
+}
+
+pub(crate) fn shell_label(executable: &str) -> String {
+    let name = std::path::Path::new(executable)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or(executable);
+    match name.to_ascii_lowercase().as_str() {
+        "powershell.exe" => "PowerShell".into(),
+        "pwsh.exe" => "PowerShell 7".into(),
+        "cmd.exe" => "CMD".into(),
+        "wsl.exe" => "WSL".into(),
+        "zsh" => "Zsh".into(),
+        "bash" => "Bash".into(),
+        "sh" => "Sh".into(),
+        _ => name.to_string(),
     }
 }
 

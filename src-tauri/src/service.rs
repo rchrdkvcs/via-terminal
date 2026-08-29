@@ -69,24 +69,18 @@ impl DomainService {
                 position: d.workspaces.len() as i64,
                 default_profile_id: Some(profile_id),
             };
+            let executable = if d.settings.default_shell.trim().is_empty() {
+                crate::domain::default_shell()
+            } else {
+                d.settings.default_shell.clone()
+            };
             d.profiles.push(LocalProfile {
                 id: profile_id,
                 workspace_id,
-                name: "PowerShell".into(),
-                executable: crate::domain::default_shell(),
+                name: crate::domain::shell_label(&executable),
+                executable,
                 args: vec![],
                 working_directory: None,
-            });
-            // Without a node the default profile exists but never appears in
-            // the sidebar, so a fresh workspace would look empty.
-            d.sidebar_nodes.push(SidebarNode {
-                id: Uuid::new_v4(),
-                workspace_id,
-                parent_id: None,
-                kind: "profile".into(),
-                label: "PowerShell".into(),
-                target_id: Some(profile_id),
-                position: 0,
             });
             d.workspaces.push(w.clone());
             Ok(w)
@@ -306,8 +300,24 @@ impl DomainService {
         })
     }
     pub fn update_settings(&self, settings: Settings) -> Result<Settings, String> {
+        if settings.default_shell.trim().is_empty() || settings.default_shell.contains('\0') {
+            return Err("invalid default shell".into());
+        }
         self.mutate(|d| {
             d.settings = settings.clone();
+            let shell = d.settings.default_shell.clone();
+            let label = crate::domain::shell_label(&shell);
+            let default_ids: std::collections::HashSet<_> = d
+                .workspaces
+                .iter()
+                .filter_map(|workspace| workspace.default_profile_id)
+                .collect();
+            for profile in &mut d.profiles {
+                if default_ids.contains(&profile.id) {
+                    profile.executable = shell.clone();
+                    profile.name = label.clone();
+                }
+            }
             Ok(settings)
         })
     }
@@ -931,7 +941,7 @@ mod tests {
                 .iter()
                 .filter(|x| x.workspace_id == copy.id)
                 .count(),
-            3
+            2
         );
         assert_eq!(
             snapshot
@@ -974,6 +984,39 @@ mod tests {
     }
 
     #[test]
+    fn create_workspace_keeps_the_launch_profile_off_the_sidebar() {
+        let service = DomainService::new(Repository::memory().unwrap());
+        let workspace = service
+            .create_workspace("Ops".into(), "server".into(), "#67e8f9".into())
+            .unwrap();
+        let snapshot = service.snapshot().unwrap();
+        assert!(snapshot
+            .sidebar_nodes
+            .iter()
+            .all(|node| node.workspace_id != workspace.id || node.kind != "profile"));
+        assert_eq!(
+            snapshot
+                .profiles
+                .iter()
+                .find(|profile| profile.workspace_id == workspace.id)
+                .map(|profile| profile.executable.as_str()),
+            Some(snapshot.settings.default_shell.as_str())
+        );
+    }
+
+    #[test]
+    fn updating_the_default_shell_rewrites_workspace_launch_profiles() {
+        let service = DomainService::new(Repository::memory().unwrap());
+        let mut settings = service.snapshot().unwrap().settings;
+        settings.default_shell = "cmd.exe".into();
+        service.update_settings(settings).unwrap();
+        let snapshot = service.snapshot().unwrap();
+        assert_eq!(snapshot.settings.default_shell, "cmd.exe");
+        assert_eq!(snapshot.profiles[0].executable, "cmd.exe");
+        assert_eq!(snapshot.profiles[0].name, "CMD");
+    }
+
+    #[test]
     fn import_preserves_organization_and_remaps_every_reference() {
         let service = DomainService::new(Repository::memory().unwrap());
         let incoming = organized_data();
@@ -983,7 +1026,7 @@ mod tests {
             .import_json(&serde_json::to_string(&incoming).unwrap())
             .unwrap();
         assert_ne!(imported.workspaces[0].id, old_workspace);
-        assert_eq!(imported.sidebar_nodes.len(), 3);
+        assert_eq!(imported.sidebar_nodes.len(), 2);
         assert_eq!(imported.favorites.len(), 1);
         assert!(imported
             .sidebar_nodes
@@ -1150,18 +1193,16 @@ mod tests {
 
         let mut nodes = service.snapshot().unwrap().sidebar_nodes;
         nodes.sort_by_key(|node| node.position);
-        // The workspace default profile is a root sibling too, so the whole
-        // root list must come back renumbered without a gap.
         assert_eq!(
             nodes
                 .iter()
                 .map(|node| node.label.as_str())
                 .collect::<Vec<_>>(),
-            vec!["C", "PowerShell", "A", "B"]
+            vec!["C", "A", "B"]
         );
         assert_eq!(
             nodes.iter().map(|node| node.position).collect::<Vec<_>>(),
-            vec![0, 1, 2, 3]
+            vec![0, 1, 2]
         );
     }
 

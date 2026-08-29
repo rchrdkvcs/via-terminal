@@ -202,10 +202,12 @@ export const useAppStore = defineStore('app', () => {
     const favoriteTargetIds = new Set(
       favoriteRecords.value
         .filter((item) => item.workspaceId === activeWorkspaceId.value)
+        .filter((item) => item.targetKind !== 'profile')
         .map((item) => item.targetId),
     )
     const records = sidebarNodes.value
       .filter((node) => node.workspaceId === activeWorkspaceId.value)
+      .filter((node) => node.kind !== 'profile')
       .filter((node) => !node.targetId || !favoriteTargetIds.has(node.targetId))
       .sort((a, b) => a.position - b.position)
 
@@ -257,6 +259,7 @@ export const useAppStore = defineStore('app', () => {
   const favorites = computed<TreeNode[]>(() =>
     favoriteRecords.value
       .filter((item) => item.workspaceId === activeWorkspaceId.value)
+      .filter((item) => item.targetKind !== 'profile')
       .sort((a, b) => a.position - b.position)
       .flatMap((favorite) => {
         const name = targetName(favorite.targetKind, favorite.targetId)
@@ -305,6 +308,11 @@ export const useAppStore = defineStore('app', () => {
   const activeSession = computed(() =>
     activePaneSessionId.value ? (sessionById.value.get(activePaneSessionId.value) ?? null) : null,
   )
+
+  /** The sidebar highlights only the target of the tab the user is looking at. */
+  function isTargetActive(targetId: Id | null | undefined) {
+    return Boolean(targetId) && activeSession.value?.targetId === targetId
+  }
 
   const appearance = computed<'dark' | 'light'>(() => {
     if (settings.value.theme === 'system')
@@ -790,16 +798,19 @@ export const useAppStore = defineStore('app', () => {
     targetId: Id,
     options: { reuse?: boolean } = {},
   ) {
+    // Local shells live in the open-tab list. Only SSH resources belong in the
+    // saved tree, so a profile target must never be marked organized.
+    const organized = targetKind === 'resource'
     const existing = sessionsByTarget.value.get(targetId)?.[0]
     // PRODUCT.md: clicking an open favorite focuses it; a secondary action opens another.
     if (options.reuse !== false && existing) {
       const tab = tabs.value.find((item) => paneSessionIds(item.root).includes(existing))
-      if (tab) tab.organized = true
+      if (tab && organized) tab.organized = true
       focusSession(existing)
       return
     }
     const session = await startSession(targetKind, targetId)
-    if (session) openSessionInTab(session, true)
+    if (session) openSessionInTab(session, organized)
   }
 
   function openSessionInTab(session: SessionSummary, organized = false) {
@@ -870,7 +881,7 @@ export const useAppStore = defineStore('app', () => {
   async function createTerminal(profileId?: Id) {
     const id = profileId ?? defaultProfileId.value
     if (!id) {
-      notify('error', 'Aucun profil local n’est configuré dans cet espace de travail.')
+      notify('error', 'Aucun terminal par défaut n’est configuré.')
       return
     }
     const session = await startSession('profile', id)
@@ -882,7 +893,7 @@ export const useAppStore = defineStore('app', () => {
     if (!tab || tab.organized) return
     const sessionId = paneSessionIds(tab.root)[0]
     const session = sessions.value.find((item) => item.id === sessionId)
-    if (!session) return
+    if (!session || session.targetKind !== 'resource') return
     const existingNode = sidebarNodes.value.find(
       (node) => node.workspaceId === tab.workspaceId && node.targetId === session.targetId,
     )
@@ -1070,9 +1081,14 @@ export const useAppStore = defineStore('app', () => {
     if (!isNative()) return
     if (settingsTimer) clearTimeout(settingsTimer)
     settingsTimer = setTimeout(() => {
-      void api.updateSettings({ ...settings.value }).catch((error) => {
-        report('Réglages non enregistrés', error)
-      })
+      void api
+        .updateSettings({ ...settings.value })
+        .then(async () => {
+          if (patch.defaultShell) await refresh()
+        })
+        .catch((error) => {
+          report('Réglages non enregistrés', error)
+        })
     }, 300)
   }
 
@@ -1223,6 +1239,7 @@ export const useAppStore = defineStore('app', () => {
       updateSettings({
         fontFamily: defaultSettings.fontFamily,
         fontSize: defaultSettings.fontSize,
+        defaultShell: detectedShells.value[0] ?? defaultSettings.defaultShell,
       })
       updatePreferences({
         cursorStyle: 'bar',
@@ -1299,10 +1316,36 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function reparentNode(id: Id, parentId: Id | null, position: number) {
-    if (id === parentId) return
+  /**
+   * Drop targets name the row the dragged item must land before, never a raw
+   * index: the visible rows hide favourites and collapsed folders, so an index
+   * read from the screen does not match the stored positions.
+   */
+  function nodePosition(
+    workspaceId: Id,
+    parentId: Id | null,
+    beforeId: Id | null,
+    movingId: Id | null,
+  ) {
+    const siblings = sidebarNodes.value
+      .filter(
+        (item) =>
+          item.workspaceId === workspaceId && item.parentId === parentId && item.id !== movingId,
+      )
+      .sort((a, b) => a.position - b.position)
+    const index = beforeId ? siblings.findIndex((item) => item.id === beforeId) : -1
+    return index >= 0 ? index : siblings.length
+  }
+
+  async function reparentNode(id: Id, parentId: Id | null, beforeId: Id | null) {
+    const record = sidebarNodes.value.find((item) => item.id === id)
+    if (!record || id === parentId || id === beforeId) return
     try {
-      await api.moveSidebarNode(id, parentId, position)
+      await api.moveSidebarNode(
+        id,
+        parentId,
+        nodePosition(record.workspaceId, parentId, beforeId, id),
+      )
       await refresh()
     } catch (error) {
       report('Déplacement impossible', error)
@@ -1316,95 +1359,124 @@ export const useAppStore = defineStore('app', () => {
     return session ? { kind: session.targetKind, id: session.targetId } : null
   }
 
-  async function placeTarget(targetId: Id, parentId: Id | null, position: number) {
+  async function placeTarget(targetId: Id, parentId: Id | null, beforeId: Id | null) {
+    if (profiles.value.some((item) => item.id === targetId)) return false
+    const workspaceId = activeWorkspaceId.value
     const favorite = favoriteRecords.value.find(
-      (item) => item.workspaceId === activeWorkspaceId.value && item.targetId === targetId,
+      (item) => item.workspaceId === workspaceId && item.targetId === targetId,
     )
-    let node = sidebarNodes.value.find(
-      (item) => item.workspaceId === activeWorkspaceId.value && item.targetId === targetId,
+    const node = sidebarNodes.value.find(
+      (item) => item.workspaceId === workspaceId && item.targetId === targetId,
     )
+    if (node && (node.id === parentId || node.id === beforeId)) return false
     try {
-      if (favorite)
-        await api.setFavorite(activeWorkspaceId.value, favorite.targetKind, targetId, false)
+      // A favourite and a tree row are two views of the same target, so leaving
+      // the favourites is part of landing in the tree.
+      if (favorite) {
+        await api.setFavorite(workspaceId, favorite.targetKind, targetId, false)
+        await refresh()
+      }
       if (!node) {
         const profile = profiles.value.find((item) => item.id === targetId)
         const resource = resources.value.find((item) => item.id === targetId)
         const target = profile ?? resource
-        if (!target) return
-        node = await api.createSidebarNode(
-          activeWorkspaceId.value,
+        if (!target) return false
+        const created = await api.createSidebarNode(
+          workspaceId,
           profile ? 'profile' : 'resource',
           target.name,
           parentId,
           targetId,
         )
+        await api.moveSidebarNode(
+          created.id,
+          parentId,
+          nodePosition(workspaceId, parentId, beforeId, created.id),
+        )
         await refresh()
-        return
+        return true
       }
-      if (node.parentId === parentId) {
-        const siblings = sidebarNodes.value
-          .filter((item) => item.parentId === parentId && item.workspaceId === node!.workspaceId)
-          .sort((a, b) => a.position - b.position)
-        if (siblings.findIndex((item) => item.id === node!.id) < position) position -= 1
-      }
-      await api.moveSidebarNode(node.id, parentId, position)
+      await api.moveSidebarNode(
+        node.id,
+        parentId,
+        nodePosition(workspaceId, parentId, beforeId, node.id),
+      )
       await refresh()
+      return true
     } catch (error) {
       report('Déplacement impossible', error)
+      return false
     }
   }
 
-  async function placeTab(tabId: Id, parentId: Id | null, position: number) {
+  async function placeTab(tabId: Id, parentId: Id | null, beforeId: Id | null) {
     const target = tabTarget(tabId)
-    if (target) await placeTarget(target.id, parentId, position)
+    const tab = tabs.value.find((item) => item.id === tabId)
+    if (!target || !tab || !(await placeTarget(target.id, parentId, beforeId))) return
+    tab.organized = true
+    scheduleLayoutSave(tab.id)
   }
 
-  async function pinTarget(targetId: Id, position: number) {
+  async function pinTarget(targetId: Id, beforeFavoriteId: Id | null) {
+    if (profiles.value.some((item) => item.id === targetId)) return false
     const target =
       favoriteRecords.value.find((item) => item.targetId === targetId) ??
       (() => {
         const node = sidebarNodes.value.find((item) => item.targetId === targetId)
         if (node) return { targetKind: recordTargetKind(node), targetId: node.targetId! }
-        if (profiles.value.some((item) => item.id === targetId))
-          return { targetKind: 'profile' as const, targetId }
         if (resources.value.some((item) => item.id === targetId))
           return { targetKind: 'resource' as const, targetId }
         return null
       })()
-    if (!target || !activeWorkspaceId.value) return
+    const workspaceId = activeWorkspaceId.value
+    if (!target || !workspaceId) return false
     try {
-      let favorite = favoriteRecords.value.find((item) => item.targetId === targetId)
+      let favorite = favoriteRecords.value.find(
+        (item) => item.workspaceId === workspaceId && item.targetId === targetId,
+      )
+      if (favorite && favorite.id === beforeFavoriteId) return true
       if (!favorite) {
-        await api.setFavorite(activeWorkspaceId.value, target.targetKind, targetId, true)
+        await api.setFavorite(workspaceId, target.targetKind, targetId, true)
         await refresh()
-        favorite = favoriteRecords.value.find((item) => item.targetId === targetId)
+        favorite = favoriteRecords.value.find(
+          (item) => item.workspaceId === workspaceId && item.targetId === targetId,
+        )
       }
       if (favorite) {
         const ordered = favoriteRecords.value
-          .filter((item) => item.workspaceId === activeWorkspaceId.value)
+          .filter((item) => item.workspaceId === workspaceId && item.id !== favorite!.id)
           .sort((a, b) => a.position - b.position)
-        if (ordered.findIndex((item) => item.id === favorite!.id) < position) position -= 1
-        await api.moveFavorite(favorite.id, position)
+        const index = beforeFavoriteId
+          ? ordered.findIndex((item) => item.id === beforeFavoriteId)
+          : -1
+        await api.moveFavorite(favorite.id, index >= 0 ? index : ordered.length)
+        await refresh()
       }
-      await refresh()
+      return true
     } catch (error) {
       report('Favori non enregistré', error)
+      return false
     }
   }
 
-  async function pinTab(tabId: Id, position: number) {
+  async function pinTab(tabId: Id, beforeFavoriteId: Id | null) {
     const target = tabTarget(tabId)
-    if (target) await pinTarget(target.id, position)
+    const tab = tabs.value.find((item) => item.id === tabId)
+    if (!target || !tab || !(await pinTarget(target.id, beforeFavoriteId))) return
+    tab.organized = true
+    scheduleLayoutSave(tab.id)
   }
 
-  async function reorderTab(tabId: Id, position: number) {
+  /** `beforeTabId` is the tab the moved one must precede; `null` means last. */
+  async function reorderTab(tabId: Id, beforeTabId: Id | null) {
     const tab = tabs.value.find((item) => item.id === tabId)
-    if (!tab) return
+    if (!tab || tabId === beforeTabId) return
     const ordered = tabs.value
       .filter((item) => item.workspaceId === tab.workspaceId && item.id !== tabId)
       .sort((a, b) => a.position - b.position)
-    ordered.splice(Math.max(0, Math.min(position, ordered.length)), 0, tab)
-    ordered.forEach((item, index) => (item.position = index))
+    const index = beforeTabId ? ordered.findIndex((item) => item.id === beforeTabId) : -1
+    ordered.splice(index >= 0 ? index : ordered.length, 0, tab)
+    ordered.forEach((item, position) => (item.position = position))
     await Promise.all(ordered.map((item) => persistTab(item.id)))
   }
 
@@ -1516,6 +1588,7 @@ export const useAppStore = defineStore('app', () => {
     workspaceContentCollapsed,
     defaultProfileId,
     isFavorite,
+    isTargetActive,
 
     /* actions */
     initialize,

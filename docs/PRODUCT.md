@@ -13,7 +13,7 @@ Terminarr is a fast, pleasant native terminal workspace for IT technicians. It u
 
 ## V1 experience
 
-- Local PowerShell, CMD, WSL, and Zsh-in-WSL profiles.
+- One default local shell (PowerShell, CMD, WSL, or Zsh-in-WSL), chosen in settings.
 - Arc/Zen-inspired sidebar with visual favorites, nested folders, temporary sessions, and workspace icons at the bottom.
 - Workspace switching by click, command palette, `Alt+1…9`, and `Ctrl+wheel` over the sidebar.
 - Tabs containing horizontal or vertical split panes.

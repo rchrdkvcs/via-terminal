@@ -601,6 +601,10 @@ fn window_create(app: tauri::AppHandle) -> Result<(), String> {
     tauri::WebviewWindowBuilder::new(&app, label, tauri::WebviewUrl::App("index.html".into()))
         .title("Terminarr")
         .inner_size(1100.0, 720.0)
+        // The native drop target of the webview swallows every HTML5 drag
+        // event, which stops the sidebar drag and drop. Windows created here do
+        // not inherit `dragDropEnabled` from tauri.conf.json, so set it again.
+        .drag_and_drop(false)
         .build()
         .map(|_| ())
         .map_err(|error| error.to_string())

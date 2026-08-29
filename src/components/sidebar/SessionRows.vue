@@ -15,7 +15,17 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { useAppStore } from '@/stores/app'
-import { readSidebarDrag, writeSidebarDrag } from '@/lib/sidebar-dnd'
+import type { DropZone } from '@/lib/sidebar-dnd'
+import {
+  acceptDrop,
+  activeDrag,
+  dropHint,
+  dropZoneClass,
+  endSidebarDrag,
+  readSidebarDrag,
+  rowZone,
+  startSidebarDrag,
+} from '@/lib/sidebar-dnd'
 
 const store = useAppStore()
 const editing = ref<string | null>(null)
@@ -57,27 +67,59 @@ const rows = computed(() =>
       id: tab.id,
       label: tab.name,
       detail: store.sessionById.get(ids[0])?.detail ?? '',
+      kind: store.sessionById.get(ids[0])?.kind ?? 'local',
       state,
     }
   }),
 )
 
-function dropTab(event: DragEvent, position: number) {
+/** Only open tabs reorder here; organizing a tab happens in the tree above. */
+function draggedTabId() {
+  const drag = activeDrag.value
+  return drag?.type === 'tab' ? drag.id : null
+}
+
+function hintClass(id: string) {
+  const [row, zone] = (dropHint.value ?? '').split(':')
+  return row === id ? dropZoneClass[zone as DropZone] : ''
+}
+
+function onDragOver(event: DragEvent, id: string) {
+  if (!draggedTabId()) return
+  acceptDrop(event)
+  dropHint.value = `${id}:${rowZone(event, false)}`
+}
+
+function onDrop(event: DragEvent, index: number) {
+  event.preventDefault()
   const drag = readSidebarDrag(event)
+  const zone = rowZone(event, false)
+  endSidebarDrag()
   if (drag?.type !== 'tab') return
-  const source = rows.value.findIndex((row) => row.id === drag.id)
-  void store.reorderTab(drag.id, source >= 0 && source < position ? position - 1 : position)
+  const before = zone === 'before' ? rows.value[index] : rows.value[index + 1]
+  void store.reorderTab(drag.id, before?.id ?? null)
+}
+
+/** Alt+Arrow moves a tab past its neighbour, which is the row to insert before. */
+function moveByKey(index: number, direction: -1 | 1) {
+  const target = direction < 0 ? rows.value[index - 1] : rows.value[index + 2]
+  if (direction < 0 && !target) return
+  if (direction > 0 && index >= rows.value.length - 1) return
+  void store.reorderTab(rows.value[index].id, target?.id ?? null)
 }
 </script>
 
 <template>
   <SidebarMenu role="tablist" aria-label="Sessions ouvertes" aria-orientation="vertical">
-    <template v-for="(row, index) in rows" :key="row.id">
-      <li class="h-1" @dragover.prevent @drop.stop.prevent="dropTab($event, index)" />
-      <SidebarMenuItem
-        draggable="true"
-        @dragstart="writeSidebarDrag($event, { type: 'tab', id: row.id })"
-      >
+    <SidebarMenuItem
+      v-for="(row, index) in rows"
+      :key="row.id"
+      draggable="true"
+      class="transition-opacity"
+      :class="draggedTabId() === row.id ? 'opacity-40' : ''"
+      @dragstart.stop="startSidebarDrag($event, { type: 'tab', id: row.id })"
+      @dragend.stop="endSidebarDrag()"
+    >
       <SidebarMenuButton
         :as="editing === row.id ? 'div' : 'button'"
         role="tab"
@@ -85,10 +127,14 @@ function dropTab(event: DragEvent, position: number) {
         :tabindex="row.id === store.activeTabId ? 0 : -1"
         :is-active="row.id === store.activeTabId"
         :title="row.detail || row.label"
+        :class="hintClass(row.id)"
         @click="store.selectTab(row.id)"
-         @auxclick.middle.prevent="store.closeTab(row.id)"
-         @keydown.alt.up.prevent="store.reorderTab(row.id, Math.max(0, index - 1))"
-         @keydown.alt.down.prevent="store.reorderTab(row.id, Math.min(rows.length - 1, index + 1))"
+        @auxclick.middle.prevent="store.closeTab(row.id)"
+        @keydown.alt.up.prevent="moveByKey(index, -1)"
+        @keydown.alt.down.prevent="moveByKey(index, 1)"
+        @dragenter="onDragOver($event, row.id)"
+        @dragover="onDragOver($event, row.id)"
+        @drop="onDrop($event, index)"
       >
         <span class="relative flex shrink-0 items-center">
           <SquareTerminal :stroke-width="1.5" class="text-sidebar-foreground/60" />
@@ -134,7 +180,7 @@ function dropTab(event: DragEvent, position: number) {
           </SidebarMenuAction>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start">
-          <DropdownMenuItem @select="store.organizeTab(row.id)">
+          <DropdownMenuItem v-if="row.kind === 'ssh'" @select="store.organizeTab(row.id)">
             <Pin :stroke-width="1.5" />Épingler dans l’espace
           </DropdownMenuItem>
           <DropdownMenuItem @select="beginRename(row.id, row.label)">
@@ -145,9 +191,7 @@ function dropTab(event: DragEvent, position: number) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      </SidebarMenuItem>
-    </template>
-    <li class="h-1" @dragover.prevent @drop.stop.prevent="dropTab($event, rows.length)" />
+    </SidebarMenuItem>
 
     <SidebarMenuItem>
       <SidebarMenuButton class="text-sidebar-foreground/60" @click="store.createTerminal()">

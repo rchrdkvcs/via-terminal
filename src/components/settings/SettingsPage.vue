@@ -21,13 +21,12 @@ import AppearanceSection from './sections/AppearanceSection.vue'
 import DataSection from './sections/DataSection.vue'
 import GeneralSection from './sections/GeneralSection.vue'
 import KeybindingsSection from './sections/KeybindingsSection.vue'
-import ProfilesSection from './sections/ProfilesSection.vue'
 import ResourcesSection from './sections/ResourcesSection.vue'
 import SecuritySection from './sections/SecuritySection.vue'
 import TerminalSection from './sections/TerminalSection.vue'
 import { useAppStore } from '@/stores/app'
 
-const emit = defineEmits<{ addProfile: []; addResource: [] }>()
+const emit = defineEmits<{ addResource: [] }>()
 
 const store = useAppStore()
 const filter = ref('')
@@ -44,15 +43,9 @@ const sections = [
     id: 'terminal',
     label: 'Terminal',
     icon: SquareTerminal,
-    keywords: 'police taille curseur historique lecteur écran',
+    keywords: 'police taille curseur historique lecteur écran powershell cmd wsl',
   },
   { id: 'keybindings', label: 'Raccourcis', icon: Keyboard, keywords: 'clavier touches chords' },
-  {
-    id: 'profiles',
-    label: 'Profils locaux',
-    icon: SquareTerminal,
-    keywords: 'powershell cmd wsl shell',
-  },
   {
     id: 'resources',
     label: 'Ressources SSH',
@@ -169,7 +162,6 @@ function restoreDefaults() {
           <AppearanceSection v-else-if="active.id === 'appearance'" />
           <TerminalSection v-else-if="active.id === 'terminal'" />
           <KeybindingsSection v-else-if="active.id === 'keybindings'" />
-          <ProfilesSection v-else-if="active.id === 'profiles'" @add="emit('addProfile')" />
           <ResourcesSection v-else-if="active.id === 'resources'" @add="emit('addResource')" />
           <SecuritySection v-else-if="active.id === 'security'" />
           <DataSection v-else-if="active.id === 'data'" />

@@ -145,3 +145,39 @@ properties at 150 ms, transitions suppressed for one frame on theme switch,
 - Import from a file picker; only export-to-clipboard is wired.
 - A measured performance baseline (`docs/ACCEPTANCE.md` "Performance reference").
 - NVDA, 200 % zoom and RTL passes.
+
+## Sidebar drag and drop — repair, 2026-08-29
+
+The first implementation moved no row in the window. Four defects, in the order
+they blocked the gesture.
+
+| # | Defect | Effect |
+| --- | --- | --- |
+| 1 | `dragDropEnabled` left at its default in `tauri.conf.json`, and no `.drag_and_drop(false)` on `WebviewWindowBuilder` | The native drop target of the webview swallowed every `dragover` and `drop`. Nothing the page did could work. |
+| 2 | Drops accepted only on `dragover` | A pointer that arrived and released at once fired `dragenter` then `dragend`, so the drop was refused and the row sprang back. |
+| 3 | Callers corrected the insertion index that the backend already corrects, and read that index from the visible rows | Downward moves landed one place short, and any hidden row — a favourite, a collapsed folder — shifted the result. |
+| 4 | `dragstart` bound to the row `<li>` without `.stop`, and the payload only readable on `drop` | Dragging a row inside a folder overwrote the payload with the folder. No drop indicator could be shown, since `dragover` cannot read the payload. |
+
+### Result
+
+- Positions are named by the row to land before; the store resolves the anchor
+  against the records. `nodePosition` is the single place that maps one to the
+  other.
+- A row is split into hit bands: the edges insert between rows, the middle of a
+  folder drops inside it. The gap elements are gone, so there is no dead zone.
+- The drop is marked while it is offered: a line on the edge crossed, a ring
+  around the folder or the group, and the dragged row dimmed.
+- A row refuses a drop on itself and a folder refuses its own descendants, so no
+  indicator promises a move the backend would reject.
+
+### Verification
+
+- `node .ai/dnd-repro.mjs` drives real mouse presses and moves over CDP in a
+  scratch workspace: tab to favourites, favourite back to the tree, row into a
+  folder, row out of a folder, tree reorder, open-tab reorder, folder refused on
+  itself, no marker left behind. Ten checks, all passing.
+- `pnpm test` — 32 passing, nine of them new and covering the anchor arithmetic
+  against the contract of `move_sidebar_node` and `favorite_move`.
+- `pnpm typecheck`, `pnpm lint`, `pnpm build`, `cargo test` — passing.
+- `pnpm format:check` still reports the drift it reported before this work, in
+  files this change does not touch.

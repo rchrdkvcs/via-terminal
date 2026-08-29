@@ -13,7 +13,7 @@ These scenarios are the release-level public seams. Unit and integration tests m
 
 - Create two workspaces targeting the same host as different users; edits and identity choices do not propagate.
 - Duplicate a workspace; structure is copied with fresh identifiers and no secret.
-- Create, nest, rename, keyboard-move, drag, and delete folders/resources/profiles.
+- Create, nest, rename, keyboard-move, drag, and delete folders and resources.
 - Collapse folders and the active workspace section, restart, and verify that each workspace restores its own expansion state.
 - Rename a workspace or open tab inline with Enter, Escape, blur, and keyboard-only focus restoration.
 - Drag a sidebar entry before, after, or into a folder; invalid descendant drops must leave the tree unchanged.

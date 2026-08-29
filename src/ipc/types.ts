@@ -114,6 +114,8 @@ export interface Settings {
   fontFamily: string
   fontSize: number
   restoreLocalSessions: boolean
+  /** Executable used when « Nouveau terminal » opens a local shell. */
+  defaultShell: string
 }
 
 export interface AppData {
@@ -188,4 +190,5 @@ export const defaultSettings: Settings = {
   fontFamily: 'Cascadia Mono',
   fontSize: 14,
   restoreLocalSessions: false,
+  defaultShell: 'powershell.exe',
 }

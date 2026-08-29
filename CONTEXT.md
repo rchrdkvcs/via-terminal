@@ -4,7 +4,7 @@ The words below are canonical. This file describes the product domain, not its i
 
 ## Workspace
 
-A named work context that owns its organization, resources, identities, profiles, favorites, and saved layout. Workspaces are isolated: ownership is never shared implicitly.
+A named work context that owns its organization, resources, identities, favorites, and saved layout. Workspaces are isolated: ownership is never shared implicitly.
 
 ## Resource
 
@@ -13,10 +13,6 @@ A machine or network destination known inside exactly one workspace. Two resourc
 ## Identity
 
 The non-secret authentication context used to access resources, such as a username and key reference. An identity belongs to exactly one workspace and cannot be reused by another.
-
-## Local profile
-
-A saved recipe for starting a local shell, including its shell, initial location, and terminal presentation.
 
 ## Session
 
@@ -36,7 +32,7 @@ A native view onto workspaces and their tabs. Closing a window does not inherent
 
 ## Favorite
 
-A workspace-local shortcut to a resource or local profile.
+A workspace-local shortcut to a resource.
 
 ## Temporary session
 

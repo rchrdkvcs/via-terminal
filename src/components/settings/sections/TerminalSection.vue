@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -11,13 +12,42 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import SettingRow from '../SettingRow.vue'
 import SettingsSection from '../SettingsSection.vue'
+import { shellLabel } from '@/lib/shells'
 import { useAppStore } from '@/stores/app'
 
 const store = useAppStore()
+
+const shellChoices = computed(() => {
+  const current = store.settings.defaultShell || 'powershell.exe'
+  const detected = store.detectedShells
+  const list = detected.includes(current) ? detected : [current, ...detected]
+  return list.length ? list : [current]
+})
 </script>
 
 <template>
-  <SettingsSection title="Terminal" description="Typographie et rendu des sessions.">
+  <SettingsSection
+    title="Terminal"
+    description="Typographie, shell par défaut et rendu des sessions."
+  >
+    <SettingRow
+      label="Terminal par défaut"
+      description="Shell ouvert par « Nouveau terminal » et Ctrl T."
+      for-id="default-shell"
+    >
+      <Select
+        :model-value="store.settings.defaultShell"
+        @update:model-value="store.updateSettings({ defaultShell: String($event) })"
+      >
+        <SelectTrigger id="default-shell" class="w-56"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem v-for="shell in shellChoices" :key="shell" :value="shell">
+            {{ shellLabel(shell) }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </SettingRow>
+
     <SettingRow label="Police" description="Une police à chasse fixe donne le meilleur résultat.">
       <Input
         id="font-family"

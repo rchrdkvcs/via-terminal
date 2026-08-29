@@ -47,7 +47,7 @@ function toggleMaximize(event: MouseEvent) {
 
 /**
  * The pill names what the window is showing. An SSH session is best identified
- * by its destination, a local shell by the profile the user named.
+ * by its destination, a local shell by the name of the default terminal.
  */
 const title = computed(() => {
   const session = store.activeSession

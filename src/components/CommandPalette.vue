@@ -58,7 +58,7 @@ const commands = computed<Action[]>(() => [
   {
     id: 'new-terminal',
     label: 'Nouveau terminal',
-    detail: 'Profil par défaut · Ctrl T',
+    detail: 'Terminal par défaut · Ctrl T',
     icon: Terminal,
     run: () => store.createTerminal(),
   },

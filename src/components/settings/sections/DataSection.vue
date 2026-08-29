@@ -30,7 +30,6 @@ async function validateAndApply() {
     const preview = await api.validateImport(importPayload.value)
     const counts = [
       `${preview.workspaces.length} espace(s)`,
-      `${preview.profiles.length} profil(s)`,
       `${preview.resources.length} ressource(s)`,
     ].join(', ')
     if (!window.confirm(`Importer ${counts} ? De nouveaux identifiants seront attribués.`)) return

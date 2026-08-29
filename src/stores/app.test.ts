@@ -7,6 +7,8 @@ import { readFileSync } from 'node:fs'
 const spawned: string[] = []
 const closed: string[] = []
 const savedTabs: unknown[] = []
+/** Every reordering call sent to the backend, to assert the resolved index. */
+const moves: Array<Record<string, unknown>> = []
 
 const listeners = new Map<string, (event: { payload: unknown }) => void>()
 
@@ -65,6 +67,37 @@ vi.mock('@/ipc/client', async () => {
       deleteTab: vi.fn(async () => undefined),
       saveWindowState: vi.fn(async (value: unknown) => value),
       updateSettings: vi.fn(async (value: unknown) => value),
+      createSidebarNode: vi.fn(
+        async (
+          workspaceId: string,
+          kind: string,
+          label: string,
+          parentId: string | null,
+          targetId: string | null,
+        ) => {
+          const node = {
+            id: `node-new-${++counter}`,
+            workspaceId,
+            parentId,
+            kind,
+            label,
+            targetId,
+            position: 0,
+          }
+          moves.push({ call: 'create', id: node.id, parentId })
+          return node
+        },
+      ),
+      moveSidebarNode: vi.fn(async (id: string, parentId: string | null, position: number) => {
+        moves.push({ call: 'move', id, parentId, position })
+        return { id, parentId, position }
+      }),
+      setFavorite: vi.fn(async (_ws: string, _kind: string, targetId: string, pinned: boolean) => {
+        moves.push({ call: 'favorite', targetId, pinned })
+      }),
+      moveFavorite: vi.fn(async (id: string, position: number) => {
+        moves.push({ call: 'moveFavorite', id, position })
+      }),
       updateWorkspace: vi.fn(async (id: string, name: string, icon: string) => ({
         ...snapshot().workspaces.find((workspace) => workspace.id === id)!,
         name,
@@ -215,6 +248,7 @@ beforeEach(() => {
   spawned.length = 0
   closed.length = 0
   savedTabs.length = 0
+  moves.length = 0
   window.localStorage?.clear()
 })
 
@@ -229,19 +263,39 @@ describe('snapshot ingestion', () => {
     expect(store.tree).toEqual([])
   })
 
-  it('exposes a favorite as a pinned row above the tree', async () => {
+  it('keeps local launch profiles off the sidebar', async () => {
     const store = await bootedStore()
+    expect(store.favorites).toEqual([])
+    expect(
+      store.tree.flatMap((node) => [node, ...node.children]).map((node) => node.kind),
+    ).not.toContain('profile')
+  })
+
+  it('exposes a resource favorite as a pinned row above the tree', async () => {
+    const store = useAppStore()
+    const data = snapshot()
+    data.favorites = [
+      {
+        id: 'fav-a',
+        workspaceId: WORKSPACE_A,
+        targetKind: 'resource',
+        targetId: RESOURCE_A,
+        position: 0,
+      },
+    ]
+    store.applySnapshot(data)
+
     expect(store.favorites).toHaveLength(1)
     expect(store.favorites[0]).toMatchObject({
-      label: 'PowerShell',
-      kind: 'profile',
-      targetId: PROFILE_A,
+      label: 'Production',
+      kind: 'resource',
+      targetId: RESOURCE_A,
       depth: 0,
     })
-    expect(store.isFavorite(PROFILE_A)).toBe(true)
+    expect(store.isFavorite(RESOURCE_A)).toBe(true)
     expect(
       store.tree.flatMap((node) => [node, ...node.children]).map((node) => node.targetId),
-    ).not.toContain(PROFILE_A)
+    ).not.toContain(RESOURCE_A)
   })
 })
 
@@ -294,18 +348,32 @@ describe('sessions and tabs', () => {
     await store.createTerminal()
 
     expect(store.unfavoritedTabs).toHaveLength(3)
-    expect(store.favorites[0].sessionIds).toEqual([])
+    expect(store.favorites).toEqual([])
   })
 
-  it('moves a temporary tab into its saved target when it is pinned', async () => {
+  it('leaves a local terminal in the open-tab list when pin is requested', async () => {
     const store = await bootedStore()
     await store.createTerminal()
     const tabId = store.activeTabId
 
     await store.organizeTab(tabId)
+    await store.pinTab(tabId, null)
+
+    expect(store.unfavoritedTabs.map((tab) => tab.id)).toEqual([tabId])
+    expect(store.favorites).toEqual([])
+    expect(moves.filter((item) => item.call === 'favorite')).toEqual([])
+  })
+
+  it('pins an SSH tab onto its resource and removes it from the open-tab list', async () => {
+    const store = await bootedStore()
+    await store.openTarget('resource', RESOURCE_A, { reuse: false })
+    const tabId = store.activeTabId
+    store.tabs.find((tab) => tab.id === tabId)!.organized = false
+
+    await store.organizeTab(tabId)
 
     expect(store.unfavoritedTabs).toEqual([])
-    expect(store.favorites[0].sessionIds).toEqual([spawned[0]])
+    expect(store.tree[0].children[0].sessionIds).toEqual([spawned[0]])
   })
 
   it('uses the session identifier returned by ssh_session_connect', async () => {
@@ -320,29 +388,43 @@ describe('sessions and tabs', () => {
 
   it('focuses an already open target instead of spawning a second session', async () => {
     const store = await bootedStore()
-    await store.openTarget('profile', PROFILE_A)
-    await store.openTarget('profile', PROFILE_A)
+    await store.openTarget('resource', RESOURCE_A)
+    await store.openTarget('resource', RESOURCE_A)
     expect(spawned).toHaveLength(1)
     expect(store.visibleTabs).toHaveLength(1)
   })
 
-  it('lists an open target in exactly one sidebar section', async () => {
+  it('lists a local terminal as an open tab and an SSH target in the tree', async () => {
     const store = await bootedStore()
-    await store.openTarget('profile', PROFILE_A)
-    expect(store.favorites[0].sessionIds).toEqual([spawned[0]])
-    expect(store.unfavoritedTabs).toEqual([])
+    await store.createTerminal()
+    expect(store.unfavoritedTabs).toHaveLength(1)
+    expect(store.favorites).toEqual([])
 
     await store.openTarget('resource', RESOURCE_A)
-    expect(store.unfavoritedTabs).toEqual([])
+    expect(store.unfavoritedTabs).toHaveLength(1)
     expect(store.tree[0].children[0].sessionIds).toEqual([spawned[1]])
   })
 
   it('opens a second session when reuse is refused', async () => {
     const store = await bootedStore()
-    await store.openTarget('profile', PROFILE_A)
-    await store.openTarget('profile', PROFILE_A, { reuse: false })
+    await store.openTarget('resource', RESOURCE_A)
+    await store.openTarget('resource', RESOURCE_A, { reuse: false })
     expect(spawned).toHaveLength(2)
     expect(store.visibleTabs).toHaveLength(2)
+  })
+
+  it('marks only the target of the active tab as selected', async () => {
+    const store = await bootedStore()
+    await store.createTerminal()
+    const localTab = store.activeTabId
+    await store.openTarget('resource', RESOURCE_A)
+
+    expect(store.isTargetActive(RESOURCE_A)).toBe(true)
+    expect(store.isTargetActive(PROFILE_A)).toBe(false)
+
+    store.selectTab(localTab)
+    expect(store.isTargetActive(RESOURCE_A)).toBe(false)
+    expect(store.activeTabId).toBe(localTab)
   })
 
   it('keeps sessions alive and remembers the tab of each workspace', async () => {
@@ -412,6 +494,13 @@ describe('desktop shell regressions', () => {
     expect(rows).toContain('Nouveau terminal')
     expect(rows).not.toContain('row.panes')
     expect(tree).not.toContain('SidebarMenuBadge')
+    expect(sidebar).not.toContain('Rien d’organisé pour l’instant')
+  })
+
+  it('switches workspace on a left click and does not open a menu', () => {
+    const bar = readFileSync('src/components/sidebar/WorkspaceBar.vue', 'utf8')
+    expect(bar).toContain('@click="store.switchWorkspace(workspace.id)"')
+    expect(bar).not.toContain('Ouvrir «')
   })
 })
 
@@ -538,5 +627,228 @@ describe('restorable layout', () => {
     await store.activateRestorableSession('saved-1')
     expect(spawned).toHaveLength(1)
     expect(store.activeSession).toMatchObject({ status: 'connected', id: spawned[0] })
+  })
+})
+
+describe('sidebar drag and drop', () => {
+  /**
+   * `move_sidebar_node` and `favorite_move` insert into the sibling list with
+   * the moved row already taken out. A drop names the row to land before, so
+   * the store must resolve that anchor against the same list, without the
+   * off-by-one correction the caller used to apply on top.
+   */
+  function flatSnapshot() {
+    const data = snapshot()
+    data.sidebarNodes = [
+      {
+        id: 'n1',
+        workspaceId: WORKSPACE_A,
+        parentId: null,
+        kind: 'folder',
+        label: 'A',
+        targetId: null,
+        position: 0,
+      },
+      {
+        id: 'n2',
+        workspaceId: WORKSPACE_A,
+        parentId: null,
+        kind: 'folder',
+        label: 'B',
+        targetId: null,
+        position: 1,
+      },
+      {
+        id: 'n3',
+        workspaceId: WORKSPACE_A,
+        parentId: null,
+        kind: 'folder',
+        label: 'C',
+        targetId: null,
+        position: 2,
+      },
+    ]
+    data.favorites = []
+    return data
+  }
+
+  it('moves a node down to the position that follows its former place', async () => {
+    const store = useAppStore()
+    store.applySnapshot(flatSnapshot())
+
+    // A dropped before C: siblings without A are [B, C], so C sits at index 1.
+    await store.reparentNode('n1', null, 'n3')
+    expect(moves).toEqual([{ call: 'move', id: 'n1', parentId: null, position: 1 }])
+  })
+
+  it('moves a node up without shifting the anchor', async () => {
+    const store = useAppStore()
+    store.applySnapshot(flatSnapshot())
+
+    await store.reparentNode('n3', null, 'n1')
+    expect(moves).toEqual([{ call: 'move', id: 'n3', parentId: null, position: 0 }])
+  })
+
+  it('appends when no row follows the drop', async () => {
+    const store = useAppStore()
+    store.applySnapshot(flatSnapshot())
+
+    await store.reparentNode('n1', null, null)
+    expect(moves).toEqual([{ call: 'move', id: 'n1', parentId: null, position: 2 }])
+  })
+
+  it('drops a node into a folder at the end of its children', async () => {
+    const store = useAppStore()
+    store.applySnapshot(flatSnapshot())
+
+    await store.reparentNode('n3', 'n1', null)
+    expect(moves).toEqual([{ call: 'move', id: 'n3', parentId: 'n1', position: 0 }])
+  })
+
+  it('refuses a drop of a row onto itself', async () => {
+    const store = useAppStore()
+    store.applySnapshot(flatSnapshot())
+
+    await store.reparentNode('n1', null, 'n1')
+    await store.reparentNode('n1', 'n1', null)
+    expect(moves).toEqual([])
+  })
+
+  it('unpins a favorite when it lands in the tree', async () => {
+    const store = useAppStore()
+    const data = snapshot()
+    data.favorites = [
+      {
+        id: 'fav-a',
+        workspaceId: WORKSPACE_A,
+        targetKind: 'resource',
+        targetId: RESOURCE_A,
+        position: 0,
+      },
+    ]
+    store.applySnapshot(data)
+
+    await store.placeTarget(RESOURCE_A, 'node-folder', null)
+    expect(moves).toEqual([
+      { call: 'favorite', targetId: RESOURCE_A, pinned: false },
+      { call: 'move', id: 'node-resource', parentId: 'node-folder', position: 0 },
+    ])
+  })
+
+  it('reorders favorites against the list without the moved one', async () => {
+    const store = useAppStore()
+    const data = snapshot()
+    data.resources = [
+      ...data.resources,
+      {
+        id: 'resource-b',
+        workspaceId: WORKSPACE_A,
+        name: 'Staging',
+        sshAlias: 'stg',
+        host: null,
+        port: null,
+        identityId: IDENTITY_A,
+      },
+    ]
+    data.favorites = [
+      {
+        id: 'f1',
+        workspaceId: WORKSPACE_A,
+        targetKind: 'resource',
+        targetId: RESOURCE_A,
+        position: 0,
+      },
+      {
+        id: 'f2',
+        workspaceId: WORKSPACE_A,
+        targetKind: 'resource',
+        targetId: 'resource-b',
+        position: 1,
+      },
+    ]
+    store.applySnapshot(data)
+
+    // f1 dropped after f2 means "before nothing": last place, index 1.
+    await store.pinTarget(RESOURCE_A, null)
+    expect(moves).toEqual([{ call: 'moveFavorite', id: 'f1', position: 1 }])
+  })
+
+  it('pins a tree row that was never a favorite, at the head of the list', async () => {
+    const store = useAppStore()
+    const data = snapshot()
+    data.resources = [
+      ...data.resources,
+      {
+        id: 'resource-b',
+        workspaceId: WORKSPACE_A,
+        name: 'Staging',
+        sshAlias: 'stg',
+        host: null,
+        port: null,
+        identityId: IDENTITY_A,
+      },
+    ]
+    data.sidebarNodes.push({
+      id: 'node-staging',
+      workspaceId: WORKSPACE_A,
+      parentId: null,
+      kind: 'resource',
+      label: 'Staging',
+      targetId: 'resource-b',
+      position: 2,
+    })
+    data.favorites = [
+      {
+        id: 'f2',
+        workspaceId: WORKSPACE_A,
+        targetKind: 'resource',
+        targetId: RESOURCE_A,
+        position: 0,
+      },
+    ]
+    store.applySnapshot(data)
+
+    await store.pinTarget('resource-b', 'f2')
+    expect(moves[0]).toEqual({ call: 'favorite', targetId: 'resource-b', pinned: true })
+  })
+
+  it('refuses to pin a local launch profile', async () => {
+    const store = useAppStore()
+    store.applySnapshot(snapshot())
+    await store.pinTarget(PROFILE_A, null)
+    await store.placeTarget(PROFILE_A, null, null)
+    expect(moves).toEqual([])
+  })
+
+  it('reorders open tabs by naming the tab to precede', async () => {
+    const store = useAppStore()
+    const data = snapshot()
+    data.savedSessions = ['t1', 't2', 't3'].map((id) => ({
+      id: `session-${id}`,
+      workspaceId: WORKSPACE_A,
+      targetKind: 'resource' as const,
+      targetId: RESOURCE_A,
+      workingDirectory: null,
+    }))
+    data.tabs = ['t1', 't2', 't3'].map((id, position) => ({
+      id,
+      workspaceId: WORKSPACE_A,
+      name: id,
+      root: { kind: 'pane' as const, sessionId: `session-${id}` },
+      position,
+      organized: false,
+    }))
+    store.applySnapshot(data)
+    await store.dismissRecovery(true)
+    expect(store.visibleTabs.map((tab) => tab.id)).toEqual(['t1', 't2', 't3'])
+
+    await store.reorderTab('t1', null)
+    expect(store.visibleTabs.map((tab) => tab.id)).toEqual(['t2', 't3', 't1'])
+
+    await store.reorderTab('t1', 't2')
+    expect(store.visibleTabs.map((tab) => tab.id)).toEqual(['t1', 't2', 't3'])
+
+    await store.reorderTab('t3', 't2')
+    expect(store.visibleTabs.map((tab) => tab.id)).toEqual(['t1', 't3', 't2'])
   })
 })

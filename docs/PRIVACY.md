@@ -6,7 +6,7 @@ Terminarr is local-first and requires no account.
 
 - Workspace names and organization
 - Resource addresses and non-secret identity metadata
-- Local profile configuration and non-secret environment values
+- Default shell setting and non-secret environment values
 - Favorites, tab/pane layouts, window state, and preferences
 - Redacted rotating diagnostics
 

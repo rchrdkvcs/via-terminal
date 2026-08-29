@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { workspaceIcon, workspaceIconNames, workspaceIcons } from '@/lib/icons'
 import { useAppStore } from '@/stores/app'
 
-const emit = defineEmits<{ addProfile: []; addResource: [] }>()
+const emit = defineEmits<{ addResource: [] }>()
 const store = useAppStore()
 const editing = ref(false)
 const draft = ref('')
@@ -57,7 +57,7 @@ function openContextMenu() {
 </script>
 
 <template>
-  <div class="relative flex w-full min-w-0 items-center rounded-lg px-1 py-0.5">
+  <div class="relative flex w-full min-w-0 items-center">
     <Input
       v-if="editing"
       ref="input"
@@ -70,7 +70,7 @@ function openContextMenu() {
     />
     <button
       v-else
-      class="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-start text-sm transition-colors hover:bg-sidebar-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+      class="flex h-8 w-full min-w-0 items-center gap-2 rounded-md p-2 text-start text-sm transition-colors hover:bg-sidebar-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
       :aria-expanded="!store.workspaceContentCollapsed"
       aria-controls="workspace-sidebar-content"
       @click="store.toggleWorkspaceContent()"
@@ -142,7 +142,6 @@ function openContextMenu() {
           </button>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem @select="emit('addProfile')">Nouveau profil local</DropdownMenuItem>
         <DropdownMenuItem @select="emit('addResource')">Nouvelle ressource SSH</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

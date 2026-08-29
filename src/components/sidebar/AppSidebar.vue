@@ -12,9 +12,15 @@ import SidebarTree from './SidebarTree.vue'
 import WorkspaceBar from './WorkspaceBar.vue'
 import WorkspaceIndicator from './WorkspaceIndicator.vue'
 import { useAppStore } from '@/stores/app'
-import { readSidebarDrag } from '@/lib/sidebar-dnd'
+import {
+  acceptDrop,
+  activeDrag,
+  dropHint,
+  endSidebarDrag,
+  readSidebarDrag,
+} from '@/lib/sidebar-dnd'
 
-const emit = defineEmits<{ addProfile: []; addResource: [] }>()
+const emit = defineEmits<{ addResource: [] }>()
 
 const store = useAppStore()
 
@@ -24,26 +30,64 @@ function onWheel(event: WheelEvent) {
   store.cycleWorkspace(event.deltaY > 0 ? 1 : -1)
 }
 
-function dropAtRoot(event: DragEvent) {
-  const drag = readSidebarDrag(event)
+/** The target behind a drag, so the favourites can refuse a folder. */
+function targetIdOf(drag: NonNullable<typeof activeDrag.value>) {
+  if (drag.type === 'favorite') return drag.targetId
+  if (drag.type === 'node')
+    return store.sidebarNodes.find((node) => node.id === drag.id)?.targetId ?? null
+  const tab = store.tabs.find((item) => item.id === drag.id)
+  const sessionId = tab && store.paneSessionIds(tab.root)[0]
+  return sessionId ? (store.sessionById.get(sessionId)?.targetId ?? null) : null
+}
+
+/**
+ * The blank space of a group appends to it. Rows stop their own drops, so this
+ * only runs when the pointer misses every row — including on an empty list.
+ */
+function isPinnable(drag: NonNullable<typeof activeDrag.value>) {
+  const targetId = targetIdOf(drag)
+  return Boolean(targetId && store.resources.some((item) => item.id === targetId))
+}
+
+function overGroup(event: DragEvent, key: 'favorites' | 'tree') {
+  const drag = activeDrag.value
   if (!drag) return
-  const position = store.sidebarNodes.filter(
-    (node) => node.workspaceId === store.activeWorkspaceId && node.parentId === null,
-  ).length
-  if (drag.type === 'node') void store.reparentNode(drag.id, null, position)
-  else if (drag.type === 'tab') void store.placeTab(drag.id, null, position)
-  else void store.placeTarget(drag.targetId, null, position)
+  if (key === 'favorites' && !isPinnable(drag)) return
+  acceptDrop(event)
+  dropHint.value = `${key}:into`
 }
 
 function dropInFavorites(event: DragEvent) {
+  event.preventDefault()
   const drag = readSidebarDrag(event)
+  endSidebarDrag()
   if (!drag) return
-  if (drag.type === 'favorite') void store.pinTarget(drag.targetId, store.favorites.length)
-  else if (drag.type === 'tab') void store.pinTab(drag.id, store.favorites.length)
-  else {
-    const targetId = store.sidebarNodes.find((node) => node.id === drag.id)?.targetId
-    if (targetId) void store.pinTarget(targetId, store.favorites.length)
+  if (drag.type === 'tab') {
+    void store.pinTab(drag.id, null)
+    return
   }
+  const targetId = targetIdOf(drag)
+  if (targetId) void store.pinTarget(targetId, null)
+}
+
+function dropAtRoot(event: DragEvent) {
+  event.preventDefault()
+  const drag = readSidebarDrag(event)
+  endSidebarDrag()
+  if (!drag) return
+  if (drag.type === 'node') void store.reparentNode(drag.id, null, null)
+  else if (drag.type === 'tab') void store.placeTab(drag.id, null, null)
+  else void store.placeTarget(drag.targetId, null, null)
+}
+
+function groupHint(key: 'favorites' | 'tree') {
+  return dropHint.value === `${key}:into` ? 'rounded-md ring-2 ring-sidebar-ring ring-inset' : ''
+}
+
+/** Leaving the sidebar entirely must not leave a drop marker behind. */
+function onLeave(event: DragEvent) {
+  const next = event.relatedTarget as Node | null
+  if (!next || !(event.currentTarget as HTMLElement).contains(next)) dropHint.value = null
 }
 </script>
 
@@ -52,9 +96,15 @@ function dropInFavorites(event: DragEvent) {
     `collapsible="none"` because the shell animates this panel itself: pinned it
     sits in the flow, peeked it floats over the terminal so no reflow happens.
   -->
-  <Sidebar collapsible="none" class="h-full w-full border-0 bg-transparent" @wheel="onWheel">
+  <Sidebar
+    collapsible="none"
+    class="h-full w-full border-0 bg-transparent"
+    @wheel="onWheel"
+    @dragleave="onLeave"
+    @dragend="endSidebarDrag()"
+  >
     <SidebarHeader class="gap-0 p-2 pb-1">
-      <WorkspaceIndicator @add-profile="emit('addProfile')" @add-resource="emit('addResource')" />
+      <WorkspaceIndicator @add-resource="emit('addResource')" />
     </SidebarHeader>
 
     <SidebarContent
@@ -76,25 +126,29 @@ function dropInFavorites(event: DragEvent) {
       >
         <div v-if="!store.workspaceContentCollapsed" id="workspace-sidebar-content">
           <SidebarGroup
-            class="min-h-8 p-2 py-1"
+            v-if="store.favorites.length || (activeDrag && isPinnable(activeDrag))"
+            class="p-2 py-1"
+            :class="[groupHint('favorites'), store.favorites.length ? '' : 'min-h-10']"
             aria-label="Favoris — déposez ici pour épingler"
-            @dragover.prevent
-            @drop.prevent="dropInFavorites"
+            @dragenter="overGroup($event, 'favorites')"
+            @dragover="overGroup($event, 'favorites')"
+            @drop="dropInFavorites"
           >
             <SidebarTree :nodes="store.favorites" pinned />
           </SidebarGroup>
 
-          <SidebarGroup class="min-h-10 p-2 py-1" @dragover.prevent @drop.prevent="dropAtRoot">
+          <SidebarGroup
+            v-if="store.tree.length"
+            class="p-2 py-1"
+            :class="groupHint('tree')"
+            aria-label="Organisation de l’espace"
+            @dragenter="overGroup($event, 'tree')"
+            @dragover="overGroup($event, 'tree')"
+            @drop="dropAtRoot"
+          >
             <SidebarTree :nodes="store.tree" />
-            <p
-              v-if="!store.tree.length && !store.favorites.length"
-              class="px-2 py-4 text-xs leading-relaxed text-sidebar-foreground/50"
-            >
-              Rien d’organisé pour l’instant. Ajoutez un profil local ou une ressource SSH avec le
-              bouton ＋.
-            </p>
           </SidebarGroup>
-          <SidebarSeparator class="mx-2 my-1" />
+          <SidebarSeparator v-if="store.favorites.length || store.tree.length" class="mx-2 my-1" />
         </div>
       </Transition>
 
@@ -104,7 +158,7 @@ function dropInFavorites(event: DragEvent) {
     </SidebarContent>
 
     <SidebarFooter class="p-2">
-      <WorkspaceBar @add-profile="emit('addProfile')" @add-resource="emit('addResource')" />
+      <WorkspaceBar @add-resource="emit('addResource')" />
     </SidebarFooter>
   </Sidebar>
 </template>

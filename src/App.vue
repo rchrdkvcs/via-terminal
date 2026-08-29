@@ -32,7 +32,7 @@ const store = useAppStore()
 useAppearance()
 useShortcuts()
 
-const targetDialog = ref<'profile' | 'resource' | null>(null)
+const targetDialog = ref<'resource' | null>(null)
 let unbind: (() => void) | undefined
 
 const closingTab = computed(
@@ -109,10 +109,7 @@ window.addEventListener('beforeunload', () => {
           v-if="store.sidebarPinned && store.route === 'workspace'"
           class="h-full w-64 shrink-0 overflow-hidden"
         >
-          <AppSidebar
-            @add-profile="targetDialog = 'profile'"
-            @add-resource="targetDialog = 'resource'"
-          />
+          <AppSidebar @add-resource="targetDialog = 'resource'" />
         </div>
       </Transition>
 
@@ -134,10 +131,7 @@ window.addEventListener('beforeunload', () => {
             class="absolute inset-y-0 start-1 z-30 w-64 overflow-hidden rounded-xl border border-border/50 bg-sidebar shadow-2xl"
             @mouseleave="hideSidebar"
           >
-            <AppSidebar
-              @add-profile="targetDialog = 'profile'"
-              @add-resource="targetDialog = 'resource'"
-            />
+            <AppSidebar @add-resource="targetDialog = 'resource'" />
           </div>
         </Transition>
       </template>
@@ -145,11 +139,7 @@ window.addEventListener('beforeunload', () => {
       <main
         class="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/50 bg-card"
       >
-        <SettingsPage
-          v-if="store.route === 'settings'"
-          @add-profile="targetDialog = 'profile'"
-          @add-resource="targetDialog = 'resource'"
-        />
+        <SettingsPage v-if="store.route === 'settings'" @add-resource="targetDialog = 'resource'" />
 
         <template v-else>
           <TerminalSearch />

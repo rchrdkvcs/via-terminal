@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Check, Copy, FolderPlus, Lock, Plus, Server, Terminal } from '@lucide/vue'
+import { Check, FolderPlus, Lock, Plus, Server, Terminal } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -16,7 +16,7 @@ import { workspaceIcon, workspaceIconNames, workspaceIcons } from '@/lib/icons'
 import { useAppStore } from '@/stores/app'
 
 const store = useAppStore()
-const emit = defineEmits<{ addProfile: []; addResource: [] }>()
+const emit = defineEmits<{ addResource: [] }>()
 
 const creating = ref(false)
 const draftName = ref('')
@@ -58,36 +58,19 @@ function submit() {
     <div class="flex items-center justify-center gap-1 overflow-x-auto no-scrollbar">
       <Tooltip v-for="(workspace, index) in store.workspaces" :key="workspace.id">
         <TooltipTrigger as-child>
-          <DropdownMenu>
-            <DropdownMenuTrigger as-child>
-              <button
-                class="grid size-7 shrink-0 place-items-center rounded-md transition-[background-color,color] duration-150 active:scale-[0.96]"
-                :class="
-                  workspace.id === store.activeWorkspaceId
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground/50 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
-                "
-                :aria-current="workspace.id === store.activeWorkspaceId ? 'true' : undefined"
-                :aria-label="workspace.name"
-                @click="store.switchWorkspace(workspace.id)"
-                @contextmenu.prevent
-              >
-                <component :is="workspaceIcon(workspace.icon)" :size="16" :stroke-width="1.5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="top">
-              <DropdownMenuItem @select="store.switchWorkspace(workspace.id)">
-                Ouvrir « {{ workspace.name }} »
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                @select="store.duplicateWorkspace(workspace.id, `${workspace.name} (copie)`)"
-              >
-                <Copy :stroke-width="1.5" />
-                Dupliquer
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <button
+            class="grid size-7 shrink-0 place-items-center rounded-md transition-[background-color,color] duration-150 active:scale-[0.96]"
+            :class="
+              workspace.id === store.activeWorkspaceId
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                : 'text-sidebar-foreground/50 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
+            "
+            :aria-current="workspace.id === store.activeWorkspaceId ? 'true' : undefined"
+            :aria-label="workspace.name"
+            @click="store.switchWorkspace(workspace.id)"
+          >
+            <component :is="workspaceIcon(workspace.icon)" :size="16" :stroke-width="1.5" />
+          </button>
         </TooltipTrigger>
         <TooltipContent side="top">{{ workspace.name }} · Alt {{ index + 1 }}</TooltipContent>
       </Tooltip>
@@ -116,9 +99,6 @@ function submit() {
             ><Plus :stroke-width="1.5" />Nouvel espace de travail</DropdownMenuItem
           >
           <DropdownMenuSeparator />
-          <DropdownMenuItem @select="emit('addProfile')"
-            ><Terminal :stroke-width="1.5" />Nouveau profil local</DropdownMenuItem
-          >
           <DropdownMenuItem @select="emit('addResource')"
             ><Server :stroke-width="1.5" />Nouvelle ressource SSH</DropdownMenuItem
           >

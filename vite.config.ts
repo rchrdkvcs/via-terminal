@@ -24,8 +24,9 @@ export default defineConfig(async () => ({
     host: host || false,
     hmr: host ? { protocol: 'ws', host, port: 1421 } : undefined,
     watch: {
-      // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ['**/src-tauri/**'],
+      // 3. tell Vite to ignore watching `src-tauri`, and `.ai`, whose dev
+      //    scripts drive the running window and must not reload it.
+      ignored: ['**/src-tauri/**', '**/.ai/**'],
     },
   },
   // WebView2 on Windows and WKWebView elsewhere both support modern syntax.
