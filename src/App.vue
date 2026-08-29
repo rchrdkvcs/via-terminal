@@ -33,8 +33,6 @@ useAppearance()
 useShortcuts()
 
 const targetDialog = ref<'profile' | 'resource' | null>(null)
-let revealTimer: ReturnType<typeof setTimeout> | undefined
-let hideTimer: ReturnType<typeof setTimeout> | undefined
 let unbind: (() => void) | undefined
 
 const closingTab = computed(
@@ -46,28 +44,12 @@ const closingTab = computed(
  * to rest on it, so crossing the window edge on the way somewhere else does not
  * flash the panel open.
  */
-function armReveal() {
-  clearTimeout(hideTimer)
-  clearTimeout(revealTimer)
-  revealTimer = setTimeout(() => {
-    store.sidebarPeek = true
-  }, store.preferences.sidebarRevealDelay)
+function revealSidebar() {
+  store.sidebarPeek = true
 }
 
-function cancelReveal() {
-  clearTimeout(revealTimer)
-}
-
-/** A short grace period lets the pointer travel from the strip onto the panel. */
-function armHide() {
-  clearTimeout(hideTimer)
-  hideTimer = setTimeout(() => {
-    store.sidebarPeek = false
-  }, 220)
-}
-
-function keepOpen() {
-  clearTimeout(hideTimer)
+function hideSidebar() {
+  store.sidebarPeek = false
 }
 
 // Notices surface as toasts so they never displace the terminal below them.
@@ -97,8 +79,6 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  clearTimeout(revealTimer)
-  clearTimeout(hideTimer)
   unbind?.()
 })
 
@@ -141,27 +121,18 @@ window.addEventListener('beforeunload', () => {
       terminal rather than pushing it, so peeking never reflows xterm.
     -->
       <template v-if="!store.sidebarPinned && store.route === 'workspace'">
-        <div
-          class="group h-full w-2 shrink-0 cursor-e-resize rounded-full"
-          @mouseenter="armReveal"
-          @mouseleave="cancelReveal"
-        >
-          <div
-            class="h-full w-full rounded-full bg-transparent transition-colors duration-150 group-hover:bg-neutral-900"
-          />
-        </div>
+        <div class="h-full w-1 shrink-0" aria-hidden="true" @mouseenter="revealSidebar" />
 
         <Transition
-          enter-active-class="transition-[translate,opacity] duration-200 ease-out"
+          enter-active-class="transition-[translate,opacity] duration-75 ease-out"
           enter-from-class="-translate-x-full opacity-0"
-          leave-active-class="transition-[translate,opacity] duration-150 ease-out"
+          leave-active-class="transition-[translate,opacity] duration-75 ease-out"
           leave-to-class="-translate-x-full opacity-0"
         >
           <div
             v-if="store.sidebarPeek"
-            class="absolute inset-y-0 start-2 z-30 w-64 overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950 shadow-2xl"
-            @mouseenter="keepOpen"
-            @mouseleave="armHide"
+            class="absolute inset-y-0 start-1 z-30 w-64 overflow-hidden rounded-xl border border-border/50 bg-sidebar shadow-2xl"
+            @mouseleave="hideSidebar"
           >
             <AppSidebar
               @add-profile="targetDialog = 'profile'"
@@ -172,7 +143,7 @@ window.addEventListener('beforeunload', () => {
       </template>
 
       <main
-        class="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card"
+        class="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/50 bg-card"
       >
         <SettingsPage
           v-if="store.route === 'settings'"

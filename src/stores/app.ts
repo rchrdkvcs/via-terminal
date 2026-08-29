@@ -183,8 +183,14 @@ export const useAppStore = defineStore('app', () => {
   })
 
   const tree = computed<TreeNode[]>(() => {
+    const favoriteTargetIds = new Set(
+      favoriteRecords.value
+        .filter((item) => item.workspaceId === activeWorkspaceId.value)
+        .map((item) => item.targetId),
+    )
     const records = sidebarNodes.value
       .filter((node) => node.workspaceId === activeWorkspaceId.value)
+      .filter((node) => !node.targetId || !favoriteTargetIds.has(node.targetId))
       .sort((a, b) => a.position - b.position)
 
     const byId = new Map<Id, TreeNode>()
@@ -256,6 +262,15 @@ export const useAppStore = defineStore('app', () => {
       .filter((tab) => tab.workspaceId === activeWorkspaceId.value)
       .sort((a, b) => a.position - b.position),
   )
+
+  const unfavoritedTabs = computed(() => {
+    const favoriteTargetIds = new Set(favorites.value.map((favorite) => favorite.targetId))
+    return visibleTabs.value.filter((tab) => {
+      const firstSessionId = paneSessionIds(tab.root)[0]
+      const targetId = sessions.value.find((session) => session.id === firstSessionId)?.targetId
+      return !targetId || !favoriteTargetIds.has(targetId)
+    })
+  })
 
   const activeTabId = computed(() => activeTabPerWorkspace.value[activeWorkspaceId.value] ?? '')
   const activeTab = computed(
@@ -1241,6 +1256,7 @@ export const useAppStore = defineStore('app', () => {
     tree,
     favorites,
     visibleTabs,
+    unfavoritedTabs,
     activeTabId,
     activeTab,
     activeSession,

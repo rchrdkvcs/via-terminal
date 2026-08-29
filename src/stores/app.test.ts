@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import type { AppData } from '@/ipc/types'
 import { defaultSettings } from '@/ipc/types'
+import { readFileSync } from 'node:fs'
 
 const spawned: string[] = []
 const closed: string[] = []
@@ -215,7 +216,7 @@ describe('snapshot ingestion', () => {
   it('builds the sidebar tree of the active workspace only', async () => {
     const store = await bootedStore()
     expect(store.activeWorkspaceId).toBe(WORKSPACE_A)
-    expect(store.tree.map((node) => node.label)).toEqual(['Clients', 'PowerShell'])
+    expect(store.tree.map((node) => node.label)).toEqual(['Clients'])
     expect(store.tree[0].children[0]).toMatchObject({ label: 'Production', depth: 1 })
 
     store.switchWorkspace(WORKSPACE_B)
@@ -232,6 +233,9 @@ describe('snapshot ingestion', () => {
       depth: 0,
     })
     expect(store.isFavorite(PROFILE_A)).toBe(true)
+    expect(
+      store.tree.flatMap((node) => [node, ...node.children]).map((node) => node.targetId),
+    ).not.toContain(PROFILE_A)
   })
 })
 
@@ -265,6 +269,16 @@ describe('sessions and tabs', () => {
     await store.openTarget('profile', PROFILE_A)
     expect(spawned).toHaveLength(1)
     expect(store.visibleTabs).toHaveLength(1)
+  })
+
+  it('lists an open target in exactly one sidebar section', async () => {
+    const store = await bootedStore()
+    await store.openTarget('profile', PROFILE_A)
+    expect(store.favorites[0].sessionIds).toEqual([spawned[0]])
+    expect(store.unfavoritedTabs).toEqual([])
+
+    await store.openTarget('resource', RESOURCE_A)
+    expect(store.unfavoritedTabs.map((tab) => tab.name)).toEqual(['Production'])
   })
 
   it('opens a second session when reuse is refused', async () => {
@@ -305,6 +319,29 @@ describe('sessions and tabs', () => {
     await store.closeTab(tabId, { force: true })
     expect(store.visibleTabs).toHaveLength(0)
     expect(closed).toEqual(spawned)
+  })
+})
+
+describe('desktop shell regressions', () => {
+  it('grants the native titlebar actions used by the custom header', () => {
+    const capability = JSON.parse(readFileSync('src-tauri/capabilities/default.json', 'utf8'))
+    expect(capability.permissions).toEqual(
+      expect.arrayContaining([
+        'core:window:allow-minimize',
+        'core:window:allow-toggle-maximize',
+        'core:window:allow-close',
+        'core:window:allow-start-dragging',
+      ]),
+    )
+  })
+
+  it('keeps the header balanced and the edge reveal immediate', () => {
+    const topBar = readFileSync('src/components/workspace/TopBar.vue', 'utf8')
+    const app = readFileSync('src/App.vue', 'utf8')
+    expect(topBar).toContain('grid-cols-3')
+    expect(topBar).toContain('window.startDragging()')
+    expect(app).not.toContain('sidebarRevealDelay')
+    expect(app).not.toContain('group-hover:bg-neutral-900')
   })
 })
 

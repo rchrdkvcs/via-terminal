@@ -16,7 +16,7 @@ const store = useAppStore()
  * the session it presents; a split tab shows the session of its active pane.
  */
 const rows = computed(() =>
-  store.visibleTabs.map((tab) => {
+  store.unfavoritedTabs.map((tab) => {
     const ids = store.paneSessionIds(tab.root)
     const statuses = ids.map((id) => store.sessionById.get(id)?.status)
     const state =

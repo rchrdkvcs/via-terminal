@@ -15,6 +15,18 @@ async function windowAction(action: 'minimize' | 'maximize' | 'close') {
   else await window.close()
 }
 
+async function startDragging(event: MouseEvent) {
+  if ((event.target as HTMLElement).closest('button')) return
+  const { getCurrentWindow } = await import('@tauri-apps/api/window')
+  const window = getCurrentWindow()
+  await window.startDragging()
+}
+
+function toggleMaximize(event: MouseEvent) {
+  if ((event.target as HTMLElement).closest('button')) return
+  void windowAction('maximize')
+}
+
 /**
  * The pill names what the window is showing. An SSH session is best identified
  * by its destination, a local shell by the profile the user named.
@@ -27,29 +39,36 @@ const title = computed(() => {
 </script>
 
 <template>
-  <header data-tauri-drag-region class="flex h-[54px] shrink-0 items-center gap-2 px-2">
-    <Tooltip>
-      <TooltipTrigger as-child>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          class="shrink-0 text-muted-foreground active:scale-[0.96]"
-          :aria-label="
-            store.sidebarPinned ? 'Masquer la barre latérale' : 'Afficher la barre latérale'
-          "
-          @click="store.sidebarPinned = !store.sidebarPinned"
-        >
-          <PanelLeft :stroke-width="1.5" />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom">Barre latérale · Ctrl B</TooltipContent>
-    </Tooltip>
+  <header
+    data-tauri-drag-region
+    class="grid h-[54px] shrink-0 grid-cols-3 items-center gap-2 px-2"
+    @mousedown.left="startDragging"
+    @dblclick="toggleMaximize"
+  >
+    <div class="flex justify-start">
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            class="shrink-0 text-muted-foreground active:scale-[0.96]"
+            :aria-label="
+              store.sidebarPinned ? 'Masquer la barre latérale' : 'Afficher la barre latérale'
+            "
+            @click="store.sidebarPinned = !store.sidebarPinned"
+          >
+            <PanelLeft :stroke-width="1.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Barre latérale · Ctrl B</TooltipContent>
+      </Tooltip>
+    </div>
 
     <!--
       Centred pill. It is a button, not a field: it opens the command palette,
       which already owns search over actions, resources and workspaces.
     -->
-    <div class="flex min-w-0 flex-1 justify-center">
+    <div class="flex min-w-0 justify-center">
       <button
         class="flex h-8 w-full max-w-xl items-center gap-2 rounded-lg border bg-card px-3 text-sm text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         @click="store.paletteOpen = true"
@@ -74,7 +93,7 @@ const title = computed(() => {
       </button>
     </div>
 
-    <div class="flex shrink-0 items-center gap-1">
+    <div class="flex shrink-0 items-center justify-end gap-1">
       <Tooltip>
         <TooltipTrigger as-child>
           <Button

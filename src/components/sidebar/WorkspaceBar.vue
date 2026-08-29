@@ -37,23 +37,25 @@ function submit() {
     the current workspace; the header at the top of the sidebar repeats the same
     icon and adds the name.
   -->
-  <div class="grid grid-cols-[2rem_1fr_2rem] items-center gap-2">
-    <Tooltip>
-      <TooltipTrigger as-child>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          class="text-sidebar-foreground/60 active:scale-[0.96]"
-          aria-label="Verrouiller Terminarr"
-          @click="store.lock()"
-        >
-          <Lock :stroke-width="1.5" />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="top">Verrouiller · Ctrl Maj L</TooltipContent>
-    </Tooltip>
+  <div class="grid grid-cols-3 items-center gap-2 w-full">
+    <div class="flex items-center justify-start">
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            class="text-sidebar-foreground/60 active:scale-[0.96]"
+            aria-label="Verrouiller Terminarr"
+            @click="store.lock()"
+          >
+            <Lock :stroke-width="1.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">Verrouiller · Ctrl Maj L</TooltipContent>
+      </Tooltip>
+    </div>
 
-    <div class="flex min-w-0 items-center justify-center gap-1 overflow-x-auto no-scrollbar">
+    <div class="flex items-center justify-center gap-1 overflow-x-auto no-scrollbar">
       <Tooltip v-for="(workspace, index) in store.workspaces" :key="workspace.id">
         <TooltipTrigger as-child>
           <DropdownMenu>
@@ -91,36 +93,38 @@ function submit() {
       </Tooltip>
     </div>
 
-    <DropdownMenu>
-      <DropdownMenuTrigger as-child>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          class="shrink-0 text-sidebar-foreground/60 active:scale-[0.96]"
-          aria-label="Ajouter"
-        >
-          <Plus :stroke-width="1.5" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="end" class="w-56">
-        <DropdownMenuItem @select="store.createTerminal()"
-          ><Terminal :stroke-width="1.5" />Nouveau terminal</DropdownMenuItem
-        >
-        <DropdownMenuItem @select="store.createFolder('Nouveau dossier')"
-          ><FolderPlus :stroke-width="1.5" />Nouveau dossier</DropdownMenuItem
-        >
-        <DropdownMenuItem @select="creating = true"
-          ><Plus :stroke-width="1.5" />Nouvel espace de travail</DropdownMenuItem
-        >
-        <DropdownMenuSeparator />
-        <DropdownMenuItem @select="emit('addProfile')"
-          ><Terminal :stroke-width="1.5" />Nouveau profil local</DropdownMenuItem
-        >
-        <DropdownMenuItem @select="emit('addResource')"
-          ><Server :stroke-width="1.5" />Nouvelle ressource SSH</DropdownMenuItem
-        >
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div class="flex items-center justify-end">
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            class="shrink-0 text-sidebar-foreground/60 active:scale-[0.96]"
+            aria-label="Ajouter"
+          >
+            <Plus :stroke-width="1.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="top" align="end" class="w-56">
+          <DropdownMenuItem @select="store.createTerminal()"
+            ><Terminal :stroke-width="1.5" />Nouveau terminal</DropdownMenuItem
+          >
+          <DropdownMenuItem @select="store.createFolder('Nouveau dossier')"
+            ><FolderPlus :stroke-width="1.5" />Nouveau dossier</DropdownMenuItem
+          >
+          <DropdownMenuItem @select="creating = true"
+            ><Plus :stroke-width="1.5" />Nouvel espace de travail</DropdownMenuItem
+          >
+          <DropdownMenuSeparator />
+          <DropdownMenuItem @select="emit('addProfile')"
+            ><Terminal :stroke-width="1.5" />Nouveau profil local</DropdownMenuItem
+          >
+          <DropdownMenuItem @select="emit('addResource')"
+            ><Server :stroke-width="1.5" />Nouvelle ressource SSH</DropdownMenuItem
+          >
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
 
     <Dialog v-model:open="creating">
       <DialogContent class="sm:max-w-sm">

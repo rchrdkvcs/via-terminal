@@ -47,8 +47,7 @@ watch(isActive, (active) => {
 
 <template>
   <section
-    class="relative flex min-h-0 min-w-0 flex-1 flex-col bg-card transition-[box-shadow] duration-150"
-    :class="isActive ? 'shadow-[inset_0_0_0_1px_var(--ring)]' : ''"
+    class="relative flex min-h-0 min-w-0 flex-1 flex-col bg-card transition-shadow duration-150"
     :aria-label="session?.name ?? 'Terminal'"
     @mousedown="store.selectPane(paneId)"
   >
