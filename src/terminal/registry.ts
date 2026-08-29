@@ -194,7 +194,7 @@ class TerminalRegistry {
   }
 
   releaseAll(): void {
-    for (const sessionId of [...this.entries.keys()]) this.release(sessionId)
+    for (const sessionId of this.entries.keys()) this.release(sessionId)
   }
 
   /** Re-measure after a container resize; safe to call on every frame. */

@@ -1,8 +1,0 @@
-dist/
-node_modules/
-src-tauri/target/
-src-tauri/gen/
-pnpm-lock.yaml
-
-# Local scratch: agent notes and the CDP smoke driver stay out of the bundle.
-.ai/

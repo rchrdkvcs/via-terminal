@@ -146,7 +146,12 @@ export interface ResolvedSshTarget {
 }
 
 export type SshStatus =
-  'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'failed' | 'closed'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'disconnected'
+  | 'failed'
+  | 'closed'
 
 export interface SpawnedSession {
   id: Id
