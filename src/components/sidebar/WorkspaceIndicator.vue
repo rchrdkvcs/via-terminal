@@ -18,6 +18,7 @@ const editing = ref(false)
 const draft = ref('')
 const input = ref<InstanceType<typeof Input> | null>(null)
 const contextTrigger = ref<HTMLButtonElement | null>(null)
+const menuOpen = ref(false)
 
 async function beginRename() {
   if (!store.activeWorkspace) return
@@ -52,7 +53,10 @@ function cycleIcon() {
 }
 
 function openContextMenu() {
-  contextTrigger.value?.click()
+  menuOpen.value = false
+  void nextTick(() => {
+    menuOpen.value = true
+  })
 }
 </script>
 
@@ -95,7 +99,7 @@ function openContextMenu() {
       />
     </button>
 
-    <DropdownMenu>
+    <DropdownMenu v-model:open="menuOpen">
       <DropdownMenuTrigger as-child>
         <button
           ref="contextTrigger"

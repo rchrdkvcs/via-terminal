@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
-import { MoreHorizontal, Pencil, Pin, Plus, SquareTerminal, X } from '@lucide/vue'
+import { Pencil, Pin, PinOff, Plus, SquareTerminal, X } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,10 +27,20 @@ import {
   startSidebarDrag,
 } from '@/lib/sidebar-dnd'
 
+const props = withDefaults(defineProps<{ pinned?: boolean }>(), { pinned: false })
+
 const store = useAppStore()
 const editing = ref<string | null>(null)
 const draft = ref('')
 const input = ref<InstanceType<typeof Input> | null>(null)
+const menuFor = ref<string | null>(null)
+
+function openRowMenu(id: string) {
+  menuFor.value = null
+  void nextTick(() => {
+    menuFor.value = id
+  })
+}
 
 async function beginRename(id: string, label: string) {
   editing.value = id
@@ -48,11 +58,11 @@ function commitRename(id: string, label: string) {
 }
 
 /**
- * Open tabs live in the sidebar, under the saved organization. Each row shows
- * the session it presents; a split tab shows the session of its active pane.
+ * One list of real tabs. Pinned rows sit above the divider; open rows sit
+ * below it. A tab is never in both.
  */
 const rows = computed(() =>
-  store.unfavoritedTabs.map((tab) => {
+  (props.pinned ? store.pinnedTabs : store.unfavoritedTabs).map((tab) => {
     const ids = store.paneSessionIds(tab.root)
     const statuses = ids.map((id) => store.sessionById.get(id)?.status)
     const state =
@@ -67,7 +77,6 @@ const rows = computed(() =>
       id: tab.id,
       label: tab.name,
       detail: store.sessionById.get(ids[0])?.detail ?? '',
-      kind: store.sessionById.get(ids[0])?.kind ?? 'local',
       state,
     }
   }),
@@ -97,7 +106,8 @@ function onDrop(event: DragEvent, index: number) {
   endSidebarDrag()
   if (drag?.type !== 'tab') return
   const before = zone === 'before' ? rows.value[index] : rows.value[index + 1]
-  void store.reorderTab(drag.id, before?.id ?? null)
+  if (props.pinned) void store.pinTab(drag.id, before?.id ?? null)
+  else void store.unpinTab(drag.id, before?.id ?? null)
 }
 
 /** Alt+Arrow moves a tab past its neighbour, which is the row to insert before. */
@@ -105,20 +115,26 @@ function moveByKey(index: number, direction: -1 | 1) {
   const target = direction < 0 ? rows.value[index - 1] : rows.value[index + 2]
   if (direction < 0 && !target) return
   if (direction > 0 && index >= rows.value.length - 1) return
-  void store.reorderTab(rows.value[index].id, target?.id ?? null)
+  if (props.pinned) void store.pinTab(rows.value[index].id, target?.id ?? null)
+  else void store.unpinTab(rows.value[index].id, target?.id ?? null)
 }
 </script>
 
 <template>
-  <SidebarMenu role="tablist" aria-label="Sessions ouvertes" aria-orientation="vertical">
+  <SidebarMenu
+    role="tablist"
+    :aria-label="props.pinned ? 'Onglets épinglés' : 'Sessions ouvertes'"
+    aria-orientation="vertical"
+  >
     <SidebarMenuItem
       v-for="(row, index) in rows"
       :key="row.id"
       draggable="true"
-      class="transition-opacity"
+      class="relative transition-opacity"
       :class="draggedTabId() === row.id ? 'opacity-40' : ''"
       @dragstart.stop="startSidebarDrag($event, { type: 'tab', id: row.id })"
       @dragend.stop="endSidebarDrag()"
+      @contextmenu.prevent="openRowMenu(row.id)"
     >
       <SidebarMenuButton
         :as="editing === row.id ? 'div' : 'button'"
@@ -140,9 +156,9 @@ function moveByKey(index: number, direction: -1 | 1) {
           <SquareTerminal :stroke-width="1.5" class="text-sidebar-foreground/60" />
           <!-- Colour marks the state; the tooltip and the pane header name it. -->
           <span
-            v-if="row.state !== 'online'"
             class="absolute -end-0.5 -bottom-0.5 size-1.5 rounded-full ring-2 ring-sidebar"
             :class="{
+              'bg-state-online': row.state === 'online',
               'bg-state-offline': row.state === 'offline',
               'bg-state-pending': row.state === 'pending',
               'bg-muted-foreground': row.state === 'idle',
@@ -169,19 +185,28 @@ function moveByKey(index: number, direction: -1 | 1) {
       <SidebarMenuAction
         show-on-hover
         :aria-label="`Fermer ${row.label}`"
-        @click="store.closeTab(row.id)"
+        @click.stop="store.closeTab(row.id)"
       >
         <X :stroke-width="1.5" />
       </SidebarMenuAction>
-      <DropdownMenu>
+      <DropdownMenu
+        :open="menuFor === row.id"
+        @update:open="(open) => (menuFor = open ? row.id : null)"
+      >
         <DropdownMenuTrigger as-child>
-          <SidebarMenuAction show-on-hover class="end-7" :aria-label="`Options de ${row.label}`">
-            <MoreHorizontal :stroke-width="1.5" />
-          </SidebarMenuAction>
+          <button
+            class="pointer-events-none absolute inset-0 opacity-0"
+            tabindex="-1"
+            aria-hidden="true"
+            @contextmenu.prevent
+          />
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start">
-          <DropdownMenuItem v-if="row.kind === 'ssh'" @select="store.organizeTab(row.id)">
-            <Pin :stroke-width="1.5" />Épingler dans l’espace
+          <DropdownMenuItem v-if="pinned" @select="store.unpinTab(row.id)">
+            <PinOff :stroke-width="1.5" />Détacher
+          </DropdownMenuItem>
+          <DropdownMenuItem v-else @select="store.pinTab(row.id)">
+            <Pin :stroke-width="1.5" />Épingler
           </DropdownMenuItem>
           <DropdownMenuItem @select="beginRename(row.id, row.label)">
             <Pencil :stroke-width="1.5" />Renommer
@@ -193,7 +218,7 @@ function moveByKey(index: number, direction: -1 | 1) {
       </DropdownMenu>
     </SidebarMenuItem>
 
-    <SidebarMenuItem>
+    <SidebarMenuItem v-if="!pinned">
       <SidebarMenuButton class="text-sidebar-foreground/60" @click="store.createTerminal()">
         <Plus :stroke-width="1.5" />
         <span>Nouveau terminal</span>

@@ -188,16 +188,27 @@ fn import_apply(state: State<BackendState>, json: String) -> Result<AppData, Str
 }
 #[tauri::command]
 fn profile_detect() -> Vec<String> {
-    let candidates = if cfg!(windows) {
+    let mut shells: Vec<String> = if cfg!(windows) {
         vec!["powershell.exe", "pwsh.exe", "cmd.exe", "wsl.exe"]
     } else {
         vec!["/bin/zsh", "/bin/bash", "/bin/sh"]
-    };
-    candidates
-        .into_iter()
-        .filter(|c| command_exists(c))
-        .map(str::to_string)
-        .collect()
+    }
+    .into_iter()
+    .filter(|c| command_exists(c))
+    .map(str::to_string)
+    .collect();
+    if cfg!(windows) {
+        const GIT_BASH: &[&str] = &[
+            r"C:\Program Files\Git\bin\bash.exe",
+            r"C:\Program Files\Git\usr\bin\bash.exe",
+        ];
+        if let Some(path) = GIT_BASH.iter().copied().find(|path| command_exists(path)) {
+            shells.push(path.to_string());
+        } else if command_exists("bash.exe") {
+            shells.push("bash.exe".into());
+        }
+    }
+    shells
 }
 fn command_exists(command: &str) -> bool {
     if std::path::Path::new(command).is_absolute() {

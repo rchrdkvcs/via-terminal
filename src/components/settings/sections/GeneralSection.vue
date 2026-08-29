@@ -39,7 +39,7 @@ const store = useAppStore()
 
     <SettingRow
       label="Délai de réapparition de la barre latérale"
-      description="Temps que le pointeur doit passer sur le bord gauche avant l’ouverture. En millisecondes."
+      description="Temps que le pointeur doit rester sur le bord gauche avant l’ouverture. En millisecondes."
       for-id="reveal-delay"
     >
       <Input
@@ -50,6 +50,24 @@ const store = useAppStore()
         @update:model-value="
           store.updatePreferences({
             sidebarRevealDelay: Math.min(Math.max(Number($event) || 0, 0), 2000),
+          })
+        "
+      />
+    </SettingRow>
+
+    <SettingRow
+      label="Délai de disparition"
+      description="Temps avant que la barre latérale se referme une fois le pointeur parti. En millisecondes."
+      for-id="hide-delay"
+    >
+      <Input
+        id="hide-delay"
+        class="w-24 text-end tabular-nums"
+        inputmode="numeric"
+        :model-value="store.preferences.sidebarHideDelay"
+        @update:model-value="
+          store.updatePreferences({
+            sidebarHideDelay: Math.min(Math.max(Number($event) || 0, 0), 3000),
           })
         "
       />

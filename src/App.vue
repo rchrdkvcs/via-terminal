@@ -40,16 +40,47 @@ const closingTab = computed(
 )
 
 /**
- * The 8 px strip is the only affordance for a hidden sidebar. The pointer has
- * to rest on it, so crossing the window edge on the way somewhere else does not
- * flash the panel open.
+ * Compact-mode peek, matching Zen: the pointer must rest on the window edge
+ * before the overlay appears, and it stays up for a beat after leaving so a
+ * menu or a slightly sloppy pointer does not slam it shut.
  */
-function revealSidebar() {
-  store.sidebarPeek = true
+let revealTimer: ReturnType<typeof setTimeout> | undefined
+let hideTimer: ReturnType<typeof setTimeout> | undefined
+
+function clearPeekTimers() {
+  if (revealTimer) clearTimeout(revealTimer)
+  if (hideTimer) clearTimeout(hideTimer)
+  revealTimer = undefined
+  hideTimer = undefined
 }
 
-function hideSidebar() {
-  store.sidebarPeek = false
+function scheduleReveal() {
+  if (store.sidebarPinned || store.route !== 'workspace') return
+  if (hideTimer) {
+    clearTimeout(hideTimer)
+    hideTimer = undefined
+  }
+  if (store.sidebarPeek || revealTimer) return
+  revealTimer = setTimeout(() => {
+    revealTimer = undefined
+    store.sidebarPeek = true
+  }, store.preferences.sidebarRevealDelay)
+}
+
+function scheduleHide() {
+  if (revealTimer) {
+    clearTimeout(revealTimer)
+    revealTimer = undefined
+  }
+  if (!store.sidebarPeek || hideTimer) return
+  hideTimer = setTimeout(() => {
+    hideTimer = undefined
+    if (document.querySelector('[data-slot="dropdown-menu-content"]')) {
+      scheduleHide()
+      return
+    }
+    store.sidebarPeek = false
+  }, store.preferences.sidebarHideDelay)
 }
 
 // Notices surface as toasts so they never displace the terminal below them.
@@ -69,6 +100,7 @@ watch(
 watch(
   () => store.sidebarPinned,
   () => {
+    clearPeekTimers()
     store.sidebarPeek = false
   },
 )
@@ -79,6 +111,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  clearPeekTimers()
   unbind?.()
 })
 
@@ -114,26 +147,31 @@ window.addEventListener('beforeunload', () => {
       </Transition>
 
       <!--
-      Unpinned: an 8 px hover strip plus a floating panel. The panel overlays the
-      terminal rather than pushing it, so peeking never reflows xterm.
-    -->
+        Compact: a hit strip on the window edge. Resting there reveals a floating
+        overlay so xterm is never refit. Leaving starts the hide delay.
+      -->
       <template v-if="!store.sidebarPinned && store.route === 'workspace'">
-        <div class="h-full w-1 shrink-0" aria-hidden="true" @mouseenter="revealSidebar" />
-
-        <Transition
-          enter-active-class="transition-[translate,opacity] duration-75 ease-out"
-          enter-from-class="-translate-x-full opacity-0"
-          leave-active-class="transition-[translate,opacity] duration-75 ease-out"
-          leave-to-class="-translate-x-full opacity-0"
+        <div
+          class="absolute inset-y-0 start-0 z-40"
+          :class="store.sidebarPeek ? 'w-64' : 'w-5'"
+          :aria-hidden="store.sidebarPeek ? undefined : 'true'"
+          @pointerenter="scheduleReveal"
+          @pointerleave="scheduleHide"
         >
-          <div
-            v-if="store.sidebarPeek"
-            class="absolute inset-y-0 start-1 z-30 w-64 overflow-hidden rounded-xl border border-border/50 bg-sidebar shadow-2xl"
-            @mouseleave="hideSidebar"
+          <Transition
+            enter-active-class="transition-[translate,opacity] duration-100 ease-out"
+            enter-from-class="-translate-x-full opacity-0"
+            leave-active-class="transition-[translate,opacity] duration-100 ease-out"
+            leave-to-class="-translate-x-full opacity-0"
           >
-            <AppSidebar @add-resource="targetDialog = 'resource'" />
-          </div>
-        </Transition>
+            <div
+              v-if="store.sidebarPeek"
+              class="h-full w-64 overflow-hidden rounded-xl border border-border/50 bg-sidebar shadow-2xl"
+            >
+              <AppSidebar @add-resource="targetDialog = 'resource'" />
+            </div>
+          </Transition>
+        </div>
       </template>
 
       <main

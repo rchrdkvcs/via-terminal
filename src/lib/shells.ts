@@ -12,8 +12,9 @@ export function shellLabel(executable: string): string {
       return 'WSL'
     case 'zsh':
       return 'Zsh'
+    case 'bash.exe':
     case 'bash':
-      return 'Bash'
+      return 'Git Bash'
     case 'sh':
       return 'Sh'
     default:

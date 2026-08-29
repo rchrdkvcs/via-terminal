@@ -183,14 +183,10 @@ export const useAppStore = defineStore('app', () => {
     return record?.name ?? null
   }
 
-  /** Temporary tabs must not decorate their saved profile/resource with live state. */
   const sessionsByTarget = computed(() => {
     const map = new Map<Id, Id[]>()
-    const organizedSessionIds = new Set(
-      tabs.value.filter((tab) => tab.organized).flatMap((tab) => paneSessionIds(tab.root)),
-    )
     for (const session of sessions.value) {
-      if (session.status === 'closed' || !organizedSessionIds.has(session.id)) continue
+      if (session.status === 'closed') continue
       const current = map.get(session.targetId)
       if (current) current.push(session.id)
       else map.set(session.targetId, [session.id])
@@ -286,6 +282,8 @@ export const useAppStore = defineStore('app', () => {
   )
 
   const unfavoritedTabs = computed(() => visibleTabs.value.filter((tab) => !tab.organized))
+  /** Pinned tabs sit above the divider, like Zen; they are the same tabs, not copies. */
+  const pinnedTabs = computed(() => visibleTabs.value.filter((tab) => tab.organized))
 
   const activeTabId = computed(() => activeTabPerWorkspace.value[activeWorkspaceId.value] ?? '')
   const activeTab = computed(
@@ -389,15 +387,14 @@ export const useAppStore = defineStore('app', () => {
   /** TECHNICAL.md: layout writes are debounced and committed atomically. */
   function scheduleLayoutSave(tabId: Id) {
     if (!isNative()) return
-    const tab = tabs.value.find((item) => item.id === tabId)
-    if (!tab?.organized) return
+    if (!tabs.value.find((item) => item.id === tabId)) return
     if (layoutTimer) clearTimeout(layoutTimer)
     layoutTimer = setTimeout(() => void persistTab(tabId), 400)
   }
 
   async function persistTab(tabId: Id) {
     const tab = tabs.value.find((item) => item.id === tabId)
-    if (!tab?.organized) return
+    if (!tab) return
     const descriptors: SavedSession[] = paneSessionIds(tab.root).flatMap((sessionId) => {
       const session = sessionById.value.get(sessionId)
       if (!session) return []
@@ -798,19 +795,14 @@ export const useAppStore = defineStore('app', () => {
     targetId: Id,
     options: { reuse?: boolean } = {},
   ) {
-    // Local shells live in the open-tab list. Only SSH resources belong in the
-    // saved tree, so a profile target must never be marked organized.
-    const organized = targetKind === 'resource'
     const existing = sessionsByTarget.value.get(targetId)?.[0]
-    // PRODUCT.md: clicking an open favorite focuses it; a secondary action opens another.
+    // Clicking an already open target focuses it; a secondary action opens another.
     if (options.reuse !== false && existing) {
-      const tab = tabs.value.find((item) => paneSessionIds(item.root).includes(existing))
-      if (tab && organized) tab.organized = true
       focusSession(existing)
       return
     }
     const session = await startSession(targetKind, targetId)
-    if (session) openSessionInTab(session, organized)
+    if (session) openSessionInTab(session, false)
   }
 
   function openSessionInTab(session: SessionSummary, organized = false) {
@@ -889,30 +881,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function organizeTab(id: Id) {
-    const tab = tabs.value.find((item) => item.id === id)
-    if (!tab || tab.organized) return
-    const sessionId = paneSessionIds(tab.root)[0]
-    const session = sessions.value.find((item) => item.id === sessionId)
-    if (!session || session.targetKind !== 'resource') return
-    const existingNode = sidebarNodes.value.find(
-      (node) => node.workspaceId === tab.workspaceId && node.targetId === session.targetId,
-    )
-    try {
-      if (!existingNode) {
-        await api.createSidebarNode(
-          tab.workspaceId,
-          session.targetKind,
-          session.name,
-          null,
-          session.targetId,
-        )
-        await refresh()
-      }
-      tab.organized = true
-      scheduleLayoutSave(tab.id)
-    } catch (error) {
-      report('Épinglage impossible', error)
-    }
+    await pinTab(id)
   }
 
   async function splitActivePane(direction: SplitDirection) {
@@ -1232,7 +1201,7 @@ export const useAppStore = defineStore('app', () => {
   function restoreDefaults(section: string) {
     if (section === 'general') {
       updateSettings({ density: defaultSettings.density, restoreLocalSessions: false })
-      updatePreferences({ sidebarRevealDelay: 180, confirmOnClose: true })
+      updatePreferences({ sidebarRevealDelay: 50, sidebarHideDelay: 300, confirmOnClose: true })
     } else if (section === 'appearance') {
       updateSettings({ theme: defaultSettings.theme })
     } else if (section === 'terminal') {
@@ -1459,25 +1428,41 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function pinTab(tabId: Id, beforeFavoriteId: Id | null) {
-    const target = tabTarget(tabId)
+  /**
+   * Zen model: a tab lives in exactly one section. Pinning moves it above the
+   * divider; unpinning moves it back. `beforeTabId` is the neighbour to land
+   * in front of inside that section.
+   */
+  async function moveTab(tabId: Id, pinned: boolean, beforeTabId: Id | null = null) {
     const tab = tabs.value.find((item) => item.id === tabId)
-    if (!target || !tab || !(await pinTarget(target.id, beforeFavoriteId))) return
-    tab.organized = true
-    scheduleLayoutSave(tab.id)
+    if (!tab || tabId === beforeTabId) return
+    const siblings = tabs.value
+      .filter((item) => item.workspaceId === tab.workspaceId && item.id !== tabId)
+      .sort((a, b) => a.position - b.position)
+    const pinnedSiblings = siblings.filter((item) => item.organized)
+    const openSiblings = siblings.filter((item) => !item.organized)
+    tab.organized = pinned
+    const bucket = pinned ? pinnedSiblings : openSiblings
+    const index = beforeTabId ? bucket.findIndex((item) => item.id === beforeTabId) : -1
+    bucket.splice(index >= 0 ? index : bucket.length, 0, tab)
+    const ordered = pinned ? [...bucket, ...openSiblings] : [...pinnedSiblings, ...bucket]
+    ordered.forEach((item, position) => (item.position = position))
+    await Promise.all(ordered.map((item) => persistTab(item.id)))
+  }
+
+  async function pinTab(tabId: Id, beforeTabId: Id | null = null) {
+    await moveTab(tabId, true, beforeTabId)
+  }
+
+  async function unpinTab(tabId: Id, beforeTabId: Id | null = null) {
+    await moveTab(tabId, false, beforeTabId)
   }
 
   /** `beforeTabId` is the tab the moved one must precede; `null` means last. */
   async function reorderTab(tabId: Id, beforeTabId: Id | null) {
     const tab = tabs.value.find((item) => item.id === tabId)
-    if (!tab || tabId === beforeTabId) return
-    const ordered = tabs.value
-      .filter((item) => item.workspaceId === tab.workspaceId && item.id !== tabId)
-      .sort((a, b) => a.position - b.position)
-    const index = beforeTabId ? ordered.findIndex((item) => item.id === beforeTabId) : -1
-    ordered.splice(index >= 0 ? index : ordered.length, 0, tab)
-    ordered.forEach((item, position) => (item.position = position))
-    await Promise.all(ordered.map((item) => persistTab(item.id)))
+    if (!tab) return
+    await moveTab(tabId, tab.organized, beforeTabId)
   }
 
   const isFavorite = computed(() => {
@@ -1579,6 +1564,7 @@ export const useAppStore = defineStore('app', () => {
     favorites,
     visibleTabs,
     unfavoritedTabs,
+    pinnedTabs,
     activeTabId,
     activeTab,
     activeSession,
@@ -1639,6 +1625,7 @@ export const useAppStore = defineStore('app', () => {
     placeTab,
     pinTarget,
     pinTab,
+    unpinTab,
     reorderTab,
     toggleFavorite,
     openWindow,

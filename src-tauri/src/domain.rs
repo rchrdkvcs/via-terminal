@@ -476,7 +476,13 @@ pub(crate) fn shell_label(executable: &str) -> String {
         "cmd.exe" => "CMD".into(),
         "wsl.exe" => "WSL".into(),
         "zsh" => "Zsh".into(),
-        "bash" => "Bash".into(),
+        "bash.exe" | "bash" => {
+            if cfg!(windows) {
+                "Git Bash".into()
+            } else {
+                "Bash".into()
+            }
+        }
         "sh" => "Sh".into(),
         _ => name.to_string(),
     }

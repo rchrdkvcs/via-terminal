@@ -32,11 +32,11 @@ A native view onto workspaces and their tabs. Closing a window does not inherent
 
 ## Favorite
 
-A workspace-local shortcut to a resource.
+A pinned tab in the current workspace. Pinning moves the tab above the sidebar divider; it does not create a second row.
 
 ## Temporary session
 
-A session not represented by a saved favorite or organized sidebar entry. A temporary session may later be organized explicitly.
+An unpinned tab, listed below the sidebar divider.
 
 ## Application lock
 

@@ -37,8 +37,8 @@ function submit() {
     the current workspace; the header at the top of the sidebar repeats the same
     icon and adds the name.
   -->
-  <div class="grid grid-cols-3 items-center gap-2 w-full">
-    <div class="flex items-center justify-start">
+  <div class="flex w-full min-w-0 items-center gap-1">
+    <div class="shrink-0">
       <Tooltip>
         <TooltipTrigger as-child>
           <Button
@@ -55,7 +55,7 @@ function submit() {
       </Tooltip>
     </div>
 
-    <div class="flex items-center justify-center gap-1 overflow-x-auto no-scrollbar">
+    <div class="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto no-scrollbar">
       <Tooltip v-for="(workspace, index) in store.workspaces" :key="workspace.id">
         <TooltipTrigger as-child>
           <button
@@ -76,7 +76,7 @@ function submit() {
       </Tooltip>
     </div>
 
-    <div class="flex items-center justify-end">
+    <div class="shrink-0">
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
           <Button

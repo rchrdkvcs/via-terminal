@@ -351,29 +351,39 @@ describe('sessions and tabs', () => {
     expect(store.favorites).toEqual([])
   })
 
-  it('leaves a local terminal in the open-tab list when pin is requested', async () => {
+  it('pins a tab by moving it above the divider without duplicating it', async () => {
     const store = await bootedStore()
     await store.createTerminal()
     const tabId = store.activeTabId
 
-    await store.organizeTab(tabId)
-    await store.pinTab(tabId, null)
+    await store.pinTab(tabId)
 
-    expect(store.unfavoritedTabs.map((tab) => tab.id)).toEqual([tabId])
-    expect(store.favorites).toEqual([])
+    expect(store.pinnedTabs.map((tab) => tab.id)).toEqual([tabId])
+    expect(store.unfavoritedTabs.map((tab) => tab.id)).toEqual([])
+    expect(store.visibleTabs).toHaveLength(1)
     expect(moves.filter((item) => item.call === 'favorite')).toEqual([])
   })
 
-  it('pins an SSH tab onto its resource and removes it from the open-tab list', async () => {
+  it('unpins a tab back into the open list', async () => {
     const store = await bootedStore()
-    await store.openTarget('resource', RESOURCE_A, { reuse: false })
+    await store.createTerminal()
     const tabId = store.activeTabId
-    store.tabs.find((tab) => tab.id === tabId)!.organized = false
+    await store.pinTab(tabId)
+    await store.unpinTab(tabId)
 
-    await store.organizeTab(tabId)
+    expect(store.pinnedTabs).toEqual([])
+    expect(store.unfavoritedTabs.map((tab) => tab.id)).toEqual([tabId])
+  })
 
-    expect(store.unfavoritedTabs).toEqual([])
-    expect(store.tree[0].children[0].sessionIds).toEqual([spawned[0]])
+  it('pinning an already pinned tab does not create a second row', async () => {
+    const store = await bootedStore()
+    await store.createTerminal()
+    const tabId = store.activeTabId
+    await store.pinTab(tabId)
+    await store.pinTab(tabId)
+
+    expect(store.pinnedTabs).toHaveLength(1)
+    expect(store.visibleTabs).toHaveLength(1)
   })
 
   it('uses the session identifier returned by ssh_session_connect', async () => {
@@ -394,15 +404,14 @@ describe('sessions and tabs', () => {
     expect(store.visibleTabs).toHaveLength(1)
   })
 
-  it('lists a local terminal as an open tab and an SSH target in the tree', async () => {
+  it('opens an SSH session as a normal tab until it is pinned', async () => {
     const store = await bootedStore()
     await store.createTerminal()
     expect(store.unfavoritedTabs).toHaveLength(1)
-    expect(store.favorites).toEqual([])
 
     await store.openTarget('resource', RESOURCE_A)
-    expect(store.unfavoritedTabs).toHaveLength(1)
-    expect(store.tree[0].children[0].sessionIds).toEqual([spawned[1]])
+    expect(store.unfavoritedTabs).toHaveLength(2)
+    expect(store.pinnedTabs).toEqual([])
   })
 
   it('opens a second session when reuse is refused', async () => {
@@ -480,21 +489,28 @@ describe('desktop shell regressions', () => {
     expect(topBar).toContain('window.startDragging()')
     expect(topBar).not.toContain('@mousedown.left="startDragging"')
     expect(topBar).toContain('@pointerdown="prepareDragging"')
-    expect(app).not.toContain('sidebarRevealDelay')
+    expect(app).toContain('sidebarRevealDelay')
+    expect(app).toContain('scheduleReveal')
+    expect(app).toContain('scheduleHide')
+    expect(app).toContain('w-5')
     expect(app).not.toContain('group-hover:bg-neutral-900')
   })
 
-  it('keeps open tabs and New terminal outside the collapsible saved section', () => {
+  it('keeps a single pinned section above the divider and open tabs below it', () => {
     const sidebar = readFileSync('src/components/sidebar/AppSidebar.vue', 'utf8')
     const rows = readFileSync('src/components/sidebar/SessionRows.vue', 'utf8')
-    const tree = readFileSync('src/components/sidebar/SidebarTree.vue', 'utf8')
-    expect(sidebar.indexOf('workspace-sidebar-content')).toBeLessThan(
-      sidebar.indexOf('<SessionRows'),
-    )
+    const markup = sidebar.slice(sidebar.indexOf('<template>'))
+    expect(markup.indexOf('<SessionRows pinned')).toBeLessThan(markup.indexOf('<SidebarSeparator'))
+    expect(markup.indexOf('<SidebarSeparator')).toBeLessThan(markup.lastIndexOf('<SessionRows'))
+    expect(markup).not.toContain('store.favorites')
+    expect(markup).toContain('store.tree')
+    expect(rows).toContain('bg-state-online')
     expect(rows).toContain('Nouveau terminal')
+    expect(rows).toContain('Épingler')
+    expect(rows).toContain('Détacher')
+    expect(rows).not.toContain('Épingler dans l’espace')
+    expect(rows).not.toContain('Épingler en haut')
     expect(rows).not.toContain('row.panes')
-    expect(tree).not.toContain('SidebarMenuBadge')
-    expect(sidebar).not.toContain('Rien d’organisé pour l’instant')
   })
 
   it('switches workspace on a left click and does not open a menu', () => {

@@ -30,44 +30,24 @@ function onWheel(event: WheelEvent) {
   store.cycleWorkspace(event.deltaY > 0 ? 1 : -1)
 }
 
-/** The target behind a drag, so the favourites can refuse a folder. */
-function targetIdOf(drag: NonNullable<typeof activeDrag.value>) {
-  if (drag.type === 'favorite') return drag.targetId
-  if (drag.type === 'node')
-    return store.sidebarNodes.find((node) => node.id === drag.id)?.targetId ?? null
-  const tab = store.tabs.find((item) => item.id === drag.id)
-  const sessionId = tab && store.paneSessionIds(tab.root)[0]
-  return sessionId ? (store.sessionById.get(sessionId)?.targetId ?? null) : null
+function draggingTab() {
+  return activeDrag.value?.type === 'tab'
 }
 
-/**
- * The blank space of a group appends to it. Rows stop their own drops, so this
- * only runs when the pointer misses every row — including on an empty list.
- */
-function isPinnable(drag: NonNullable<typeof activeDrag.value>) {
-  const targetId = targetIdOf(drag)
-  return Boolean(targetId && store.resources.some((item) => item.id === targetId))
-}
-
-function overGroup(event: DragEvent, key: 'favorites' | 'tree') {
-  const drag = activeDrag.value
-  if (!drag) return
-  if (key === 'favorites' && !isPinnable(drag)) return
+function overGroup(event: DragEvent, key: 'pinned' | 'open' | 'tree') {
+  if (key !== 'tree' && !draggingTab()) return
+  if (key === 'tree' && !activeDrag.value) return
   acceptDrop(event)
   dropHint.value = `${key}:into`
 }
 
-function dropInFavorites(event: DragEvent) {
+function dropOnSection(event: DragEvent, pinned: boolean) {
   event.preventDefault()
   const drag = readSidebarDrag(event)
   endSidebarDrag()
-  if (!drag) return
-  if (drag.type === 'tab') {
-    void store.pinTab(drag.id, null)
-    return
-  }
-  const targetId = targetIdOf(drag)
-  if (targetId) void store.pinTarget(targetId, null)
+  if (drag?.type !== 'tab') return
+  if (pinned) void store.pinTab(drag.id)
+  else void store.unpinTab(drag.id)
 }
 
 function dropAtRoot(event: DragEvent) {
@@ -76,11 +56,9 @@ function dropAtRoot(event: DragEvent) {
   endSidebarDrag()
   if (!drag) return
   if (drag.type === 'node') void store.reparentNode(drag.id, null, null)
-  else if (drag.type === 'tab') void store.placeTab(drag.id, null, null)
-  else void store.placeTarget(drag.targetId, null, null)
 }
 
-function groupHint(key: 'favorites' | 'tree') {
+function groupHint(key: 'pinned' | 'open' | 'tree') {
   return dropHint.value === `${key}:into` ? 'rounded-md ring-2 ring-sidebar-ring ring-inset' : ''
 }
 
@@ -117,7 +95,10 @@ function onLeave(event: DragEvent) {
           : '',
       ]"
     >
-      <!-- The workspace indicator only collapses persisted items, never open tabs or New terminal. -->
+      <!--
+        Zen layout: pinned tabs, then the divider, then open tabs.
+        The workspace name only collapses the pinned section.
+      -->
       <Transition
         enter-active-class="transition-[opacity,grid-template-rows] duration-150 ease-out"
         enter-from-class="opacity-0"
@@ -126,33 +107,42 @@ function onLeave(event: DragEvent) {
       >
         <div v-if="!store.workspaceContentCollapsed" id="workspace-sidebar-content">
           <SidebarGroup
-            v-if="store.favorites.length || (activeDrag && isPinnable(activeDrag))"
+            v-if="store.pinnedTabs.length || draggingTab()"
             class="p-2 py-1"
-            :class="[groupHint('favorites'), store.favorites.length ? '' : 'min-h-10']"
-            aria-label="Favoris — déposez ici pour épingler"
-            @dragenter="overGroup($event, 'favorites')"
-            @dragover="overGroup($event, 'favorites')"
-            @drop="dropInFavorites"
+            :class="[groupHint('pinned'), store.pinnedTabs.length ? '' : 'min-h-10']"
+            aria-label="Onglets épinglés"
+            @dragenter="overGroup($event, 'pinned')"
+            @dragover="overGroup($event, 'pinned')"
+            @drop="dropOnSection($event, true)"
           >
-            <SidebarTree :nodes="store.favorites" pinned />
+            <SessionRows pinned />
           </SidebarGroup>
-
           <SidebarGroup
             v-if="store.tree.length"
             class="p-2 py-1"
             :class="groupHint('tree')"
-            aria-label="Organisation de l’espace"
+            aria-label="Dossiers"
             @dragenter="overGroup($event, 'tree')"
             @dragover="overGroup($event, 'tree')"
             @drop="dropAtRoot"
           >
             <SidebarTree :nodes="store.tree" />
           </SidebarGroup>
-          <SidebarSeparator v-if="store.favorites.length || store.tree.length" class="mx-2 my-1" />
+          <SidebarSeparator
+            v-if="store.pinnedTabs.length || store.tree.length || draggingTab()"
+            class="mx-2 my-1"
+          />
         </div>
       </Transition>
 
-      <SidebarGroup class="p-2 py-1">
+      <SidebarGroup
+        class="p-2 py-1"
+        :class="groupHint('open')"
+        aria-label="Sessions ouvertes"
+        @dragenter="overGroup($event, 'open')"
+        @dragover="overGroup($event, 'open')"
+        @drop="dropOnSection($event, false)"
+      >
         <SessionRows />
       </SidebarGroup>
     </SidebarContent>

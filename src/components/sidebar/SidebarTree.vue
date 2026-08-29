@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { MoreHorizontal, Pencil, Star, StarOff, Trash2 } from '@lucide/vue'
+import { computed, ref, watch } from 'vue'
+import { MoreHorizontal, Pencil, Trash2 } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +60,16 @@ function beginRename(node: TreeNode) {
   editing.value = node.id
   draft.value = node.label
 }
+
+watch(
+  () => store.renamingNodeId,
+  (id) => {
+    const node = props.nodes.find((item) => item.id === id)
+    if (!node) return
+    beginRename(node)
+    store.renamingNodeId = null
+  },
+)
 
 function commitRename(node: TreeNode) {
   const value = draft.value
@@ -204,24 +214,15 @@ function pin(drag: SidebarDrag, beforeId: string | null) {
           </SidebarMenuAction>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" side="right" class="w-52">
-          <DropdownMenuItem v-if="!pinned" @select="beginRename(node)">
+          <DropdownMenuItem @select="beginRename(node)">
             <Pencil :stroke-width="1.5" />
             Renommer
           </DropdownMenuItem>
-          <DropdownMenuItem
-            v-if="node.targetId"
-            @select="store.toggleFavorite(node.kind as 'profile' | 'resource', node.targetId!)"
-          >
-            <component :is="store.isFavorite(node.targetId) ? StarOff : Star" :stroke-width="1.5" />
-            {{ store.isFavorite(node.targetId) ? 'Retirer des favoris' : 'Épingler en haut' }}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" @select="store.deleteNode(node.id)">
+            <Trash2 :stroke-width="1.5" />
+            Supprimer
           </DropdownMenuItem>
-          <template v-if="!pinned">
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" @select="store.deleteNode(node.id)">
-              <Trash2 :stroke-width="1.5" />
-              Supprimer
-            </DropdownMenuItem>
-          </template>
         </DropdownMenuContent>
       </DropdownMenu>
 
