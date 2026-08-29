@@ -235,6 +235,31 @@ impl DomainService {
             Ok(w)
         })
     }
+    pub fn update_workspace(
+        &self,
+        id: Id,
+        name: String,
+        icon: String,
+    ) -> Result<Workspace, String> {
+        let name = name.trim().to_string();
+        let icon = icon.trim().to_string();
+        if name.is_empty() {
+            return Err("workspace name cannot be empty".into());
+        }
+        if icon.is_empty() {
+            return Err("workspace icon cannot be empty".into());
+        }
+        self.mutate(|d| {
+            let workspace = d
+                .workspaces
+                .iter_mut()
+                .find(|workspace| workspace.id == id)
+                .ok_or("workspace not found")?;
+            workspace.name = name;
+            workspace.icon = icon;
+            Ok(workspace.clone())
+        })
+    }
     pub fn create_identity(
         &self,
         workspace_id: Id,
@@ -931,6 +956,24 @@ mod tests {
     }
 
     #[test]
+    fn update_workspace_persists_name_and_icon() {
+        let repo = Repository::memory().unwrap();
+        let data = AppData::seed();
+        let workspace_id = data.workspaces[0].id;
+        repo.save(&data).unwrap();
+        let service = DomainService::new(repo);
+
+        let updated = service
+            .update_workspace(workspace_id, " Operations ".into(), "server".into())
+            .unwrap();
+
+        assert_eq!(updated.name, "Operations");
+        assert_eq!(updated.icon, "server");
+        let snapshot = service.snapshot().unwrap();
+        assert_eq!(snapshot.workspaces[0].name, "Operations");
+    }
+
+    #[test]
     fn import_preserves_organization_and_remaps_every_reference() {
         let service = DomainService::new(Repository::memory().unwrap());
         let incoming = organized_data();
@@ -992,6 +1035,7 @@ mod tests {
             name: "Operations".into(),
             root: Some(PaneTree::Pane { session_id }),
             position: 0,
+            organized: false,
         };
         service
             .save_tab(
@@ -1163,6 +1207,7 @@ mod tests {
                     name: "Production".into(),
                     root: Some(PaneTree::Pane { session_id }),
                     position: 0,
+                    organized: true,
                 },
                 vec![SavedSession {
                     id: session_id,
@@ -1269,6 +1314,7 @@ mod tests {
                     name: "Shell".into(),
                     root: Some(PaneTree::Pane { session_id }),
                     position: 0,
+                    organized: false,
                 },
                 vec![SavedSession {
                     id: session_id,

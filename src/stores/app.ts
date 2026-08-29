@@ -23,6 +23,11 @@ import type {
 import { defaultSettings } from '@/ipc/types'
 import { terminals } from '@/terminal/registry'
 import { loadPreferences, savePreferences, type LocalPreferences } from '@/lib/preferences'
+import {
+  loadSidebarNavigation,
+  saveSidebarNavigation,
+  type SidebarNavigationState,
+} from '@/lib/sidebar-state'
 
 export type SessionKind = 'local' | 'ssh'
 
@@ -66,6 +71,8 @@ export interface RuntimeTab {
   root: PaneNode
   activePaneId: string
   position: number
+  /** Saved targets live in the tree; temporary tabs live in the open-tab section. */
+  organized: boolean
 }
 
 export interface TreeNode {
@@ -117,6 +124,7 @@ export const useAppStore = defineStore('app', () => {
   const savedTabs = ref<Tab[]>([])
   const settings = ref<Settings>({ ...defaultSettings })
   const preferences = ref<LocalPreferences>(loadPreferences())
+  const sidebarNavigation = ref<SidebarNavigationState>(loadSidebarNavigation())
   const detectedShells = shallowRef<string[]>([])
 
   /* -------------------------------------------------------------- runtime */
@@ -126,6 +134,11 @@ export const useAppStore = defineStore('app', () => {
   /** Remembered per workspace so switching back restores the same tab. */
   const activeTabPerWorkspace = ref<Record<Id, Id | undefined>>({})
   const notices = ref<Notice[]>([])
+  const renamingNodeId = ref<Id | null>(null)
+  const isSwitchingWorkspace = ref(false)
+  const workspaceSwitchDirection = ref<-1 | 0 | 1>(0)
+  let workspaceTransitionTimer: ReturnType<typeof setTimeout> | undefined
+  let lastWorkspaceWheelChange = 0
 
   /* ------------------------------------------------------------ shell state */
   const ready = ref(false)
@@ -170,11 +183,14 @@ export const useAppStore = defineStore('app', () => {
     return record?.name ?? null
   }
 
-  /** Sessions grouped by the target that produced them, for sidebar badges. */
+  /** Temporary tabs must not decorate their saved profile/resource with live state. */
   const sessionsByTarget = computed(() => {
     const map = new Map<Id, Id[]>()
+    const organizedSessionIds = new Set(
+      tabs.value.filter((tab) => tab.organized).flatMap((tab) => paneSessionIds(tab.root)),
+    )
     for (const session of sessions.value) {
-      if (session.status === 'closed') continue
+      if (session.status === 'closed' || !organizedSessionIds.has(session.id)) continue
       const current = map.get(session.targetId)
       if (current) current.push(session.id)
       else map.set(session.targetId, [session.id])
@@ -221,6 +237,9 @@ export const useAppStore = defineStore('app', () => {
       for (const node of nodes) {
         node.depth = depth
         assignDepth(node.children, depth + 1)
+        if (node.kind === 'folder') {
+          node.sessionIds = [...new Set(node.children.flatMap((child) => child.sessionIds))]
+        }
       }
     }
     assignDepth(roots, 0)
@@ -263,14 +282,7 @@ export const useAppStore = defineStore('app', () => {
       .sort((a, b) => a.position - b.position),
   )
 
-  const unfavoritedTabs = computed(() => {
-    const favoriteTargetIds = new Set(favorites.value.map((favorite) => favorite.targetId))
-    return visibleTabs.value.filter((tab) => {
-      const firstSessionId = paneSessionIds(tab.root)[0]
-      const targetId = sessions.value.find((session) => session.id === firstSessionId)?.targetId
-      return !targetId || !favoriteTargetIds.has(targetId)
-    })
-  })
+  const unfavoritedTabs = computed(() => visibleTabs.value.filter((tab) => !tab.organized))
 
   const activeTabId = computed(() => activeTabPerWorkspace.value[activeWorkspaceId.value] ?? '')
   const activeTab = computed(
@@ -369,13 +381,15 @@ export const useAppStore = defineStore('app', () => {
   /** TECHNICAL.md: layout writes are debounced and committed atomically. */
   function scheduleLayoutSave(tabId: Id) {
     if (!isNative()) return
+    const tab = tabs.value.find((item) => item.id === tabId)
+    if (!tab?.organized) return
     if (layoutTimer) clearTimeout(layoutTimer)
     layoutTimer = setTimeout(() => void persistTab(tabId), 400)
   }
 
   async function persistTab(tabId: Id) {
     const tab = tabs.value.find((item) => item.id === tabId)
-    if (!tab) return
+    if (!tab?.organized) return
     const descriptors: SavedSession[] = paneSessionIds(tab.root).flatMap((sessionId) => {
       const session = sessionById.value.get(sessionId)
       if (!session) return []
@@ -397,6 +411,7 @@ export const useAppStore = defineStore('app', () => {
           name: tab.name,
           root: toWire(tab.root),
           position: tab.position,
+          organized: tab.organized,
         },
         descriptors,
       )
@@ -506,6 +521,7 @@ export const useAppStore = defineStore('app', () => {
         root,
         activePaneId: firstPane(root)?.id ?? '',
         position: saved.position,
+        organized: saved.organized,
       }
       tabs.value.push(runtime)
       activeTabPerWorkspace.value[saved.workspaceId] ??= runtime.id
@@ -571,18 +587,70 @@ export const useAppStore = defineStore('app', () => {
   /* -------------------------------------------------------------- workspaces */
   function switchWorkspace(id: Id) {
     if (!workspaces.value.some((item) => item.id === id)) return
+    if (id === activeWorkspaceId.value) return
+    const previousIndex = workspaces.value.findIndex((item) => item.id === activeWorkspaceId.value)
+    const nextIndex = workspaces.value.findIndex((item) => item.id === id)
+    workspaceSwitchDirection.value =
+      nextIndex === previousIndex ? 0 : nextIndex > previousIndex ? 1 : -1
+    isSwitchingWorkspace.value = true
     activeWorkspaceId.value = id
     const remembered = activeTabPerWorkspace.value[id]
     if (!remembered || !tabs.value.some((tab) => tab.id === remembered))
       activeTabPerWorkspace.value[id] = visibleTabs.value[0]?.id
     void persistWindowState()
+    if (workspaceTransitionTimer) clearTimeout(workspaceTransitionTimer)
+    workspaceTransitionTimer = setTimeout(() => {
+      isSwitchingWorkspace.value = false
+      workspaceSwitchDirection.value = 0
+    }, 200)
   }
 
   function cycleWorkspace(direction: 1 | -1) {
     if (workspaces.value.length < 2) return
+    const now = Date.now()
+    if (now - lastWorkspaceWheelChange < 180) return
+    lastWorkspaceWheelChange = now
     const index = workspaces.value.findIndex((item) => item.id === activeWorkspaceId.value)
     const next = (index + direction + workspaces.value.length) % workspaces.value.length
     switchWorkspace(workspaces.value[next].id)
+  }
+
+  function isFolderCollapsed(id: Id): boolean {
+    return (sidebarNavigation.value.collapsedFolders[activeWorkspaceId.value] ?? []).includes(id)
+  }
+
+  function setFolderCollapsed(id: Id, collapsed: boolean) {
+    const workspaceId = activeWorkspaceId.value
+    if (!workspaceId) return
+    const current = new Set(sidebarNavigation.value.collapsedFolders[workspaceId] ?? [])
+    if (collapsed) current.add(id)
+    else current.delete(id)
+    sidebarNavigation.value = {
+      ...sidebarNavigation.value,
+      collapsedFolders: {
+        ...sidebarNavigation.value.collapsedFolders,
+        [workspaceId]: [...current],
+      },
+    }
+    saveSidebarNavigation(sidebarNavigation.value)
+  }
+
+  function toggleFolder(id: Id) {
+    setFolderCollapsed(id, !isFolderCollapsed(id))
+  }
+
+  const workspaceContentCollapsed = computed(() =>
+    sidebarNavigation.value.collapsedWorkspaces.includes(activeWorkspaceId.value),
+  )
+
+  function toggleWorkspaceContent() {
+    const id = activeWorkspaceId.value
+    if (!id) return
+    const current = new Set(sidebarNavigation.value.collapsedWorkspaces)
+    if (current.has(id)) current.delete(id)
+    else current.add(id)
+    sidebarNavigation.value = { ...sidebarNavigation.value, collapsedWorkspaces: [...current] }
+    saveSidebarNavigation(sidebarNavigation.value)
   }
 
   async function createWorkspace(name: string, icon = 'terminal') {
@@ -606,6 +674,24 @@ export const useAppStore = defineStore('app', () => {
       notify('success', `Espace de travail dupliqué en « ${workspace.name} ».`)
     } catch (error) {
       report('Duplication impossible', error)
+    }
+  }
+
+  async function updateWorkspace(id: Id, changes: { name?: string; icon?: string }) {
+    const current = workspaces.value.find((workspace) => workspace.id === id)
+    if (!current) return false
+    const name = changes.name?.trim() ?? current.name
+    const icon = changes.icon?.trim() ?? current.icon
+    if (!name || !icon || (name === current.name && icon === current.icon)) return false
+    try {
+      const updated = await api.updateWorkspace(id, name, icon)
+      const index = workspaces.value.findIndex((workspace) => workspace.id === id)
+      workspaces.value.splice(index, 1, updated)
+      notify('success', `Espace de travail « ${updated.name} » mis à jour.`)
+      return true
+    } catch (error) {
+      report('Modification de l’espace de travail impossible', error)
+      return false
     }
   }
 
@@ -707,14 +793,16 @@ export const useAppStore = defineStore('app', () => {
     const existing = sessionsByTarget.value.get(targetId)?.[0]
     // PRODUCT.md: clicking an open favorite focuses it; a secondary action opens another.
     if (options.reuse !== false && existing) {
+      const tab = tabs.value.find((item) => paneSessionIds(item.root).includes(existing))
+      if (tab) tab.organized = true
       focusSession(existing)
       return
     }
     const session = await startSession(targetKind, targetId)
-    if (session) openSessionInTab(session)
+    if (session) openSessionInTab(session, true)
   }
 
-  function openSessionInTab(session: SessionSummary) {
+  function openSessionInTab(session: SessionSummary, organized = false) {
     const paneId = identifier()
     const tab: RuntimeTab = {
       id: identifier(),
@@ -723,6 +811,7 @@ export const useAppStore = defineStore('app', () => {
       root: { kind: 'pane', id: paneId, sessionId: session.id },
       activePaneId: paneId,
       position: nextPosition(session.workspaceId),
+      organized,
     }
     tabs.value.push(tab)
     activeTabPerWorkspace.value[session.workspaceId] = tab.id
@@ -785,7 +874,34 @@ export const useAppStore = defineStore('app', () => {
       return
     }
     const session = await startSession('profile', id)
-    if (session) openSessionInTab(session)
+    if (session) openSessionInTab(session, false)
+  }
+
+  async function organizeTab(id: Id) {
+    const tab = tabs.value.find((item) => item.id === id)
+    if (!tab || tab.organized) return
+    const sessionId = paneSessionIds(tab.root)[0]
+    const session = sessions.value.find((item) => item.id === sessionId)
+    if (!session) return
+    const existingNode = sidebarNodes.value.find(
+      (node) => node.workspaceId === tab.workspaceId && node.targetId === session.targetId,
+    )
+    try {
+      if (!existingNode) {
+        await api.createSidebarNode(
+          tab.workspaceId,
+          session.targetKind,
+          session.name,
+          null,
+          session.targetId,
+        )
+        await refresh()
+      }
+      tab.organized = true
+      scheduleLayoutSave(tab.id)
+    } catch (error) {
+      report('Épinglage impossible', error)
+    }
   }
 
   async function splitActivePane(direction: SplitDirection) {
@@ -1003,8 +1119,16 @@ export const useAppStore = defineStore('app', () => {
   async function createFolder(label: string, parentId: Id | null = null) {
     if (!activeWorkspaceId.value || !label.trim()) return
     try {
-      await api.createSidebarNode(activeWorkspaceId.value, 'folder', label.trim(), parentId)
+      const folder = await api.createSidebarNode(
+        activeWorkspaceId.value,
+        'folder',
+        label.trim(),
+        parentId,
+      )
+      if (parentId) setFolderCollapsed(parentId, false)
       await refresh()
+      renamingNodeId.value = folder.id
+      return folder
     } catch (error) {
       report('Création du dossier impossible', error)
     }
@@ -1125,7 +1249,30 @@ export const useAppStore = defineStore('app', () => {
 
   async function deleteNode(id: Id) {
     try {
+      const removed = new Set<Id>([id])
+      let changed = true
+      while (changed) {
+        changed = false
+        for (const node of sidebarNodes.value) {
+          if (node.parentId && removed.has(node.parentId) && !removed.has(node.id)) {
+            removed.add(node.id)
+            changed = true
+          }
+        }
+      }
+      const removedTargets = new Set(
+        sidebarNodes.value
+          .filter((node) => removed.has(node.id) && node.targetId)
+          .map((node) => node.targetId!),
+      )
+      const affectedTabs = tabs.value.filter((tab) =>
+        paneSessionIds(tab.root).some((sessionId) => {
+          const session = sessions.value.find((item) => item.id === sessionId)
+          return Boolean(session && removedTargets.has(session.targetId))
+        }),
+      )
       await api.deleteSidebarNode(id)
+      for (const tab of affectedTabs) await closeTab(tab.id, { force: true })
       await refresh()
     } catch (error) {
       report('Suppression impossible', error)
@@ -1153,6 +1300,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function reparentNode(id: Id, parentId: Id | null, position: number) {
+    if (id === parentId) return
     try {
       await api.moveSidebarNode(id, parentId, position)
       await refresh()
@@ -1344,6 +1492,9 @@ export const useAppStore = defineStore('app', () => {
     locked,
     pinConfigured,
     recoveryAvailable,
+    renamingNodeId,
+    isSwitchingWorkspace,
+    workspaceSwitchDirection,
     pendingTabClose,
     activeWorkspaceId,
 
@@ -1362,6 +1513,7 @@ export const useAppStore = defineStore('app', () => {
     activePaneSessionId,
     sessionById,
     appearance,
+    workspaceContentCollapsed,
     defaultProfileId,
     isFavorite,
 
@@ -1375,6 +1527,11 @@ export const useAppStore = defineStore('app', () => {
     cycleWorkspace,
     createWorkspace,
     duplicateWorkspace,
+    updateWorkspace,
+    isFolderCollapsed,
+    setFolderCollapsed,
+    toggleFolder,
+    toggleWorkspaceContent,
     openTarget,
     createTerminal,
     activateRestorableSession,
@@ -1383,6 +1540,7 @@ export const useAppStore = defineStore('app', () => {
     selectTab,
     selectPane,
     renameTab,
+    organizeTab,
     splitActivePane,
     setSplitRatio,
     closePane,

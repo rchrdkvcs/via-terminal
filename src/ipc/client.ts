@@ -54,6 +54,8 @@ export const api = {
     call<Workspace>('workspace_create', { name, icon: icon ?? null, color: color ?? null }),
   duplicateWorkspace: (id: Id, name: string) =>
     call<Workspace>('workspace_duplicate', { id, name }),
+  updateWorkspace: (id: Id, name: string, icon: string) =>
+    call<Workspace>('workspace_update', { id, name, icon }),
 
   /* ------------------------------------------------- profiles and resources */
   detectProfiles: () => call<string[]>('profile_detect'),

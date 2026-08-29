@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { MoreHorizontal, Pencil, Star, StarOff, Trash2 } from '@lucide/vue'
 import {
   DropdownMenu,
@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input'
 import {
   SidebarMenu,
   SidebarMenuAction,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
@@ -29,15 +28,12 @@ const props = withDefaults(
 )
 
 const store = useAppStore()
-const collapsed = ref(new Set<string>())
+const collapsed = computed(() => ({ has: (id: string) => store.isFolderCollapsed(id) }))
 const editing = ref<string | null>(null)
 const draft = ref('')
 
 function toggle(id: string) {
-  const next = new Set(collapsed.value)
-  if (next.has(id)) next.delete(id)
-  else next.add(id)
-  collapsed.value = next
+  store.setFolderCollapsed(id, !store.isFolderCollapsed(id))
 }
 
 function activate(node: TreeNode, event: MouseEvent) {
@@ -145,12 +141,8 @@ function dropInto(event: DragEvent, folderId: string) {
             @keydown.esc="editing = null"
             @blur="commitRename(node)"
           />
-          <span v-else>{{ node.label }}</span>
+          <span v-else class="truncate" @dblclick.stop="beginRename(node)">{{ node.label }}</span>
         </SidebarMenuButton>
-
-        <SidebarMenuBadge v-if="node.sessionIds.length" class="peer-hover/menu-button:hidden">
-          {{ node.sessionIds.length }}
-        </SidebarMenuBadge>
 
         <DropdownMenu>
           <DropdownMenuTrigger as-child>

@@ -1,6 +1,42 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+@keyframes workspace-next {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes workspace-previous {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-workspace-next {
+  animation: workspace-next 200ms ease-out;
+}
+.animate-workspace-previous {
+  animation: workspace-previous 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-workspace-next,
+  .animate-workspace-previous {
+    animation: none;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /*

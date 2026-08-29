@@ -65,6 +65,11 @@ vi.mock('@/ipc/client', async () => {
       deleteTab: vi.fn(async () => undefined),
       saveWindowState: vi.fn(async (value: unknown) => value),
       updateSettings: vi.fn(async (value: unknown) => value),
+      updateWorkspace: vi.fn(async (id: string, name: string, icon: string) => ({
+        ...snapshot().workspaces.find((workspace) => workspace.id === id)!,
+        name,
+        icon,
+      })),
     },
   }
 })
@@ -210,6 +215,7 @@ beforeEach(() => {
   spawned.length = 0
   closed.length = 0
   savedTabs.length = 0
+  window.localStorage?.clear()
 })
 
 describe('snapshot ingestion', () => {
@@ -239,6 +245,34 @@ describe('snapshot ingestion', () => {
   })
 })
 
+describe('workspace sidebar navigation', () => {
+  it('persists collapsed folders per workspace', async () => {
+    const store = await bootedStore()
+    expect(store.isFolderCollapsed('node-folder')).toBe(false)
+    store.toggleFolder('node-folder')
+    expect(store.isFolderCollapsed('node-folder')).toBe(true)
+
+    store.switchWorkspace(WORKSPACE_B)
+    expect(store.isFolderCollapsed('node-folder')).toBe(false)
+    store.switchWorkspace(WORKSPACE_A)
+    expect(store.isFolderCollapsed('node-folder')).toBe(true)
+  })
+
+  it('renames and changes the icon without replacing workspace state', async () => {
+    const store = await bootedStore()
+    await store.updateWorkspace(WORKSPACE_A, { name: 'Assistance', icon: 'server' })
+    expect(store.activeWorkspace).toMatchObject({ name: 'Assistance', icon: 'server' })
+    expect(store.activeWorkspaceId).toBe(WORKSPACE_A)
+  })
+
+  it('marks the direction of an animated workspace change', async () => {
+    const store = await bootedStore()
+    store.switchWorkspace(WORKSPACE_B)
+    expect(store.isSwitchingWorkspace).toBe(true)
+    expect(store.workspaceSwitchDirection).toBe(1)
+  })
+})
+
 describe('sessions and tabs', () => {
   it('opens a local terminal on the workspace default profile', async () => {
     const store = await bootedStore()
@@ -251,6 +285,27 @@ describe('sessions and tabs', () => {
       workspaceId: WORKSPACE_A,
       status: 'connected',
     })
+  })
+
+  it('keeps every new terminal as a temporary open tab without a saved-target counter', async () => {
+    const store = await bootedStore()
+    await store.createTerminal()
+    await store.createTerminal()
+    await store.createTerminal()
+
+    expect(store.unfavoritedTabs).toHaveLength(3)
+    expect(store.favorites[0].sessionIds).toEqual([])
+  })
+
+  it('moves a temporary tab into its saved target when it is pinned', async () => {
+    const store = await bootedStore()
+    await store.createTerminal()
+    const tabId = store.activeTabId
+
+    await store.organizeTab(tabId)
+
+    expect(store.unfavoritedTabs).toEqual([])
+    expect(store.favorites[0].sessionIds).toEqual([spawned[0]])
   })
 
   it('uses the session identifier returned by ssh_session_connect', async () => {
@@ -278,7 +333,8 @@ describe('sessions and tabs', () => {
     expect(store.unfavoritedTabs).toEqual([])
 
     await store.openTarget('resource', RESOURCE_A)
-    expect(store.unfavoritedTabs.map((tab) => tab.name)).toEqual(['Production'])
+    expect(store.unfavoritedTabs).toEqual([])
+    expect(store.tree[0].children[0].sessionIds).toEqual([spawned[1]])
   })
 
   it('opens a second session when reuse is refused', async () => {
@@ -344,6 +400,18 @@ describe('desktop shell regressions', () => {
     expect(topBar).toContain('@pointerdown="prepareDragging"')
     expect(app).not.toContain('sidebarRevealDelay')
     expect(app).not.toContain('group-hover:bg-neutral-900')
+  })
+
+  it('keeps open tabs and New terminal outside the collapsible saved section', () => {
+    const sidebar = readFileSync('src/components/sidebar/AppSidebar.vue', 'utf8')
+    const rows = readFileSync('src/components/sidebar/SessionRows.vue', 'utf8')
+    const tree = readFileSync('src/components/sidebar/SidebarTree.vue', 'utf8')
+    expect(sidebar.indexOf('workspace-sidebar-content')).toBeLessThan(
+      sidebar.indexOf('<SessionRows'),
+    )
+    expect(rows).toContain('Nouveau terminal')
+    expect(rows).not.toContain('row.panes')
+    expect(tree).not.toContain('SidebarMenuBadge')
   })
 })
 
@@ -452,6 +520,7 @@ describe('restorable layout', () => {
         name: 'Production',
         root: { kind: 'pane', sessionId: 'saved-1' },
         position: 0,
+        organized: true,
       },
     ]
     store.applySnapshot(data)
