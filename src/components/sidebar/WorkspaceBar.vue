@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Check, FolderPlus, Lock, Plus, Server, Terminal } from '@lucide/vue'
+import { nextTick, ref } from 'vue'
+import { Check, Copy, FolderPlus, Lock, Pencil, Plus, Server, Terminal, Trash2 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -19,15 +19,45 @@ const store = useAppStore()
 const emit = defineEmits<{ addResource: [] }>()
 
 const creating = ref(false)
+const editingId = ref<string | null>(null)
 const draftName = ref('')
 const draftIcon = ref('terminal')
+const menuFor = ref<string | null>(null)
+
+function openWorkspaceMenu(id: string) {
+  menuFor.value = null
+  void nextTick(() => {
+    menuFor.value = id
+  })
+}
+
+function beginCreate() {
+  editingId.value = null
+  draftName.value = ''
+  draftIcon.value = 'terminal'
+  creating.value = true
+}
+
+function beginEdit(id: string) {
+  const workspace = store.workspaces.find((item) => item.id === id)
+  if (!workspace) return
+  editingId.value = id
+  draftName.value = workspace.name
+  draftIcon.value = workspace.icon
+  creating.value = true
+}
 
 function submit() {
   const name = draftName.value
+  const icon = draftIcon.value
+  const id = editingId.value
   creating.value = false
   draftName.value = ''
-  if (name.trim()) void store.createWorkspace(name, draftIcon.value)
   draftIcon.value = 'terminal'
+  editingId.value = null
+  if (!name.trim()) return
+  if (id) void store.updateWorkspace(id, { name, icon })
+  else void store.createWorkspace(name, icon)
 }
 </script>
 
@@ -58,24 +88,62 @@ function submit() {
     <div
       class="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto no-scrollbar"
     >
-      <Tooltip v-for="(workspace, index) in store.workspaces" :key="workspace.id">
-        <TooltipTrigger as-child>
-          <button
-            class="grid size-7 shrink-0 place-items-center rounded-md transition-[background-color,color] duration-150 active:scale-[0.96]"
-            :class="
-              workspace.id === store.activeWorkspaceId
-                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                : 'text-sidebar-foreground/50 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
-            "
-            :aria-current="workspace.id === store.activeWorkspaceId ? 'true' : undefined"
-            :aria-label="workspace.name"
-            @click="store.switchWorkspace(workspace.id)"
-          >
-            <component :is="workspaceIcon(workspace.icon)" :size="16" :stroke-width="1.5" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top">{{ workspace.name }} · Alt {{ index + 1 }}</TooltipContent>
-      </Tooltip>
+      <div
+        v-for="(workspace, index) in store.workspaces"
+        :key="workspace.id"
+        class="relative shrink-0"
+      >
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <button
+              class="grid size-7 shrink-0 place-items-center rounded-md transition-[background-color,color] duration-150 active:scale-[0.96]"
+              :class="
+                workspace.id === store.activeWorkspaceId
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground/50 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
+              "
+              :aria-current="workspace.id === store.activeWorkspaceId ? 'true' : undefined"
+              :aria-label="workspace.name"
+              @click="store.switchWorkspace(workspace.id)"
+              @contextmenu.prevent="openWorkspaceMenu(workspace.id)"
+            >
+              <component :is="workspaceIcon(workspace.icon)" :size="16" :stroke-width="1.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">{{ workspace.name }} · Alt {{ index + 1 }}</TooltipContent>
+        </Tooltip>
+        <DropdownMenu
+          :open="menuFor === workspace.id"
+          @update:open="(open) => (menuFor = open ? workspace.id : null)"
+        >
+          <DropdownMenuTrigger as-child>
+            <button
+              class="pointer-events-none absolute inset-0 opacity-0"
+              tabindex="-1"
+              aria-hidden="true"
+              @contextmenu.prevent
+            />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="center" class="w-52">
+            <DropdownMenuItem @select="beginEdit(workspace.id)">
+              <Pencil :stroke-width="1.5" />Modifier
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              @select="store.duplicateWorkspace(workspace.id, `${workspace.name} (copie)`)"
+            >
+              <Copy :stroke-width="1.5" />Dupliquer
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              :disabled="store.workspaces.length <= 1"
+              @select="store.pendingWorkspaceDelete = workspace.id"
+            >
+              <Trash2 :stroke-width="1.5" />Supprimer
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
 
     <div class="shrink-0">
@@ -97,7 +165,7 @@ function submit() {
           <DropdownMenuItem @select="store.createFolder('Nouveau dossier')"
             ><FolderPlus :stroke-width="1.5" />Nouveau dossier</DropdownMenuItem
           >
-          <DropdownMenuItem @select="creating = true"
+          <DropdownMenuItem @select="beginCreate"
             ><Plus :stroke-width="1.5" />Nouvel espace de travail</DropdownMenuItem
           >
           <DropdownMenuSeparator />
@@ -110,9 +178,12 @@ function submit() {
 
     <Dialog v-model:open="creating">
       <DialogContent class="sm:max-w-sm">
-        <DialogHeader><DialogTitle>Nouvel espace de travail</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{{
+            editingId ? 'Modifier l’espace de travail' : 'Nouvel espace de travail'
+          }}</DialogTitle>
+        </DialogHeader>
         <div class="space-y-3">
-          <p class="text-sm font-medium">Nouvel espace de travail</p>
           <Input
             v-model="draftName"
             placeholder="Nom"
@@ -140,7 +211,7 @@ function submit() {
           </div>
           <Button class="w-full active:scale-[0.96]" :disabled="!draftName.trim()" @click="submit">
             <Check :stroke-width="1.5" />
-            Créer
+            {{ editingId ? 'Enregistrer' : 'Créer' }}
           </Button>
         </div>
       </DialogContent>

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref, shallowRef } from 'vue'
+import { computed, nextTick, ref, shallowRef } from 'vue'
 import { api, describeError, isNative } from '@/ipc/client'
 import { on } from '@/ipc/events'
 import type {
@@ -76,6 +76,8 @@ export interface RuntimeTab {
    * unique tabs; only extra instances (Ctrl/Shift click) join the open list.
    */
   organized: boolean
+  /** Local terminals dropped into a folder live here; SSH unique tabs use a sidebar node. */
+  folderId: Id | null
 }
 
 export interface TreeNode {
@@ -88,6 +90,8 @@ export interface TreeNode {
   children: TreeNode[]
   /** Live sessions currently backed by this node's target. */
   sessionIds: Id[]
+  /** Present when this row is a tab housed in a folder rather than a sidebar node. */
+  tabId?: Id
 }
 
 export interface Notice {
@@ -138,6 +142,7 @@ export const useAppStore = defineStore('app', () => {
   const activeTabPerWorkspace = ref<Record<Id, Id | undefined>>({})
   const notices = ref<Notice[]>([])
   const renamingNodeId = ref<Id | null>(null)
+  const pendingWorkspaceDelete = ref<Id | null>(null)
   const isSwitchingWorkspace = ref(false)
   const workspaceSwitchDirection = ref<-1 | 0 | 1>(0)
   let workspaceTransitionTimer: ReturnType<typeof setTimeout> | undefined
@@ -244,6 +249,33 @@ export const useAppStore = defineStore('app', () => {
       }
     }
     assignDepth(roots, 0)
+
+    const findNode = (nodes: TreeNode[], id: Id): TreeNode | undefined => {
+      for (const node of nodes) {
+        if (node.id === id) return node
+        const nested = findNode(node.children, id)
+        if (nested) return nested
+      }
+    }
+    for (const tab of tabs.value) {
+      if (tab.workspaceId !== activeWorkspaceId.value || !tab.folderId) continue
+      const folder = findNode(roots, tab.folderId)
+      if (!folder || folder.kind !== 'folder') continue
+      const sessionIds = paneSessionIds(tab.root)
+      const session = sessions.value.find((item) => item.id === sessionIds[0])
+      folder.children.push({
+        id: tab.id,
+        parentId: folder.id,
+        kind: session?.targetKind === 'resource' ? 'resource' : 'profile',
+        label: tab.name,
+        targetId: session?.targetId ?? null,
+        depth: folder.depth + 1,
+        children: [],
+        sessionIds,
+        tabId: tab.id,
+      })
+      folder.sessionIds = [...new Set([...folder.sessionIds, ...sessionIds])]
+    }
     return roots
   })
 
@@ -315,7 +347,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   const unfavoritedTabs = computed(() =>
-    visibleTabs.value.filter((tab) => !tab.organized && !isTreeUniqueTab(tab)),
+    visibleTabs.value.filter((tab) => !tab.organized && !tab.folderId && !isTreeUniqueTab(tab)),
   )
   /** Pinned tabs sit above the divider, like Zen; they are the same tabs, not copies. */
   const pinnedTabs = computed(() =>
@@ -454,6 +486,7 @@ export const useAppStore = defineStore('app', () => {
           root: toWire(tab.root),
           position: tab.position,
           organized: tab.organized,
+          folderId: tab.folderId,
         },
         descriptors,
       )
@@ -564,6 +597,7 @@ export const useAppStore = defineStore('app', () => {
         activePaneId: firstPane(root)?.id ?? '',
         position: saved.position,
         organized: saved.organized,
+        folderId: saved.folderId ?? null,
       }
       tabs.value.push(runtime)
       activeTabPerWorkspace.value[saved.workspaceId] ??= runtime.id
@@ -737,6 +771,28 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  async function deleteWorkspace(id: Id) {
+    if (workspaces.value.length <= 1) {
+      notify('error', 'Impossible de supprimer le dernier espace de travail.')
+      pendingWorkspaceDelete.value = null
+      return
+    }
+    const current = workspaces.value.find((workspace) => workspace.id === id)
+    if (!current) return
+    const fallback = workspaces.value.find((workspace) => workspace.id !== id)
+    try {
+      const owned = tabs.value.filter((tab) => tab.workspaceId === id)
+      for (const tab of owned) await closeTab(tab.id, { force: true })
+      if (activeWorkspaceId.value === id && fallback) switchWorkspace(fallback.id)
+      await api.deleteWorkspace(id)
+      applySnapshot(await api.snapshot())
+      pendingWorkspaceDelete.value = null
+      notify('success', `Espace de travail « ${current.name} » supprimé.`)
+    } catch (error) {
+      report('Suppression de l’espace de travail impossible', error)
+    }
+  }
+
   /* --------------------------------------------------------------- sessions */
   function registerSession(session: SessionSummary) {
     sessions.value.push(session)
@@ -857,10 +913,12 @@ export const useAppStore = defineStore('app', () => {
       activePaneId: paneId,
       position: nextPosition(session.workspaceId),
       organized,
+      folderId: null,
     }
     tabs.value.push(tab)
     activeTabPerWorkspace.value[session.workspaceId] = tab.id
     scheduleLayoutSave(tab.id)
+    return tab
   }
 
   function focusSession(sessionId: Id) {
@@ -919,7 +977,8 @@ export const useAppStore = defineStore('app', () => {
       return
     }
     const session = await startSession('profile', id)
-    if (session) openSessionInTab(session, false)
+    if (!session) return
+    openSessionInTab(session, false)
   }
 
   async function organizeTab(id: Id) {
@@ -1154,6 +1213,7 @@ export const useAppStore = defineStore('app', () => {
       )
       if (parentId) setFolderCollapsed(parentId, false)
       await refresh()
+      await nextTick()
       renamingNodeId.value = folder.id
       return folder
     } catch (error) {
@@ -1299,6 +1359,9 @@ export const useAppStore = defineStore('app', () => {
           return Boolean(session && removedTargets.has(session.targetId))
         }),
       )
+      for (const tab of tabs.value) {
+        if (tab.folderId && removed.has(tab.folderId)) tab.folderId = null
+      }
       await api.deleteSidebarNode(id)
       for (const tab of affectedTabs) await closeTab(tab.id, { force: true })
       await refresh()
@@ -1421,10 +1484,25 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function placeTab(tabId: Id, parentId: Id | null, beforeId: Id | null) {
-    const target = tabTarget(tabId)
     const tab = tabs.value.find((item) => item.id === tabId)
-    if (!target || !tab || !(await placeTarget(target.id, parentId, beforeId))) return
-    // The tree row is the unique tab. Pinning here would draw a second row.
+    if (!tab) return
+    const target = tabTarget(tabId)
+    const isLocal = Boolean(target && profiles.value.some((item) => item.id === target.id))
+    const isCanonicalSsh = Boolean(
+      target && !isLocal && uniqueTabForTarget(target.id)?.id === tab.id,
+    )
+    if (isCanonicalSsh && target) {
+      if (!(await placeTarget(target.id, parentId, beforeId))) return
+      tab.organized = false
+      tab.folderId = null
+      scheduleLayoutSave(tab.id)
+      return
+    }
+    if (!parentId) return
+    const parent = sidebarNodes.value.find((item) => item.id === parentId)
+    if (!parent || parent.kind !== 'folder') return
+    setFolderCollapsed(parentId, false)
+    tab.folderId = parentId
     tab.organized = false
     scheduleLayoutSave(tab.id)
   }
@@ -1485,6 +1563,7 @@ export const useAppStore = defineStore('app', () => {
     const pinnedSiblings = siblings.filter((item) => item.organized)
     const openSiblings = siblings.filter((item) => !item.organized)
     tab.organized = pinned
+    tab.folderId = null
     const bucket = pinned ? pinnedSiblings : openSiblings
     const index = beforeTabId ? bucket.findIndex((item) => item.id === beforeTabId) : -1
     bucket.splice(index >= 0 ? index : bucket.length, 0, tab)
@@ -1593,6 +1672,7 @@ export const useAppStore = defineStore('app', () => {
     pinConfigured,
     recoveryAvailable,
     renamingNodeId,
+    pendingWorkspaceDelete,
     isSwitchingWorkspace,
     workspaceSwitchDirection,
     pendingTabClose,
@@ -1631,6 +1711,7 @@ export const useAppStore = defineStore('app', () => {
     createWorkspace,
     duplicateWorkspace,
     updateWorkspace,
+    deleteWorkspace,
     isFolderCollapsed,
     setFolderCollapsed,
     toggleFolder,

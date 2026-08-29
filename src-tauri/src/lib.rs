@@ -135,6 +135,11 @@ fn workspace_update(
     state.domain.update_workspace(id, name, icon)
 }
 #[tauri::command]
+fn workspace_delete(state: State<BackendState>, id: Uuid) -> Result<(), String> {
+    state.require_unlocked()?;
+    state.domain.delete_workspace(id)
+}
+#[tauri::command]
 fn identity_create(
     state: State<BackendState>,
     workspace_id: Uuid,
@@ -711,6 +716,7 @@ pub fn run() {
             workspace_create,
             workspace_duplicate,
             workspace_update,
+            workspace_delete,
             identity_create,
             resource_create,
             profile_create,

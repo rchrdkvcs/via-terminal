@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
-import { ChevronDown, Copy, FolderPlus, Pencil } from '@lucide/vue'
+import { ChevronDown, Copy, FolderPlus, Pencil, Trash2 } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -147,6 +147,16 @@ function openContextMenu() {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem @select="emit('addResource')">Nouvelle ressource SSH</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          variant="destructive"
+          :disabled="store.workspaces.length <= 1"
+          @select="
+            store.activeWorkspace && (store.pendingWorkspaceDelete = store.activeWorkspace.id)
+          "
+        >
+          <Trash2 :stroke-width="1.5" />Supprimer l’espace
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   </div>

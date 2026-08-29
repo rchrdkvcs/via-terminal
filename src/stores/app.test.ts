@@ -103,6 +103,9 @@ vi.mock('@/ipc/client', async () => {
         name,
         icon,
       })),
+      deleteWorkspace: vi.fn(async (id: string) => {
+        moves.push({ call: 'deleteWorkspace', id })
+      }),
     },
   }
 })
@@ -324,6 +327,21 @@ describe('workspace sidebar navigation', () => {
     store.switchWorkspace(WORKSPACE_B)
     expect(store.isSwitchingWorkspace).toBe(true)
     expect(store.workspaceSwitchDirection).toBe(1)
+  })
+
+  it('deletes a workspace and refuses to delete the last one', async () => {
+    const store = await bootedStore()
+    await store.deleteWorkspace(WORKSPACE_B)
+    expect(moves.some((item) => item.call === 'deleteWorkspace' && item.id === WORKSPACE_B)).toBe(
+      true,
+    )
+
+    const only = snapshot()
+    only.workspaces = only.workspaces.filter((workspace) => workspace.id === WORKSPACE_A)
+    store.applySnapshot(only)
+    moves.length = 0
+    await store.deleteWorkspace(WORKSPACE_A)
+    expect(moves).toEqual([])
   })
 })
 
@@ -561,7 +579,10 @@ describe('desktop shell regressions', () => {
     expect(app).toContain('sidebarRevealDelay')
     expect(app).toContain('scheduleReveal')
     expect(app).toContain('scheduleHide')
-    expect(app).toContain('w-5')
+    expect(app).toContain('cursor-ew-resize')
+    expect(app).toContain('bg-background')
+    expect(app).toContain('group-hover:opacity-100')
+    expect(app).toContain('rounded-xl border border-border/50 bg-background')
     expect(app).not.toContain('group-hover:bg-neutral-900')
   })
 
@@ -578,17 +599,28 @@ describe('desktop shell regressions', () => {
     expect(tree).toContain('uniqueTabForTarget')
     expect(tree).toContain('reuse: !(event.ctrlKey || event.shiftKey)')
     expect(tree).toContain('Fermer')
+    expect(tree).not.toContain('MoreHorizontal')
     expect(rows).toContain('Nouveau terminal')
     expect(rows).toContain('Épingler')
     expect(rows).toContain('Détacher')
     expect(rows).not.toContain('Épingler dans l’espace')
     expect(rows).not.toContain('Épingler en haut')
     expect(rows).not.toContain('row.panes')
+    expect(rows).not.toContain('renamingTabId')
+    expect(sidebar).toContain('Déposer ici pour épingler')
+    expect(tree).toContain('@dragover="onDragOver($event, node)"')
+    const palette = readFileSync('src/components/CommandPalette.vue', 'utf8')
+    expect(palette).toContain('bg-neutral-950')
+    const commandDialog = readFileSync('src/components/ui/command/CommandDialog.vue', 'utf8')
+    expect(commandDialog).toContain('sm:max-w-2xl')
   })
 
   it('switches workspace on a left click and does not open a menu', () => {
     const bar = readFileSync('src/components/sidebar/WorkspaceBar.vue', 'utf8')
     expect(bar).toContain('@click="store.switchWorkspace(workspace.id)"')
+    expect(bar).toContain('@contextmenu.prevent="openWorkspaceMenu(workspace.id)"')
+    expect(bar).toContain('Modifier')
+    expect(bar).toContain('Supprimer')
     expect(bar).not.toContain('Ouvrir «')
   })
 })
@@ -822,6 +854,23 @@ describe('sidebar drag and drop', () => {
       { call: 'favorite', targetId: RESOURCE_A, pinned: false },
       { call: 'move', id: 'node-resource', parentId: 'node-folder', position: 0 },
     ])
+  })
+
+  it('houses a local terminal inside a folder instead of pinning a second row', async () => {
+    const store = await bootedStore()
+    const folder = store.tree.find((node) => node.kind === 'folder')
+    expect(folder?.id).toBe('node-folder')
+    await store.createTerminal()
+    const tabId = store.activeTabId
+
+    await store.placeTab(tabId, folder!.id, null)
+
+    expect(store.unfavoritedTabs.map((tab) => tab.id)).not.toContain(tabId)
+    expect(store.pinnedTabs).toEqual([])
+    expect(store.activeTabId).toBe(tabId)
+    expect(store.tree.some((node) => node.children.some((child) => child.tabId === tabId))).toBe(
+      true,
+    )
   })
 
   it('drops an SSH tab into the tree without pinning a second row', async () => {

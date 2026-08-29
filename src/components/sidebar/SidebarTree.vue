@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { MoreHorizontal, Pencil, Trash2, X } from '@lucide/vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { Pencil, Pin, Trash2, X } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,12 +41,18 @@ const store = useAppStore()
 const collapsed = computed(() => ({ has: (id: string) => store.isFolderCollapsed(id) }))
 const editing = ref<string | null>(null)
 const draft = ref('')
+const input = ref<InstanceType<typeof Input> | null>(null)
+const menuFor = ref<string | null>(null)
 
 function toggle(id: string) {
   store.setFolderCollapsed(id, !store.isFolderCollapsed(id))
 }
 
 function activate(node: TreeNode, event: MouseEvent) {
+  if (node.tabId) {
+    store.selectTab(node.tabId)
+    return
+  }
   if (node.kind === 'folder') {
     toggle(node.id)
     return
@@ -56,9 +62,25 @@ function activate(node: TreeNode, event: MouseEvent) {
   void store.openTarget(node.kind, node.targetId, { reuse: !(event.ctrlKey || event.shiftKey) })
 }
 
+function openRowMenu(id: string) {
+  menuFor.value = null
+  void nextTick(() => {
+    menuFor.value = id
+  })
+}
+
 function closeUnique(node: TreeNode) {
+  if (node.tabId) {
+    void store.closeTab(node.tabId)
+    return
+  }
   const tab = store.uniqueTabForTarget(node.targetId)
   if (tab) void store.closeTab(tab.id)
+}
+
+function canClose(node: TreeNode) {
+  if (node.kind === 'folder') return false
+  return Boolean(node.tabId || store.uniqueTabForTarget(node.targetId))
 }
 
 function rowState(node: TreeNode) {
@@ -70,9 +92,20 @@ function rowState(node: TreeNode) {
   return 'online'
 }
 
-function beginRename(node: TreeNode) {
+function focusRenameInput() {
+  const raw = input.value as unknown
+  const inst = Array.isArray(raw) ? raw[0] : raw
+  const element =
+    (inst as { $el?: HTMLInputElement } | undefined)?.$el ?? (inst as HTMLInputElement | undefined)
+  element?.focus?.()
+  element?.select?.()
+}
+
+async function beginRename(node: TreeNode) {
   editing.value = node.id
   draft.value = node.label
+  await nextTick()
+  focusRenameInput()
 }
 
 watch(
@@ -80,7 +113,7 @@ watch(
   (id) => {
     const node = props.nodes.find((item) => item.id === id)
     if (!node) return
-    beginRename(node)
+    void beginRename(node)
     store.renamingNodeId = null
   },
 )
@@ -88,16 +121,32 @@ watch(
 function commitRename(node: TreeNode) {
   const value = draft.value
   editing.value = null
-  if (value.trim() && value !== node.label) void store.renameNode(node.id, value)
+  if (!value.trim() || value === node.label) return
+  if (node.tabId) store.renameTab(node.tabId, value)
+  else void store.renameNode(node.id, value)
 }
 
 function startDrag(event: DragEvent, node: TreeNode) {
+  if (node.tabId) {
+    startSidebarDrag(event, { type: 'tab', id: node.tabId })
+    return
+  }
   startSidebarDrag(
     event,
     props.pinned
       ? { type: 'favorite', id: node.id, targetId: node.targetId! }
       : { type: 'node', id: node.id },
   )
+}
+
+function removeNode(node: TreeNode) {
+  if (node.tabId) void store.closeTab(node.tabId)
+  else void store.deleteNode(node.id)
+}
+
+function isActive(node: TreeNode) {
+  if (node.tabId) return store.activeTabId === node.tabId
+  return store.isTargetActive(node.targetId)
 }
 
 /** A folder cannot be dropped inside one of its own descendants. */
@@ -185,15 +234,16 @@ function pin(drag: SidebarDrag, beforeId: string | null) {
       v-for="node in nodes"
       :key="node.id"
       draggable="true"
-      class="transition-opacity"
+      class="relative transition-opacity"
       :class="activeDrag?.id === node.id ? 'opacity-40' : ''"
       @dragstart.stop="startDrag($event, node)"
       @dragend.stop="endSidebarDrag()"
+      @contextmenu.prevent="openRowMenu(node.id)"
     >
       <SidebarMenuButton
-        :is-active="store.isTargetActive(node.targetId)"
+        :is-active="isActive(node)"
         :role="node.kind === 'folder' ? undefined : 'tab'"
-        :aria-selected="node.kind === 'folder' ? undefined : store.isTargetActive(node.targetId)"
+        :aria-selected="node.kind === 'folder' ? undefined : isActive(node)"
         :aria-expanded="node.kind === 'folder' ? !collapsed.has(node.id) : undefined"
         :style="{ paddingInlineStart: `${8 + node.depth * 12}px` }"
         :class="hintClass(node)"
@@ -226,46 +276,53 @@ function pin(drag: SidebarDrag, beforeId: string | null) {
 
         <Input
           v-if="editing === node.id"
+          ref="input"
           v-model="draft"
           class="h-6 border-0 bg-transparent px-0 py-0 text-sm shadow-none focus-visible:ring-0"
-          autofocus
+          aria-label="Nom"
           @click.stop
-          @keydown.enter="commitRename(node)"
-          @keydown.esc="editing = null"
+          @keydown.enter.prevent="commitRename(node)"
+          @keydown.esc.prevent="editing = null"
           @blur="commitRename(node)"
         />
         <span v-else class="truncate" @dblclick.stop="beginRename(node)">{{ node.label }}</span>
       </SidebarMenuButton>
 
       <SidebarMenuAction
-        v-if="node.kind !== 'folder' && store.uniqueTabForTarget(node.targetId)"
+        v-if="canClose(node)"
         show-on-hover
-        class="right-7"
         :aria-label="`Fermer ${node.label}`"
         @click.stop="closeUnique(node)"
       >
         <X :stroke-width="1.5" />
       </SidebarMenuAction>
-      <DropdownMenu>
+      <DropdownMenu
+        :open="menuFor === node.id"
+        @update:open="(open) => (menuFor = open ? node.id : null)"
+      >
         <DropdownMenuTrigger as-child>
-          <SidebarMenuAction show-on-hover :aria-label="`Options de ${node.label}`">
-            <MoreHorizontal :stroke-width="1.5" />
-          </SidebarMenuAction>
+          <button
+            class="pointer-events-none absolute inset-0 opacity-0"
+            tabindex="-1"
+            aria-hidden="true"
+            @contextmenu.prevent
+          />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" side="right" class="w-52">
+        <DropdownMenuContent side="right" align="start" class="w-52">
+          <DropdownMenuItem v-if="node.tabId" @select="store.pinTab(node.tabId)">
+            <Pin :stroke-width="1.5" />
+            Épingler
+          </DropdownMenuItem>
           <DropdownMenuItem @select="beginRename(node)">
             <Pencil :stroke-width="1.5" />
             Renommer
           </DropdownMenuItem>
-          <DropdownMenuItem
-            v-if="node.kind !== 'folder' && store.uniqueTabForTarget(node.targetId)"
-            @select="closeUnique(node)"
-          >
+          <DropdownMenuItem v-if="canClose(node)" @select="closeUnique(node)">
             <X :stroke-width="1.5" />
             Fermer
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" @select="store.deleteNode(node.id)">
+          <DropdownMenuItem variant="destructive" @select="removeNode(node)">
             <Trash2 :stroke-width="1.5" />
             Supprimer
           </DropdownMenuItem>

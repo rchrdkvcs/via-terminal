@@ -210,6 +210,9 @@ impl DomainService {
             {
                 tab.id = Uuid::new_v4();
                 tab.workspace_id = new_id;
+                tab.folder_id = tab
+                    .folder_id
+                    .and_then(|folder_id| node_map.get(&folder_id).copied());
                 if let Some(root) = &mut tab.root {
                     remap_pane_sessions(root, &session_map);
                 }
@@ -254,6 +257,44 @@ impl DomainService {
             Ok(workspace.clone())
         })
     }
+
+    pub fn delete_workspace(&self, id: Id) -> Result<(), String> {
+        self.mutate(|d| {
+            if !d.workspaces.iter().any(|workspace| workspace.id == id) {
+                return Err("workspace not found".into());
+            }
+            if d.workspaces.len() <= 1 {
+                return Err("cannot delete the last workspace".into());
+            }
+            d.workspaces.retain(|workspace| workspace.id != id);
+            d.profiles.retain(|item| item.workspace_id != id);
+            d.identities.retain(|item| item.workspace_id != id);
+            d.resources.retain(|item| item.workspace_id != id);
+            d.sidebar_nodes.retain(|item| item.workspace_id != id);
+            d.favorites.retain(|item| item.workspace_id != id);
+            d.saved_sessions.retain(|item| item.workspace_id != id);
+            d.tabs.retain(|item| item.workspace_id != id);
+            for (position, workspace) in d.workspaces.iter_mut().enumerate() {
+                workspace.position = position as i64;
+            }
+            let live_tabs: std::collections::HashSet<Id> =
+                d.tabs.iter().map(|tab| tab.id).collect();
+            let fallback = d.workspaces.first().map(|workspace| workspace.id);
+            for window in &mut d.windows {
+                if window.active_workspace_id == Some(id) {
+                    window.active_workspace_id = fallback;
+                }
+                if window
+                    .active_tab_id
+                    .is_some_and(|tab| !live_tabs.contains(&tab))
+                {
+                    window.active_tab_id = None;
+                }
+            }
+            Ok(())
+        })
+    }
+
     pub fn create_identity(
         &self,
         workspace_id: Id,
@@ -587,6 +628,14 @@ impl DomainService {
             d.saved_sessions
                 .retain(|session| !orphaned.contains(&session.id));
             prune_sessions_from_tabs(&mut d.tabs, &orphaned);
+            for tab in &mut d.tabs {
+                if tab
+                    .folder_id
+                    .is_some_and(|folder_id| removed.contains(&folder_id))
+                {
+                    tab.folder_id = None;
+                }
+            }
             let live: std::collections::HashSet<Id> = d.tabs.iter().map(|tab| tab.id).collect();
             for window in &mut d.windows {
                 if window.active_tab_id.is_some_and(|tab| !live.contains(&tab)) {
@@ -984,6 +1033,21 @@ mod tests {
     }
 
     #[test]
+    fn delete_workspace_removes_owned_records_and_keeps_the_last_one() {
+        let service = DomainService::new(Repository::memory().unwrap());
+        let first = service.snapshot().unwrap().workspaces[0].id;
+        let second = service
+            .create_workspace("Ops".into(), "server".into(), "#67e8f9".into())
+            .unwrap();
+
+        service.delete_workspace(second.id).unwrap();
+        let snapshot = service.snapshot().unwrap();
+        assert_eq!(snapshot.workspaces.len(), 1);
+        assert_eq!(snapshot.workspaces[0].id, first);
+        assert!(service.delete_workspace(first).is_err());
+    }
+
+    #[test]
     fn create_workspace_keeps_the_launch_profile_off_the_sidebar() {
         let service = DomainService::new(Repository::memory().unwrap());
         let workspace = service
@@ -1079,6 +1143,7 @@ mod tests {
             root: Some(PaneTree::Pane { session_id }),
             position: 0,
             organized: false,
+            folder_id: None,
         };
         service
             .save_tab(
@@ -1249,6 +1314,7 @@ mod tests {
                     root: Some(PaneTree::Pane { session_id }),
                     position: 0,
                     organized: true,
+                    folder_id: None,
                 },
                 vec![SavedSession {
                     id: session_id,
@@ -1356,6 +1422,7 @@ mod tests {
                     root: Some(PaneTree::Pane { session_id }),
                     position: 0,
                     organized: false,
+                    folder_id: None,
                 },
                 vec![SavedSession {
                     id: session_id,

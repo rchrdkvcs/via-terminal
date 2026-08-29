@@ -15,6 +15,7 @@ const props = withDefaults(
     DialogRootProps & {
       title?: string
       description?: string
+      class?: string
     }
   >(),
   {
@@ -29,12 +30,15 @@ const forwarded = useForwardPropsEmits(props, emits)
 
 <template>
   <Dialog v-slot="slotProps" v-bind="forwarded">
-    <DialogContent class="overflow-hidden p-0">
+    <DialogContent
+      :show-close-button="false"
+      :class="['overflow-hidden p-0 sm:max-w-2xl', props.class]"
+    >
       <DialogHeader class="sr-only">
         <DialogTitle>{{ title }}</DialogTitle>
         <DialogDescription>{{ description }}</DialogDescription>
       </DialogHeader>
-      <Command>
+      <Command :class="props.class">
         <slot v-bind="slotProps" />
       </Command>
     </DialogContent>

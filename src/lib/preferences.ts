@@ -18,6 +18,8 @@ export interface LocalPreferences {
   /** Ask before closing a tab that still owns a live session. */
   confirmOnClose: boolean
   systemPrefersDark: boolean
+  /** Sidebar width in pixels; shared between the pinned panel and the peek overlay. */
+  sidebarWidth: number
 }
 
 const STORAGE_KEY = 'terminarr.preferences'
@@ -31,6 +33,7 @@ const fallback: LocalPreferences = {
   scrollback: 10000,
   confirmOnClose: true,
   systemPrefersDark: true,
+  sidebarWidth: 256,
 }
 
 export function loadPreferences(): LocalPreferences {

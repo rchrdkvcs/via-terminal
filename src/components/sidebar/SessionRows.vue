@@ -42,13 +42,20 @@ function openRowMenu(id: string) {
   })
 }
 
+function focusRenameInput() {
+  const raw = input.value as unknown
+  const inst = Array.isArray(raw) ? raw[0] : raw
+  const element =
+    (inst as { $el?: HTMLInputElement } | undefined)?.$el ?? (inst as HTMLInputElement | undefined)
+  element?.focus?.()
+  element?.select?.()
+}
+
 async function beginRename(id: string, label: string) {
   editing.value = id
   draft.value = label
   await nextTick()
-  const element = input.value?.$el as HTMLInputElement | undefined
-  element?.focus()
-  element?.select()
+  focusRenameInput()
 }
 
 function commitRename(id: string, label: string) {

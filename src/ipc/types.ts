@@ -85,6 +85,7 @@ export interface Tab {
   root: PaneTree | null
   position: number
   organized: boolean
+  folderId?: Id | null
 }
 
 export interface WindowState {

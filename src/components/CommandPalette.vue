@@ -112,9 +112,12 @@ function choose(action: Action) {
     reka-ui's Listbox drives the palette, so arrow keys, Home/End, type-ahead
     and Enter all work without a hand-rolled selection index.
   -->
-  <CommandDialog v-model:open="store.paletteOpen">
+  <CommandDialog
+    v-model:open="store.paletteOpen"
+    class="bg-neutral-950 text-neutral-100 border-neutral-800"
+  >
     <CommandInput placeholder="Rechercher une action, une ressource, un espace…" />
-    <CommandList>
+    <CommandList class="max-h-[min(28rem,70vh)]">
       <CommandEmpty>Aucun résultat.</CommandEmpty>
 
       <CommandGroup v-if="targets.length" heading="Ouvrir">

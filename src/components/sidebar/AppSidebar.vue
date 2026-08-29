@@ -50,12 +50,27 @@ function dropOnSection(event: DragEvent, pinned: boolean) {
   else void store.unpinTab(drag.id)
 }
 
+function firstFolder(nodes: typeof store.tree): (typeof store.tree)[number] | undefined {
+  for (const node of nodes) {
+    if (node.kind === 'folder') return node
+    const nested = firstFolder(node.children)
+    if (nested) return nested
+  }
+}
+
 function dropAtRoot(event: DragEvent) {
   event.preventDefault()
   const drag = readSidebarDrag(event)
   endSidebarDrag()
   if (!drag) return
-  if (drag.type === 'node') void store.reparentNode(drag.id, null, null)
+  if (drag.type === 'node') {
+    void store.reparentNode(drag.id, null, null)
+    return
+  }
+  if (drag.type === 'tab') {
+    const folder = firstFolder(store.tree)
+    if (folder) void store.placeTab(drag.id, folder.id, null)
+  }
 }
 
 function groupHint(key: 'pinned' | 'open' | 'tree') {
@@ -110,14 +125,20 @@ function onLeave(event: DragEvent) {
         <div v-if="!store.workspaceContentCollapsed" id="workspace-sidebar-content">
           <SidebarGroup
             v-if="store.pinnedTabs.length || draggingTab()"
-            class="p-2 py-1"
-            :class="[groupHint('pinned'), store.pinnedTabs.length ? '' : 'min-h-10']"
+            class="p-2 py-1 transition-colors"
+            :class="[groupHint('pinned'), store.pinnedTabs.length ? '' : 'min-h-12']"
             aria-label="Onglets épinglés"
             @dragenter="overGroup($event, 'pinned')"
             @dragover="overGroup($event, 'pinned')"
             @drop="dropOnSection($event, true)"
           >
             <SessionRows pinned />
+            <div
+              v-if="draggingTab() && !store.pinnedTabs.length"
+              class="pointer-events-none flex h-8 items-center justify-center rounded-md border border-dashed border-sidebar-border text-xs text-sidebar-foreground/50"
+            >
+              Déposer ici pour épingler
+            </div>
           </SidebarGroup>
           <SidebarGroup
             v-if="store.tree.length"

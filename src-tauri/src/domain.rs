@@ -113,6 +113,10 @@ pub struct Tab {
     pub position: i64,
     #[serde(default)]
     pub organized: bool,
+    /// Folder this tab lives in. Local terminals dropped onto a folder use this
+    /// instead of a sidebar node, because they all share the default profile.
+    #[serde(default)]
+    pub folder_id: Option<Id>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -608,6 +612,7 @@ mod tests {
             root: Some(PaneTree::Pane { session_id }),
             position: 0,
             organized: false,
+            folder_id: None,
         });
         assert_eq!(
             data.validate().unwrap_err(),

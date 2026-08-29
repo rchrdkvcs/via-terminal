@@ -38,6 +38,49 @@ let unbind: (() => void) | undefined
 const closingTab = computed(
   () => store.tabs.find((tab) => tab.id === store.pendingTabClose) ?? null,
 )
+const deletingWorkspace = computed(
+  () => store.workspaces.find((workspace) => workspace.id === store.pendingWorkspaceDelete) ?? null,
+)
+
+const sidebarWidth = computed(() =>
+  Math.min(480, Math.max(180, store.preferences.sidebarWidth || 256)),
+)
+const resizingSidebar = ref(false)
+
+function startSidebarResize(event: PointerEvent) {
+  if (event.button !== 0) return
+  event.preventDefault()
+  event.stopPropagation()
+  clearPeekTimers()
+  const handle = event.currentTarget as HTMLElement
+  handle.setPointerCapture(event.pointerId)
+  resizingSidebar.value = true
+  const origin = event.clientX
+  const opened = store.sidebarPinned || store.sidebarPeek
+  const originWidth = opened ? sidebarWidth.value : 0
+
+  const move = (moveEvent: PointerEvent) => {
+    const next = originWidth + (moveEvent.clientX - origin)
+    if (next < 120) {
+      store.sidebarPinned = false
+      store.sidebarPeek = false
+      return
+    }
+    store.updatePreferences({ sidebarWidth: Math.min(480, Math.max(180, next)) })
+    if (!store.sidebarPinned) {
+      store.sidebarPinned = true
+      store.sidebarPeek = false
+    }
+  }
+  const stop = () => {
+    resizingSidebar.value = false
+    handle.releasePointerCapture(event.pointerId)
+    handle.removeEventListener('pointermove', move)
+    handle.removeEventListener('pointerup', stop)
+  }
+  handle.addEventListener('pointermove', move)
+  handle.addEventListener('pointerup', stop)
+}
 
 /**
  * Compact-mode peek, matching Zen: the pointer must rest on the window edge
@@ -140,20 +183,39 @@ window.addEventListener('beforeunload', () => {
       >
         <div
           v-if="store.sidebarPinned && store.route === 'workspace'"
-          class="h-full w-64 shrink-0 overflow-hidden"
+          class="relative h-full shrink-0 overflow-hidden"
+          :class="resizingSidebar ? '' : 'transition-[width] duration-200 ease-out'"
+          :style="{ width: `${sidebarWidth}px` }"
         >
           <AppSidebar @add-resource="targetDialog = 'resource'" />
+          <div
+            class="group absolute inset-y-0 end-0 z-20 w-2 cursor-ew-resize"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Largeur de la barre latérale"
+            :aria-valuenow="Math.round(sidebarWidth)"
+            aria-valuemin="180"
+            aria-valuemax="480"
+            tabindex="0"
+            @pointerdown="startSidebarResize"
+          >
+            <span
+              class="absolute top-1/2 end-0.5 h-10 w-0.5 -translate-y-1/2 rounded-full bg-border opacity-0 transition-opacity group-hover:opacity-100"
+              aria-hidden="true"
+            />
+          </div>
         </div>
       </Transition>
 
       <!--
         Compact: a hit strip on the window edge. Resting there reveals a floating
-        overlay so xterm is never refit. Leaving starts the hide delay.
+        overlay so xterm is never refit. Leaving starts the hide delay. The
+        handle on the strip still resizes — and dragging it open pins the panel.
       -->
       <template v-if="!store.sidebarPinned && store.route === 'workspace'">
         <div
           class="absolute inset-y-0 start-0 z-40"
-          :class="store.sidebarPeek ? 'w-64' : 'w-5'"
+          :style="{ width: store.sidebarPeek ? `${sidebarWidth}px` : '20px' }"
           :aria-hidden="store.sidebarPeek ? undefined : 'true'"
           @pointerenter="scheduleReveal"
           @pointerleave="scheduleHide"
@@ -166,11 +228,29 @@ window.addEventListener('beforeunload', () => {
           >
             <div
               v-if="store.sidebarPeek"
-              class="h-full w-64 overflow-hidden rounded-xl border border-border/50 bg-sidebar shadow-2xl"
+              class="h-full overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl"
+              :style="{ width: `${sidebarWidth}px` }"
             >
               <AppSidebar @add-resource="targetDialog = 'resource'" />
             </div>
           </Transition>
+          <div
+            class="group absolute inset-y-0 end-0 z-20 w-2 cursor-ew-resize"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Largeur de la barre latérale"
+            :aria-valuenow="Math.round(sidebarWidth)"
+            aria-valuemin="180"
+            aria-valuemax="480"
+            tabindex="0"
+            @pointerdown="startSidebarResize"
+            @pointerenter="scheduleReveal"
+          >
+            <span
+              class="absolute top-1/2 end-0.5 h-10 w-0.5 -translate-y-1/2 rounded-full bg-border opacity-0 transition-opacity group-hover:opacity-100"
+              aria-hidden="true"
+            />
+          </div>
         </div>
       </template>
 
@@ -239,6 +319,31 @@ window.addEventListener('beforeunload', () => {
           <Button variant="ghost" @click="store.dismissRecovery(false)">Démarrage propre</Button>
           <Button class="active:scale-[0.96]" @click="store.dismissRecovery(true)">
             Restaurer la disposition
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog
+      :open="Boolean(deletingWorkspace)"
+      @update:open="store.pendingWorkspaceDelete = $event ? store.pendingWorkspaceDelete : null"
+    >
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Supprimer « {{ deletingWorkspace?.name }} » ?</DialogTitle>
+          <DialogDescription>
+            L’espace, ses dossiers et ses ressources seront retirés. Les sessions ouvertes de cet
+            espace seront arrêtées.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="ghost" @click="store.pendingWorkspaceDelete = null">Annuler</Button>
+          <Button
+            variant="destructive"
+            class="active:scale-[0.96]"
+            @click="deletingWorkspace && store.deleteWorkspace(deletingWorkspace.id)"
+          >
+            Supprimer
           </Button>
         </DialogFooter>
       </DialogContent>
