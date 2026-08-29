@@ -71,6 +71,8 @@ export interface RuntimeTab {
   root: PaneNode
   activePaneId: string
   position: number
+  /** Saved targets live in the tree; temporary tabs live in the open-tab section. */
+  organized: boolean
 }
 
 export interface TreeNode {
@@ -181,11 +183,14 @@ export const useAppStore = defineStore('app', () => {
     return record?.name ?? null
   }
 
-  /** Sessions grouped by the target that produced them, for sidebar badges. */
+  /** Temporary tabs must not decorate their saved profile/resource with live state. */
   const sessionsByTarget = computed(() => {
     const map = new Map<Id, Id[]>()
+    const organizedSessionIds = new Set(
+      tabs.value.filter((tab) => tab.organized).flatMap((tab) => paneSessionIds(tab.root)),
+    )
     for (const session of sessions.value) {
-      if (session.status === 'closed') continue
+      if (session.status === 'closed' || !organizedSessionIds.has(session.id)) continue
       const current = map.get(session.targetId)
       if (current) current.push(session.id)
       else map.set(session.targetId, [session.id])
@@ -277,19 +282,7 @@ export const useAppStore = defineStore('app', () => {
       .sort((a, b) => a.position - b.position),
   )
 
-  const unfavoritedTabs = computed(() => {
-    const organizedTargetIds = new Set(
-      sidebarNodes.value
-        .filter((node) => node.workspaceId === activeWorkspaceId.value && node.targetId)
-        .map((node) => node.targetId),
-    )
-    for (const favorite of favorites.value) organizedTargetIds.add(favorite.targetId)
-    return visibleTabs.value.filter((tab) => {
-      const firstSessionId = paneSessionIds(tab.root)[0]
-      const targetId = sessions.value.find((session) => session.id === firstSessionId)?.targetId
-      return !targetId || !organizedTargetIds.has(targetId)
-    })
-  })
+  const unfavoritedTabs = computed(() => visibleTabs.value.filter((tab) => !tab.organized))
 
   const activeTabId = computed(() => activeTabPerWorkspace.value[activeWorkspaceId.value] ?? '')
   const activeTab = computed(
@@ -388,13 +381,15 @@ export const useAppStore = defineStore('app', () => {
   /** TECHNICAL.md: layout writes are debounced and committed atomically. */
   function scheduleLayoutSave(tabId: Id) {
     if (!isNative()) return
+    const tab = tabs.value.find((item) => item.id === tabId)
+    if (!tab?.organized) return
     if (layoutTimer) clearTimeout(layoutTimer)
     layoutTimer = setTimeout(() => void persistTab(tabId), 400)
   }
 
   async function persistTab(tabId: Id) {
     const tab = tabs.value.find((item) => item.id === tabId)
-    if (!tab) return
+    if (!tab?.organized) return
     const descriptors: SavedSession[] = paneSessionIds(tab.root).flatMap((sessionId) => {
       const session = sessionById.value.get(sessionId)
       if (!session) return []
@@ -416,6 +411,7 @@ export const useAppStore = defineStore('app', () => {
           name: tab.name,
           root: toWire(tab.root),
           position: tab.position,
+          organized: tab.organized,
         },
         descriptors,
       )
@@ -525,6 +521,7 @@ export const useAppStore = defineStore('app', () => {
         root,
         activePaneId: firstPane(root)?.id ?? '',
         position: saved.position,
+        organized: saved.organized,
       }
       tabs.value.push(runtime)
       activeTabPerWorkspace.value[saved.workspaceId] ??= runtime.id
@@ -796,14 +793,16 @@ export const useAppStore = defineStore('app', () => {
     const existing = sessionsByTarget.value.get(targetId)?.[0]
     // PRODUCT.md: clicking an open favorite focuses it; a secondary action opens another.
     if (options.reuse !== false && existing) {
+      const tab = tabs.value.find((item) => paneSessionIds(item.root).includes(existing))
+      if (tab) tab.organized = true
       focusSession(existing)
       return
     }
     const session = await startSession(targetKind, targetId)
-    if (session) openSessionInTab(session)
+    if (session) openSessionInTab(session, true)
   }
 
-  function openSessionInTab(session: SessionSummary) {
+  function openSessionInTab(session: SessionSummary, organized = false) {
     const paneId = identifier()
     const tab: RuntimeTab = {
       id: identifier(),
@@ -812,6 +811,7 @@ export const useAppStore = defineStore('app', () => {
       root: { kind: 'pane', id: paneId, sessionId: session.id },
       activePaneId: paneId,
       position: nextPosition(session.workspaceId),
+      organized,
     }
     tabs.value.push(tab)
     activeTabPerWorkspace.value[session.workspaceId] = tab.id
@@ -874,7 +874,34 @@ export const useAppStore = defineStore('app', () => {
       return
     }
     const session = await startSession('profile', id)
-    if (session) openSessionInTab(session)
+    if (session) openSessionInTab(session, false)
+  }
+
+  async function organizeTab(id: Id) {
+    const tab = tabs.value.find((item) => item.id === id)
+    if (!tab || tab.organized) return
+    const sessionId = paneSessionIds(tab.root)[0]
+    const session = sessions.value.find((item) => item.id === sessionId)
+    if (!session) return
+    const existingNode = sidebarNodes.value.find(
+      (node) => node.workspaceId === tab.workspaceId && node.targetId === session.targetId,
+    )
+    try {
+      if (!existingNode) {
+        await api.createSidebarNode(
+          tab.workspaceId,
+          session.targetKind,
+          session.name,
+          null,
+          session.targetId,
+        )
+        await refresh()
+      }
+      tab.organized = true
+      scheduleLayoutSave(tab.id)
+    } catch (error) {
+      report('Épinglage impossible', error)
+    }
   }
 
   async function splitActivePane(direction: SplitDirection) {
@@ -1414,6 +1441,7 @@ export const useAppStore = defineStore('app', () => {
     selectTab,
     selectPane,
     renameTab,
+    organizeTab,
     splitActivePane,
     setSplitRatio,
     closePane,

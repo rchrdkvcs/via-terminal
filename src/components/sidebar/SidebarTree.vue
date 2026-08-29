@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { ChevronRight, MoreHorizontal, Pencil, Star, StarOff, Trash2 } from '@lucide/vue'
+import { MoreHorizontal, Pencil, Star, StarOff, Trash2 } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +21,6 @@ import {
 import {
   SidebarMenu,
   SidebarMenuAction,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
@@ -164,13 +163,6 @@ async function confirmDelete() {
         @dragover="onDragOver($event, node)"
         @drop.prevent="onDrop($event, node)"
       >
-        <ChevronRight
-          v-if="node.kind === 'folder'"
-          :size="12"
-          :stroke-width="1.5"
-          class="shrink-0 transition-transform duration-150 motion-reduce:transition-none"
-          :class="!collapsed.has(node.id) ? 'rotate-90' : ''"
-        />
         <component
           :is="nodeIcon(node.kind, node.kind === 'folder' && !collapsed.has(node.id))"
           :stroke-width="1.5"
@@ -190,10 +182,6 @@ async function confirmDelete() {
         />
         <span v-else class="truncate" @dblclick.stop="beginRename(node)">{{ node.label }}</span>
       </SidebarMenuButton>
-
-      <SidebarMenuBadge v-if="node.sessionIds.length" class="peer-hover/menu-button:hidden">
-        {{ node.sessionIds.length }}
-      </SidebarMenuBadge>
 
       <DropdownMenu>
         <DropdownMenuTrigger as-child>

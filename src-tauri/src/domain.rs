@@ -77,7 +77,11 @@ pub struct SavedSession {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum PaneTree {
     Pane {
         session_id: Id,
@@ -107,6 +111,8 @@ pub struct Tab {
     #[serde(default)]
     pub root: Option<PaneTree>,
     pub position: i64,
+    #[serde(default)]
+    pub organized: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -583,6 +589,7 @@ mod tests {
             name: "Wrong".into(),
             root: Some(PaneTree::Pane { session_id }),
             position: 0,
+            organized: false,
         });
         assert_eq!(
             data.validate().unwrap_err(),

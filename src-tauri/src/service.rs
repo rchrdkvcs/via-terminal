@@ -1007,6 +1007,7 @@ mod tests {
             name: "Operations".into(),
             root: Some(PaneTree::Pane { session_id }),
             position: 0,
+            organized: false,
         };
         service
             .save_tab(
@@ -1178,6 +1179,7 @@ mod tests {
                     name: "Production".into(),
                     root: Some(PaneTree::Pane { session_id }),
                     position: 0,
+                    organized: true,
                 },
                 vec![SavedSession {
                     id: session_id,
@@ -1240,6 +1242,7 @@ mod tests {
                     name: "Shell".into(),
                     root: Some(PaneTree::Pane { session_id }),
                     position: 0,
+                    organized: false,
                 },
                 vec![SavedSession {
                     id: session_id,

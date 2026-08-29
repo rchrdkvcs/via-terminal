@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
-import { MoreHorizontal, Pencil, Plus, SquareTerminal, X } from '@lucide/vue'
+import { MoreHorizontal, Pencil, Pin, Plus, SquareTerminal, X } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,7 +56,6 @@ const rows = computed(() =>
       id: tab.id,
       label: tab.name,
       detail: store.sessionById.get(ids[0])?.detail ?? '',
-      panes: ids.length,
       state,
     }
   }),
@@ -104,9 +103,6 @@ const rows = computed(() =>
         <span v-else class="truncate" @dblclick.stop="beginRename(row.id, row.label)">{{
           row.label
         }}</span>
-        <span v-if="row.panes > 1" class="shrink-0 text-xs tabular-nums text-sidebar-foreground/50">
-          {{ row.panes }}
-        </span>
       </SidebarMenuButton>
 
       <SidebarMenuAction
@@ -123,6 +119,9 @@ const rows = computed(() =>
           </SidebarMenuAction>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start">
+          <DropdownMenuItem @select="store.organizeTab(row.id)">
+            <Pin :stroke-width="1.5" />Épingler dans l’espace
+          </DropdownMenuItem>
           <DropdownMenuItem @select="beginRename(row.id, row.label)">
             <Pencil :stroke-width="1.5" />Renommer
           </DropdownMenuItem>

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
-import { ChevronDown, Copy, FolderPlus, MoreHorizontal, Pencil } from '@lucide/vue'
-import { Button } from '@/components/ui/button'
+import { ChevronDown, Copy, FolderPlus, Pencil } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +17,7 @@ const store = useAppStore()
 const editing = ref(false)
 const draft = ref('')
 const input = ref<InstanceType<typeof Input> | null>(null)
+const contextTrigger = ref<HTMLButtonElement | null>(null)
 
 async function beginRename() {
   if (!store.activeWorkspace) return
@@ -50,10 +50,14 @@ function cycleIcon() {
     workspaceIconNames[(index + 1 + workspaceIconNames.length) % workspaceIconNames.length]
   void store.updateWorkspace(workspace.id, { icon })
 }
+
+function openContextMenu() {
+  contextTrigger.value?.click()
+}
 </script>
 
 <template>
-  <div class="group/indicator flex min-w-0 items-center gap-1 rounded-lg px-1 py-0.5">
+  <div class="relative flex w-full min-w-0 items-center rounded-lg px-1 py-0.5">
     <Input
       v-if="editing"
       ref="input"
@@ -70,6 +74,7 @@ function cycleIcon() {
       :aria-expanded="!store.workspaceContentCollapsed"
       aria-controls="workspace-sidebar-content"
       @click="store.toggleWorkspaceContent()"
+      @contextmenu.prevent="openContextMenu"
     >
       <component
         :is="workspaceIcon(store.activeWorkspace?.icon)"
@@ -92,16 +97,14 @@ function cycleIcon() {
 
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          class="shrink-0 opacity-0 group-hover/indicator:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-          aria-label="Actions de l’espace de travail"
-        >
-          <MoreHorizontal :stroke-width="1.5" />
-        </Button>
+        <button
+          ref="contextTrigger"
+          class="pointer-events-none absolute start-2 top-full size-px opacity-0"
+          tabindex="-1"
+          aria-hidden="true"
+        />
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="right" align="start" class="w-56">
+      <DropdownMenuContent side="bottom" align="start" class="w-56">
         <DropdownMenuItem @select="beginRename">
           <Pencil :stroke-width="1.5" />Renommer
         </DropdownMenuItem>

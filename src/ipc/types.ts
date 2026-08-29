@@ -84,6 +84,7 @@ export interface Tab {
   name: string
   root: PaneTree | null
   position: number
+  organized: boolean
 }
 
 export interface WindowState {

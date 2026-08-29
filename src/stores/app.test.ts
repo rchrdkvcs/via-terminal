@@ -287,6 +287,27 @@ describe('sessions and tabs', () => {
     })
   })
 
+  it('keeps every new terminal as a temporary open tab without a saved-target counter', async () => {
+    const store = await bootedStore()
+    await store.createTerminal()
+    await store.createTerminal()
+    await store.createTerminal()
+
+    expect(store.unfavoritedTabs).toHaveLength(3)
+    expect(store.favorites[0].sessionIds).toEqual([])
+  })
+
+  it('moves a temporary tab into its saved target when it is pinned', async () => {
+    const store = await bootedStore()
+    await store.createTerminal()
+    const tabId = store.activeTabId
+
+    await store.organizeTab(tabId)
+
+    expect(store.unfavoritedTabs).toEqual([])
+    expect(store.favorites[0].sessionIds).toEqual([spawned[0]])
+  })
+
   it('uses the session identifier returned by ssh_session_connect', async () => {
     const store = await bootedStore()
     await store.openTarget('resource', RESOURCE_A)
@@ -377,6 +398,18 @@ describe('desktop shell regressions', () => {
     expect(topBar).toContain('window.startDragging()')
     expect(app).not.toContain('sidebarRevealDelay')
     expect(app).not.toContain('group-hover:bg-neutral-900')
+  })
+
+  it('keeps open tabs and New terminal outside the collapsible saved section', () => {
+    const sidebar = readFileSync('src/components/sidebar/AppSidebar.vue', 'utf8')
+    const rows = readFileSync('src/components/sidebar/SessionRows.vue', 'utf8')
+    const tree = readFileSync('src/components/sidebar/SidebarTree.vue', 'utf8')
+    expect(sidebar.indexOf('workspace-sidebar-content')).toBeLessThan(
+      sidebar.indexOf('<SessionRows'),
+    )
+    expect(rows).toContain('Nouveau terminal')
+    expect(rows).not.toContain('row.panes')
+    expect(tree).not.toContain('SidebarMenuBadge')
   })
 })
 
@@ -485,6 +518,7 @@ describe('restorable layout', () => {
         name: 'Production',
         root: { kind: 'pane', sessionId: 'saved-1' },
         position: 0,
+        organized: true,
       },
     ]
     store.applySnapshot(data)

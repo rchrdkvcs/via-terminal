@@ -35,10 +35,8 @@ function onWheel(event: WheelEvent) {
     </SidebarHeader>
 
     <SidebarContent
-      id="workspace-sidebar-content"
       class="thin-scrollbar gap-0 overflow-x-hidden transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none"
       :class="[
-        store.workspaceContentCollapsed ? 'pointer-events-none hidden' : '',
         store.isSwitchingWorkspace
           ? store.workspaceSwitchDirection > 0
             ? 'animate-workspace-next'
@@ -46,23 +44,31 @@ function onWheel(event: WheelEvent) {
           : '',
       ]"
     >
-      <!-- Pinned favorites first, then the saved organization. -->
-      <SidebarGroup v-if="store.favorites.length" class="p-2 py-1">
-        <SidebarTree :nodes="store.favorites" pinned />
-      </SidebarGroup>
+      <!-- The workspace indicator only collapses persisted items, never open tabs or New terminal. -->
+      <Transition
+        enter-active-class="transition-[opacity,grid-template-rows] duration-150 ease-out"
+        enter-from-class="opacity-0"
+        leave-active-class="transition-opacity duration-100 ease-out"
+        leave-to-class="opacity-0"
+      >
+        <div v-if="!store.workspaceContentCollapsed" id="workspace-sidebar-content">
+          <SidebarGroup v-if="store.favorites.length" class="p-2 py-1">
+            <SidebarTree :nodes="store.favorites" pinned />
+          </SidebarGroup>
 
-      <SidebarGroup class="p-2 py-1">
-        <SidebarTree :nodes="store.tree" />
-        <p
-          v-if="!store.tree.length && !store.favorites.length"
-          class="px-2 py-4 text-xs leading-relaxed text-sidebar-foreground/50"
-        >
-          Rien d’organisé pour l’instant. Ajoutez un profil local ou une ressource SSH avec le
-          bouton ＋.
-        </p>
-      </SidebarGroup>
-
-      <SidebarSeparator class="mx-2 my-1" />
+          <SidebarGroup class="p-2 py-1">
+            <SidebarTree :nodes="store.tree" />
+            <p
+              v-if="!store.tree.length && !store.favorites.length"
+              class="px-2 py-4 text-xs leading-relaxed text-sidebar-foreground/50"
+            >
+              Rien d’organisé pour l’instant. Ajoutez un profil local ou une ressource SSH avec le
+              bouton ＋.
+            </p>
+          </SidebarGroup>
+          <SidebarSeparator class="mx-2 my-1" />
+        </div>
+      </Transition>
 
       <SidebarGroup class="p-2 py-1">
         <SessionRows />
