@@ -340,6 +340,8 @@ describe('desktop shell regressions', () => {
     const app = readFileSync('src/App.vue', 'utf8')
     expect(topBar).toContain('grid-cols-3')
     expect(topBar).toContain('window.startDragging()')
+    expect(topBar).not.toContain('@mousedown.left="startDragging"')
+    expect(topBar).toContain('@pointerdown="prepareDragging"')
     expect(app).not.toContain('sidebarRevealDelay')
     expect(app).not.toContain('group-hover:bg-neutral-900')
   })

@@ -15,11 +15,29 @@ async function windowAction(action: 'minimize' | 'maximize' | 'close') {
   else await window.close()
 }
 
-async function startDragging(event: MouseEvent) {
-  if ((event.target as HTMLElement).closest('button')) return
+async function startDragging() {
   const { getCurrentWindow } = await import('@tauri-apps/api/window')
   const window = getCurrentWindow()
   await window.startDragging()
+}
+
+function prepareDragging(event: PointerEvent) {
+  if (event.button !== 0 || (event.target as HTMLElement).closest('button')) return
+  const startX = event.clientX
+  const startY = event.clientY
+
+  const cleanup = () => {
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', cleanup)
+  }
+  const move = (moveEvent: PointerEvent) => {
+    if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) < 4) return
+    cleanup()
+    void startDragging()
+  }
+
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', cleanup, { once: true })
 }
 
 function toggleMaximize(event: MouseEvent) {
@@ -40,9 +58,8 @@ const title = computed(() => {
 
 <template>
   <header
-    data-tauri-drag-region
     class="grid h-[54px] shrink-0 grid-cols-3 items-center gap-2 px-2"
-    @mousedown.left="startDragging"
+    @pointerdown="prepareDragging"
     @dblclick="toggleMaximize"
   >
     <div class="flex justify-start">
