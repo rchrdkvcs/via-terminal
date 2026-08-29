@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { workspaceIcon } from '@/lib/icons'
 import {
   Sidebar,
   SidebarContent,
@@ -11,6 +10,7 @@ import {
 import SessionRows from './SessionRows.vue'
 import SidebarTree from './SidebarTree.vue'
 import WorkspaceBar from './WorkspaceBar.vue'
+import WorkspaceIndicator from './WorkspaceIndicator.vue'
 import { useAppStore } from '@/stores/app'
 
 const emit = defineEmits<{ addProfile: []; addResource: [] }>()
@@ -31,15 +31,21 @@ function onWheel(event: WheelEvent) {
   -->
   <Sidebar collapsible="none" class="h-full w-full border-0 bg-transparent" @wheel="onWheel">
     <SidebarHeader class="gap-0 p-2 pb-1">
-      <div class="flex items-center gap-1 px-2">
-        <div class="flex h-8 min-w-0 flex-1 items-center gap-2 text-sm">
-          <component :is="workspaceIcon(store.activeWorkspace?.icon)" :stroke-width="1.5" />
-          <span class="font-medium">{{ store.activeWorkspace?.name ?? 'Aucun espace' }}</span>
-        </div>
-      </div>
+      <WorkspaceIndicator @add-profile="emit('addProfile')" @add-resource="emit('addResource')" />
     </SidebarHeader>
 
-    <SidebarContent class="thin-scrollbar gap-0 overflow-x-hidden">
+    <SidebarContent
+      id="workspace-sidebar-content"
+      class="thin-scrollbar gap-0 overflow-x-hidden transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none"
+      :class="[
+        store.workspaceContentCollapsed ? 'pointer-events-none hidden' : '',
+        store.isSwitchingWorkspace
+          ? store.workspaceSwitchDirection > 0
+            ? 'animate-workspace-next'
+            : 'animate-workspace-previous'
+          : '',
+      ]"
+    >
       <!-- Pinned favorites first, then the saved organization. -->
       <SidebarGroup v-if="store.favorites.length" class="p-2 py-1">
         <SidebarTree :nodes="store.favorites" pinned />

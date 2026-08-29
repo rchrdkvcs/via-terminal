@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { MoreHorizontal, Pencil, Star, StarOff, Trash2 } from '@lucide/vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { ChevronRight, MoreHorizontal, Pencil, Star, StarOff, Trash2 } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   SidebarMenu,
   SidebarMenuAction,
@@ -22,23 +31,23 @@ import { useAppStore } from '@/stores/app'
 
 defineOptions({ name: 'SidebarTree' })
 
-withDefaults(defineProps<{ nodes: TreeNode[]; pinned?: boolean }>(), { pinned: false })
+const props = withDefaults(defineProps<{ nodes: TreeNode[]; pinned?: boolean }>(), {
+  pinned: false,
+})
 
 const store = useAppStore()
-const collapsed = ref(new Set<string>())
 const editing = ref<string | null>(null)
 const draft = ref('')
+const input = ref<InstanceType<typeof Input> | null>(null)
+const dragging = ref<string | null>(null)
+const dropTarget = ref<{ id: string; mode: 'before' | 'inside' | 'after' } | null>(null)
+const pendingDelete = ref<TreeNode | null>(null)
 
-function toggle(id: string) {
-  const next = new Set(collapsed.value)
-  if (next.has(id)) next.delete(id)
-  else next.add(id)
-  collapsed.value = next
-}
+const collapsed = computed(() => ({ has: (id: string) => store.isFolderCollapsed(id) }))
 
 function activate(node: TreeNode, event: MouseEvent) {
   if (node.kind === 'folder') {
-    toggle(node.id)
+    store.toggleFolder(node.id)
     return
   }
   if (!node.targetId) return
@@ -46,9 +55,14 @@ function activate(node: TreeNode, event: MouseEvent) {
   void store.openTarget(node.kind, node.targetId, { reuse: !(event.ctrlKey || event.shiftKey) })
 }
 
-function beginRename(node: TreeNode) {
+async function beginRename(node: TreeNode) {
   editing.value = node.id
   draft.value = node.label
+  store.renamingNodeId = null
+  await nextTick()
+  const element = input.value?.$el as HTMLInputElement | undefined
+  element?.focus()
+  element?.select()
 }
 
 function commitRename(node: TreeNode) {
@@ -56,19 +70,107 @@ function commitRename(node: TreeNode) {
   editing.value = null
   if (value.trim() && value !== node.label) void store.renameNode(node.id, value)
 }
+
+watch(
+  () => store.renamingNodeId,
+  (id) => {
+    if (!id) return
+    const node = props.nodes.find((item) => item.id === id)
+    if (node) void beginRename(node)
+  },
+  { immediate: true },
+)
+
+function onDragOver(event: DragEvent, node: TreeNode) {
+  event.preventDefault()
+  const row = event.currentTarget as HTMLElement
+  const ratio = event.offsetY / Math.max(row.clientHeight, 1)
+  const mode =
+    node.kind === 'folder' && ratio > 0.25 && ratio < 0.75
+      ? 'inside'
+      : ratio < 0.5
+        ? 'before'
+        : 'after'
+  dropTarget.value = { id: node.id, mode }
+}
+
+function onDragStart(event: DragEvent, id: string) {
+  dragging.value = id
+  event.dataTransfer?.setData('application/x-terminarr-sidebar-node', id)
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragEnd() {
+  dragging.value = null
+  dropTarget.value = null
+}
+
+async function onDrop(event: DragEvent, node: TreeNode) {
+  const sourceId =
+    event.dataTransfer?.getData('application/x-terminarr-sidebar-node') || dragging.value
+  const target = dropTarget.value
+  dragging.value = null
+  dropTarget.value = null
+  if (!sourceId || !target) return
+  const record = store.sidebarNodes.find((item) => item.id === node.id)
+  if (!record) return
+  if (target.mode === 'inside' && node.kind === 'folder') {
+    store.setFolderCollapsed(node.id, false)
+    await store.reparentNode(sourceId, node.id, node.children.length)
+    return
+  }
+  await store.reparentNode(
+    sourceId,
+    record.parentId,
+    Math.max(0, record.position + (target.mode === 'after' ? 1 : 0)),
+  )
+}
+
+function requestDelete(node: TreeNode) {
+  if (node.children.length || node.sessionIds.length) pendingDelete.value = node
+  else void store.deleteNode(node.id)
+}
+
+async function confirmDelete() {
+  const node = pendingDelete.value
+  pendingDelete.value = null
+  if (node) await store.deleteNode(node.id)
+}
 </script>
 
 <template>
   <SidebarMenu>
     <SidebarMenuItem v-for="node in nodes" :key="node.id">
       <SidebarMenuButton
-        :is-active="Boolean(node.targetId) && node.sessionIds.length > 0"
+        :as="editing === node.id ? 'div' : 'button'"
+        :is-active="
+          Boolean(store.activePaneSessionId && node.sessionIds.includes(store.activePaneSessionId))
+        "
         :aria-expanded="node.kind === 'folder' ? !collapsed.has(node.id) : undefined"
         :style="{ paddingInlineStart: `${8 + node.depth * 12}px` }"
         @click="activate(node, $event)"
         @keydown.alt.up.prevent="store.moveNode(node.id, -1)"
         @keydown.alt.down.prevent="store.moveNode(node.id, 1)"
+        draggable="true"
+        :class="{
+          'opacity-40': dragging === node.id,
+          'ring-1 ring-sidebar-ring': dropTarget?.id === node.id && dropTarget.mode === 'inside',
+          'border-t border-sidebar-ring':
+            dropTarget?.id === node.id && dropTarget.mode === 'before',
+          'border-b border-sidebar-ring': dropTarget?.id === node.id && dropTarget.mode === 'after',
+        }"
+        @dragstart="onDragStart($event, node.id)"
+        @dragend="onDragEnd"
+        @dragover="onDragOver($event, node)"
+        @drop.prevent="onDrop($event, node)"
       >
+        <ChevronRight
+          v-if="node.kind === 'folder'"
+          :size="12"
+          :stroke-width="1.5"
+          class="shrink-0 transition-transform duration-150 motion-reduce:transition-none"
+          :class="!collapsed.has(node.id) ? 'rotate-90' : ''"
+        />
         <component
           :is="nodeIcon(node.kind, node.kind === 'folder' && !collapsed.has(node.id))"
           :stroke-width="1.5"
@@ -77,6 +179,7 @@ function commitRename(node: TreeNode) {
 
         <Input
           v-if="editing === node.id"
+          ref="input"
           v-model="draft"
           class="h-6 border-0 bg-transparent px-0 py-0 text-sm shadow-none focus-visible:ring-0"
           autofocus
@@ -85,7 +188,7 @@ function commitRename(node: TreeNode) {
           @keydown.esc="editing = null"
           @blur="commitRename(node)"
         />
-        <span v-else>{{ node.label }}</span>
+        <span v-else class="truncate" @dblclick.stop="beginRename(node)">{{ node.label }}</span>
       </SidebarMenuButton>
 
       <SidebarMenuBadge v-if="node.sessionIds.length" class="peer-hover/menu-button:hidden">
@@ -112,7 +215,7 @@ function commitRename(node: TreeNode) {
           </DropdownMenuItem>
           <template v-if="!pinned">
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" @select="store.deleteNode(node.id)">
+            <DropdownMenuItem variant="destructive" @select="requestDelete(node)">
               <Trash2 :stroke-width="1.5" />
               Supprimer
             </DropdownMenuItem>
@@ -120,7 +223,27 @@ function commitRename(node: TreeNode) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <SidebarTree v-if="node.children.length && !collapsed.has(node.id)" :nodes="node.children" />
+      <SidebarTree
+        v-if="node.children.length && !collapsed.has(node.id)"
+        :nodes="node.children"
+        :pinned="pinned"
+      />
     </SidebarMenuItem>
   </SidebarMenu>
+
+  <Dialog :open="Boolean(pendingDelete)" @update:open="!$event && (pendingDelete = null)">
+    <DialogContent class="sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>Supprimer « {{ pendingDelete?.label }} » ?</DialogTitle>
+        <DialogDescription>
+          Les éléments enregistrés dans ce dossier seront supprimés. Les terminaux actifs concernés
+          seront fermés par la suppression en cascade.
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button variant="ghost" @click="pendingDelete = null">Annuler</Button>
+        <Button variant="destructive" @click="confirmDelete">Supprimer</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>

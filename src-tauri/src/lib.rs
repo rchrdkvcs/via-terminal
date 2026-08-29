@@ -125,6 +125,16 @@ fn workspace_duplicate(
     state.domain.duplicate_workspace(id, name)
 }
 #[tauri::command]
+fn workspace_update(
+    state: State<BackendState>,
+    id: Uuid,
+    name: String,
+    icon: String,
+) -> Result<Workspace, String> {
+    state.require_unlocked()?;
+    state.domain.update_workspace(id, name, icon)
+}
+#[tauri::command]
 fn identity_create(
     state: State<BackendState>,
     workspace_id: Uuid,
@@ -680,6 +690,7 @@ pub fn run() {
             workspace_list,
             workspace_create,
             workspace_duplicate,
+            workspace_update,
             identity_create,
             resource_create,
             profile_create,

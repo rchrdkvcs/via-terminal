@@ -235,6 +235,31 @@ impl DomainService {
             Ok(w)
         })
     }
+    pub fn update_workspace(
+        &self,
+        id: Id,
+        name: String,
+        icon: String,
+    ) -> Result<Workspace, String> {
+        let name = name.trim().to_string();
+        let icon = icon.trim().to_string();
+        if name.is_empty() {
+            return Err("workspace name cannot be empty".into());
+        }
+        if icon.is_empty() {
+            return Err("workspace icon cannot be empty".into());
+        }
+        self.mutate(|d| {
+            let workspace = d
+                .workspaces
+                .iter_mut()
+                .find(|workspace| workspace.id == id)
+                .ok_or("workspace not found")?;
+            workspace.name = name;
+            workspace.icon = icon;
+            Ok(workspace.clone())
+        })
+    }
     pub fn create_identity(
         &self,
         workspace_id: Id,
@@ -484,7 +509,9 @@ impl DomainService {
                 .sidebar_nodes
                 .iter()
                 .filter(|node| {
-                    node.workspace_id == workspace_id && node.parent_id == parent_id && node.id != id
+                    node.workspace_id == workspace_id
+                        && node.parent_id == parent_id
+                        && node.id != id
                 })
                 .map(|node| (node.position, node.id))
                 .collect::<std::collections::BTreeSet<_>>()
@@ -531,7 +558,8 @@ impl DomainService {
             d.sidebar_nodes.retain(|node| !removed.contains(&node.id));
             d.profiles.retain(|item| !targets.contains(&item.id));
             d.resources.retain(|item| !targets.contains(&item.id));
-            d.favorites.retain(|item| !targets.contains(&item.target_id));
+            d.favorites
+                .retain(|item| !targets.contains(&item.target_id));
             for workspace in &mut d.workspaces {
                 if workspace
                     .default_profile_id
@@ -900,6 +928,24 @@ mod tests {
     }
 
     #[test]
+    fn update_workspace_persists_name_and_icon() {
+        let repo = Repository::memory().unwrap();
+        let data = AppData::seed();
+        let workspace_id = data.workspaces[0].id;
+        repo.save(&data).unwrap();
+        let service = DomainService::new(repo);
+
+        let updated = service
+            .update_workspace(workspace_id, " Operations ".into(), "server".into())
+            .unwrap();
+
+        assert_eq!(updated.name, "Operations");
+        assert_eq!(updated.icon, "server");
+        let snapshot = service.snapshot().unwrap();
+        assert_eq!(snapshot.workspaces[0].name, "Operations");
+    }
+
+    #[test]
     fn import_preserves_organization_and_remaps_every_reference() {
         let service = DomainService::new(Repository::memory().unwrap());
         let incoming = organized_data();
@@ -1016,13 +1062,7 @@ mod tests {
         let workspace = service.snapshot().unwrap().workspaces[0].id;
 
         let profile = service
-            .create_profile(
-                workspace,
-                "CMD".into(),
-                "cmd.exe".into(),
-                vec![],
-                None,
-            )
+            .create_profile(workspace, "CMD".into(), "cmd.exe".into(), vec![], None)
             .unwrap();
         let node = service
             .create_sidebar_node(
@@ -1037,9 +1077,7 @@ mod tests {
         let data = service.snapshot().unwrap();
         assert!(data.profiles.iter().any(|item| item.id == profile.id));
         assert!(data.sidebar_nodes.iter().any(|item| item.id == node.id));
-        assert!(service
-            .local_profile(workspace, profile.id)
-            .is_ok());
+        assert!(service.local_profile(workspace, profile.id).is_ok());
     }
 
     #[test]
@@ -1086,7 +1124,10 @@ mod tests {
         // The workspace default profile is a root sibling too, so the whole
         // root list must come back renumbered without a gap.
         assert_eq!(
-            nodes.iter().map(|node| node.label.as_str()).collect::<Vec<_>>(),
+            nodes
+                .iter()
+                .map(|node| node.label.as_str())
+                .collect::<Vec<_>>(),
             vec!["C", "PowerShell", "A", "B"]
         );
         assert_eq!(

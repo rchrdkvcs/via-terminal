@@ -65,6 +65,11 @@ vi.mock('@/ipc/client', async () => {
       deleteTab: vi.fn(async () => undefined),
       saveWindowState: vi.fn(async (value: unknown) => value),
       updateSettings: vi.fn(async (value: unknown) => value),
+      updateWorkspace: vi.fn(async (id: string, name: string, icon: string) => ({
+        ...snapshot().workspaces.find((workspace) => workspace.id === id)!,
+        name,
+        icon,
+      })),
     },
   }
 })
@@ -210,6 +215,7 @@ beforeEach(() => {
   spawned.length = 0
   closed.length = 0
   savedTabs.length = 0
+  window.localStorage?.clear()
 })
 
 describe('snapshot ingestion', () => {
@@ -236,6 +242,34 @@ describe('snapshot ingestion', () => {
     expect(
       store.tree.flatMap((node) => [node, ...node.children]).map((node) => node.targetId),
     ).not.toContain(PROFILE_A)
+  })
+})
+
+describe('workspace sidebar navigation', () => {
+  it('persists collapsed folders per workspace', async () => {
+    const store = await bootedStore()
+    expect(store.isFolderCollapsed('node-folder')).toBe(false)
+    store.toggleFolder('node-folder')
+    expect(store.isFolderCollapsed('node-folder')).toBe(true)
+
+    store.switchWorkspace(WORKSPACE_B)
+    expect(store.isFolderCollapsed('node-folder')).toBe(false)
+    store.switchWorkspace(WORKSPACE_A)
+    expect(store.isFolderCollapsed('node-folder')).toBe(true)
+  })
+
+  it('renames and changes the icon without replacing workspace state', async () => {
+    const store = await bootedStore()
+    await store.updateWorkspace(WORKSPACE_A, { name: 'Assistance', icon: 'server' })
+    expect(store.activeWorkspace).toMatchObject({ name: 'Assistance', icon: 'server' })
+    expect(store.activeWorkspaceId).toBe(WORKSPACE_A)
+  })
+
+  it('marks the direction of an animated workspace change', async () => {
+    const store = await bootedStore()
+    store.switchWorkspace(WORKSPACE_B)
+    expect(store.isSwitchingWorkspace).toBe(true)
+    expect(store.workspaceSwitchDirection).toBe(1)
   })
 })
 
@@ -278,7 +312,8 @@ describe('sessions and tabs', () => {
     expect(store.unfavoritedTabs).toEqual([])
 
     await store.openTarget('resource', RESOURCE_A)
-    expect(store.unfavoritedTabs.map((tab) => tab.name)).toEqual(['Production'])
+    expect(store.unfavoritedTabs).toEqual([])
+    expect(store.tree[0].children[0].sessionIds).toEqual([spawned[1]])
   })
 
   it('opens a second session when reuse is refused', async () => {
