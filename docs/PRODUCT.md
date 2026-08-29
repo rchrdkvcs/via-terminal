@@ -26,6 +26,7 @@ Terminarr is a fast, pleasant native terminal workspace for IT technicians. It u
 ## Key behavior
 
 - Clicking an open favorite focuses its existing session; a secondary action opens another.
+- Clicking a saved SSH resource activates its unique tab and CLI; it does not create a second row.
 - Changing workspace does not stop sessions.
 - Closing a secondary window detaches its views rather than killing its sessions.
 - An SSH disconnect keeps terminal output visible and offers bounded reconnection attempts followed by a manual action.

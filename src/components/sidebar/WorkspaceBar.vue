@@ -55,7 +55,9 @@ function submit() {
       </Tooltip>
     </div>
 
-    <div class="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto no-scrollbar">
+    <div
+      class="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto no-scrollbar"
+    >
       <Tooltip v-for="(workspace, index) in store.workspaces" :key="workspace.id">
         <TooltipTrigger as-child>
           <button

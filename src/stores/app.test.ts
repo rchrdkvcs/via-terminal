@@ -404,14 +404,24 @@ describe('sessions and tabs', () => {
     expect(store.visibleTabs).toHaveLength(1)
   })
 
-  it('opens an SSH session as a normal tab until it is pinned', async () => {
+  it('opens a saved SSH resource as a unique tab, not a second open-tab row', async () => {
     const store = await bootedStore()
     await store.createTerminal()
     expect(store.unfavoritedTabs).toHaveLength(1)
 
     await store.openTarget('resource', RESOURCE_A)
-    expect(store.unfavoritedTabs).toHaveLength(2)
+
+    expect(store.activeSession).toMatchObject({
+      kind: 'ssh',
+      targetId: RESOURCE_A,
+      status: 'connected',
+    })
+    expect(store.isTargetActive(RESOURCE_A)).toBe(true)
+    // The tree row is the unique instance; the open list stays the local tab.
+    expect(store.unfavoritedTabs).toHaveLength(1)
+    expect(store.unfavoritedTabs[0].id).not.toBe(store.activeTabId)
     expect(store.pinnedTabs).toEqual([])
+    expect(store.visibleTabs).toHaveLength(2)
   })
 
   it('opens a second session when reuse is refused', async () => {
@@ -420,6 +430,65 @@ describe('sessions and tabs', () => {
     await store.openTarget('resource', RESOURCE_A, { reuse: false })
     expect(spawned).toHaveLength(2)
     expect(store.visibleTabs).toHaveLength(2)
+    // Only the extra instance lands in the open list; the saved SSH stays unique.
+    expect(store.unfavoritedTabs).toHaveLength(1)
+    expect(store.activeSession?.id).toBe(spawned[1])
+  })
+
+  it('starts the CLI when the unique saved SSH tab is only restorable', async () => {
+    const store = useAppStore()
+    const data = snapshot()
+    data.savedSessions = [
+      {
+        id: 'sess-rest',
+        workspaceId: WORKSPACE_A,
+        targetKind: 'resource',
+        targetId: RESOURCE_A,
+        workingDirectory: null,
+      },
+    ]
+    data.tabs = [
+      {
+        id: 'tab-rest',
+        workspaceId: WORKSPACE_A,
+        name: 'Production',
+        root: { kind: 'pane', sessionId: 'sess-rest' },
+        position: 0,
+        organized: false,
+      },
+    ]
+    store.applySnapshot(data)
+    await store.dismissRecovery(true)
+
+    expect(store.activeSession).toMatchObject({ id: 'sess-rest', status: 'restorable' })
+    expect(store.unfavoritedTabs).toHaveLength(0)
+
+    await store.openTarget('resource', RESOURCE_A)
+
+    expect(spawned).toHaveLength(1)
+    expect(store.activeSession).toMatchObject({
+      id: spawned[0],
+      status: 'connected',
+      targetId: RESOURCE_A,
+    })
+    expect(store.visibleTabs).toHaveLength(1)
+    expect(store.unfavoritedTabs).toHaveLength(0)
+  })
+
+  it('recreates the unique SSH tab after its instance is closed', async () => {
+    const store = await bootedStore()
+    await store.openTarget('resource', RESOURCE_A)
+    const tabId = store.activeTabId
+    await store.closeTab(tabId, { force: true })
+
+    expect(store.visibleTabs).toHaveLength(0)
+    expect(store.tree[0].children[0].targetId).toBe(RESOURCE_A)
+
+    await store.openTarget('resource', RESOURCE_A)
+    expect(store.activeSession?.targetId).toBe(RESOURCE_A)
+    expect(store.visibleTabs).toHaveLength(1)
+    expect(store.unfavoritedTabs).toHaveLength(0)
+    expect(store.activeTabId).not.toBe(tabId)
   })
 
   it('marks only the target of the active tab as selected', async () => {
@@ -505,6 +574,10 @@ describe('desktop shell regressions', () => {
     expect(markup).not.toContain('store.favorites')
     expect(markup).toContain('store.tree')
     expect(rows).toContain('bg-state-online')
+    const tree = readFileSync('src/components/sidebar/SidebarTree.vue', 'utf8')
+    expect(tree).toContain('uniqueTabForTarget')
+    expect(tree).toContain('reuse: !(event.ctrlKey || event.shiftKey)')
+    expect(tree).toContain('Fermer')
     expect(rows).toContain('Nouveau terminal')
     expect(rows).toContain('Épingler')
     expect(rows).toContain('Détacher')
@@ -749,6 +822,19 @@ describe('sidebar drag and drop', () => {
       { call: 'favorite', targetId: RESOURCE_A, pinned: false },
       { call: 'move', id: 'node-resource', parentId: 'node-folder', position: 0 },
     ])
+  })
+
+  it('drops an SSH tab into the tree without pinning a second row', async () => {
+    const store = await bootedStore()
+    await store.openTarget('resource', RESOURCE_A)
+    const tabId = store.activeTabId
+
+    await store.placeTab(tabId, 'node-folder', null)
+
+    expect(store.pinnedTabs).toEqual([])
+    expect(store.unfavoritedTabs).toEqual([])
+    expect(store.visibleTabs.map((tab) => tab.id)).toEqual([tabId])
+    expect(store.isTargetActive(RESOURCE_A)).toBe(true)
   })
 
   it('reorders favorites against the list without the moved one', async () => {

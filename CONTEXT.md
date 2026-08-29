@@ -20,7 +20,7 @@ A live or ended interaction with a local shell or remote resource. A session is 
 
 ## Tab
 
-A named composition of one or more panes inside a workspace.
+A named composition of one or more panes inside a workspace. Each tab is a unique instance: a saved SSH resource in the sidebar tree _is_ that tab, not a launcher that opens another.
 
 ## Pane
 

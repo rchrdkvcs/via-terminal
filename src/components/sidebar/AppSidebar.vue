@@ -96,8 +96,10 @@ function onLeave(event: DragEvent) {
       ]"
     >
       <!--
-        Zen layout: pinned tabs, then the divider, then open tabs.
-        The workspace name only collapses the pinned section.
+        Zen layout: pinned tabs, then saved unique SSH tabs in the tree,
+        then the divider, then temporary open tabs. A saved SSH row is the
+        unique tab itself — clicking it shows its CLI rather than spawning
+        another row below the divider.
       -->
       <Transition
         enter-active-class="transition-[opacity,grid-template-rows] duration-150 ease-out"

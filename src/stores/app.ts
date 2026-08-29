@@ -71,7 +71,10 @@ export interface RuntimeTab {
   root: PaneNode
   activePaneId: string
   position: number
-  /** Saved targets live in the tree; temporary tabs live in the open-tab section. */
+  /**
+   * Pinned tabs sit above the divider. Saved SSH targets live in the tree as
+   * unique tabs; only extra instances (Ctrl/Shift click) join the open list.
+   */
   organized: boolean
 }
 
@@ -281,9 +284,43 @@ export const useAppStore = defineStore('app', () => {
       .sort((a, b) => a.position - b.position),
   )
 
-  const unfavoritedTabs = computed(() => visibleTabs.value.filter((tab) => !tab.organized))
+  const treeTargetIds = computed(() => {
+    const ids = new Set<Id>()
+    const walk = (nodes: TreeNode[]) => {
+      for (const node of nodes) {
+        if (node.targetId) ids.add(node.targetId)
+        walk(node.children)
+      }
+    }
+    walk(tree.value)
+    return ids
+  })
+
+  function primaryTargetId(tab: RuntimeTab): Id | null {
+    const sessionId = paneSessionIds(tab.root)[0]
+    if (!sessionId) return null
+    return sessions.value.find((item) => item.id === sessionId)?.targetId ?? null
+  }
+
+  /** One live tab per saved tree target — the tree row is that unique instance. */
+  function uniqueTabForTarget(targetId: Id | null | undefined): RuntimeTab | undefined {
+    if (!targetId) return undefined
+    return visibleTabs.value.find((tab) => primaryTargetId(tab) === targetId)
+  }
+
+  function isTreeUniqueTab(tab: RuntimeTab): boolean {
+    const targetId = primaryTargetId(tab)
+    if (!targetId || !treeTargetIds.value.has(targetId)) return false
+    return uniqueTabForTarget(targetId)?.id === tab.id
+  }
+
+  const unfavoritedTabs = computed(() =>
+    visibleTabs.value.filter((tab) => !tab.organized && !isTreeUniqueTab(tab)),
+  )
   /** Pinned tabs sit above the divider, like Zen; they are the same tabs, not copies. */
-  const pinnedTabs = computed(() => visibleTabs.value.filter((tab) => tab.organized))
+  const pinnedTabs = computed(() =>
+    visibleTabs.value.filter((tab) => tab.organized && !isTreeUniqueTab(tab)),
+  )
 
   const activeTabId = computed(() => activeTabPerWorkspace.value[activeWorkspaceId.value] ?? '')
   const activeTab = computed(
@@ -799,6 +836,11 @@ export const useAppStore = defineStore('app', () => {
     // Clicking an already open target focuses it; a secondary action opens another.
     if (options.reuse !== false && existing) {
       focusSession(existing)
+      const session = sessionById.value.get(existing)
+      // The tree click is an explicit request for the CLI, including after restore.
+      if (session?.status === 'restorable') await activateRestorableSession(existing)
+      else if (session && (session.status === 'disconnected' || session.status === 'failed'))
+        await reconnectSession(existing)
       return
     }
     const session = await startSession(targetKind, targetId)
@@ -1382,7 +1424,8 @@ export const useAppStore = defineStore('app', () => {
     const target = tabTarget(tabId)
     const tab = tabs.value.find((item) => item.id === tabId)
     if (!target || !tab || !(await placeTarget(target.id, parentId, beforeId))) return
-    tab.organized = true
+    // The tree row is the unique tab. Pinning here would draw a second row.
+    tab.organized = false
     scheduleLayoutSave(tab.id)
   }
 
@@ -1575,6 +1618,7 @@ export const useAppStore = defineStore('app', () => {
     defaultProfileId,
     isFavorite,
     isTargetActive,
+    uniqueTabForTarget,
 
     /* actions */
     initialize,
