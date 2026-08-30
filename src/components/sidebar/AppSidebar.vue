@@ -46,7 +46,7 @@ function draggingTab() {
 }
 
 function overTree(event: DragEvent) {
-  if (!activeDrag.value || activeDrag.value.type === 'tab') return
+  if (!activeDrag.value) return
   acceptDrop(event)
   dropHint.value = 'tree:into'
 }
@@ -61,6 +61,7 @@ function dropAtRoot(event: DragEvent) {
     return
   }
   if (drag.type === 'tab') void store.pinTab(drag.id, null)
+  else if (drag.type === 'favorite') void store.pinTarget(drag.targetId, null)
 }
 
 function treeHint() {

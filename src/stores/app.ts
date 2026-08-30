@@ -53,6 +53,10 @@ export interface SessionSummary {
   message?: string
 }
 
+function clonePlain<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
 export type PaneNode =
   | { kind: 'pane'; id: string; sessionId: Id }
   | {
@@ -352,18 +356,6 @@ export const useAppStore = defineStore('app', () => {
       .sort((a, b) => a.position - b.position),
   )
 
-  const treeTargetIds = computed(() => {
-    const ids = new Set<Id>()
-    const walk = (nodes: TreeNode[]) => {
-      for (const node of nodes) {
-        if (node.targetId) ids.add(node.targetId)
-        walk(node.children)
-      }
-    }
-    walk(tree.value)
-    return ids
-  })
-
   function primaryTargetId(tab: RuntimeTab): Id | null {
     const sessionId = paneSessionIds(tab.root)[0]
     if (!sessionId) return null
@@ -376,19 +368,12 @@ export const useAppStore = defineStore('app', () => {
     return visibleTabs.value.find((tab) => primaryTargetId(tab) === targetId)
   }
 
-  function isTreeUniqueTab(tab: RuntimeTab): boolean {
-    if (tab.organized || tab.folderId) return false
-    const targetId = primaryTargetId(tab)
-    if (!targetId || !treeTargetIds.value.has(targetId)) return false
-    return uniqueTabForTarget(targetId)?.id === tab.id
-  }
-
   const unfavoritedTabs = computed(() =>
-    visibleTabs.value.filter((tab) => !tab.organized && !tab.folderId && !isTreeUniqueTab(tab)),
+    visibleTabs.value.filter((tab) => !tab.organized && !tab.folderId),
   )
   /** Pinned tabs sit above the divider, like Zen; they are the same tabs, not copies. */
   const pinnedTabs = computed(() =>
-    visibleTabs.value.filter((tab) => tab.organized && !isTreeUniqueTab(tab)),
+    visibleTabs.value.filter((tab) => tab.organized && !tab.folderId),
   )
 
   const activeTabId = computed(() => activeTabPerWorkspace.value[activeWorkspaceId.value] ?? '')
@@ -1170,12 +1155,56 @@ export const useAppStore = defineStore('app', () => {
     const source = tabs.value.find((tab) => tab.id === sourceTabId)
     const target = tabs.value.find((tab) => tab.id === targetTabId)
     if (!source || !target || source.workspaceId !== target.workspaceId) return
-    if (
-      splitGroups.value.some(
-        (group) => group.tabIds.includes(sourceTabId) || group.tabIds.includes(targetTabId),
-      )
-    ) {
+    const sourceGroup = splitGroups.value.find((group) => group.tabIds.includes(sourceTabId))
+    const targetGroup = splitGroups.value.find((group) => group.tabIds.includes(targetTabId))
+    if (sourceGroup && targetGroup) {
       notify('error', 'Deux groupes de splits existants ne peuvent pas être fusionnés.')
+      return
+    }
+    const existingGroup = sourceGroup ?? targetGroup
+    if (existingGroup) {
+      if (existingGroup.tabIds.length >= 4) {
+        notify('error', 'Un groupe de splits contient au maximum quatre onglets.')
+        return
+      }
+      const anchorId = sourceGroup ? sourceTabId : targetTabId
+      const newcomer = sourceGroup ? target : source
+      const anchor = sourceGroup ? source : target
+      newcomer.organized = anchor.organized
+      newcomer.folderId = anchor.folderId
+      const sourceFirst = edge === 'left' || edge === 'top'
+      const replacement: RuntimeSplitTree = {
+        kind: 'split',
+        id: identifier(),
+        direction: edge === 'left' || edge === 'right' ? 'vertical' : 'horizontal',
+        ratio: 0.5,
+        first: { kind: 'tab', tabId: sourceFirst ? sourceTabId : targetTabId },
+        second: { kind: 'tab', tabId: sourceFirst ? targetTabId : sourceTabId },
+      }
+      const replace = (node: RuntimeSplitTree): RuntimeSplitTree => {
+        if (node.kind === 'tab') return node.tabId === anchorId ? replacement : node
+        return { ...node, first: replace(node.first), second: replace(node.second) }
+      }
+      existingGroup.root = replace(existingGroup.root)
+      const leaves = (node: RuntimeSplitTree): Id[] =>
+        node.kind === 'tab' ? [node.tabId] : [...leaves(node.first), ...leaves(node.second)]
+      existingGroup.tabIds = leaves(existingGroup.root)
+      const siblings = tabs.value
+        .filter(
+          (tab) => tab.workspaceId === anchor.workspaceId && !existingGroup.tabIds.includes(tab.id),
+        )
+        .sort((a, b) => a.position - b.position)
+      siblings.splice(
+        Math.min(anchor.position, siblings.length),
+        0,
+        ...existingGroup.tabIds.map((id) => tabs.value.find((tab) => tab.id === id)!),
+      )
+      siblings.forEach((tab, position) => (tab.position = position))
+      if (anchor.organized) {
+        await persistTab(newcomer.id)
+        await persistSplitGroup(existingGroup)
+      }
+      activeTabPerWorkspace.value[anchor.workspaceId] = sourceTabId
       return
     }
     const pinned = source.organized || target.organized
@@ -1336,10 +1365,10 @@ export const useAppStore = defineStore('app', () => {
     }
     pendingTabClose.value = null
     const workspaceId = tab.workspaceId
-    const undoTab = structuredClone(tab)
+    const undoTab = clonePlain(tab)
     const undoSessions = paneSessionIds(tab.root).flatMap((sessionId) => {
       const session = sessionById.value.get(sessionId)
-      return session ? [structuredClone(session)] : []
+      return session ? [clonePlain(session)] : []
     })
     const canUndo = tab.organized && !hasLiveSessions(tab)
     detachFromSplit(id)
@@ -1820,13 +1849,24 @@ export const useAppStore = defineStore('app', () => {
   async function reorderTabInFolder(tabId: Id, beforeTabId: Id | null) {
     const tab = tabs.value.find((item) => item.id === tabId)
     if (!tab?.folderId || tabId === beforeTabId) return
-    const ordered = [...tabs.value].sort((a, b) => a.position - b.position)
-    const current = ordered.findIndex((item) => item.id === tabId)
-    ordered.splice(current, 1)
+    const group = splitGroups.value.find((item) => item.tabIds.includes(tabId))
+    const movingIds = group?.tabIds ?? [tabId]
+    const ordered = tabs.value
+      .filter(
+        (item) =>
+          item.workspaceId === tab.workspaceId &&
+          item.folderId === tab.folderId &&
+          !movingIds.includes(item.id),
+      )
+      .sort((a, b) => a.position - b.position)
     const anchor = beforeTabId ? ordered.findIndex((item) => item.id === beforeTabId) : -1
-    ordered.splice(anchor >= 0 ? anchor : ordered.length, 0, tab)
+    const moving = movingIds.flatMap((id) => {
+      const member = tabs.value.find((item) => item.id === id)
+      return member ? [member] : []
+    })
+    ordered.splice(anchor >= 0 ? anchor : ordered.length, 0, ...moving)
     ordered.forEach((item, position) => (item.position = position))
-    await Promise.all(ordered.filter((item) => item.organized).map((item) => persistTab(item.id)))
+    await Promise.all(ordered.map((item) => persistTab(item.id)))
   }
 
   async function pinTarget(targetId: Id, beforeFavoriteId: Id | null) {

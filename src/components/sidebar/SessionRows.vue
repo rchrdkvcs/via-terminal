@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useAppStore } from '@/stores/app'
 import TabRow from './TabRow.vue'
+import { readSidebarDrag } from '@/lib/sidebar-dnd'
 
 const props = withDefaults(defineProps<{ pinned?: boolean }>(), { pinned: false })
 const store = useAppStore()
@@ -52,11 +53,11 @@ function dropTab(
 }
 
 function dropAtEnd(event: DragEvent) {
-  const tabId = event.dataTransfer?.getData('application/x-terminarr-tab')
-  if (!tabId) return
+  const drag = readSidebarDrag(event)
+  if (drag?.type !== 'tab') return
   event.preventDefault()
-  if (props.pinned) void store.pinTab(tabId, null)
-  else void store.unpinTab(tabId, null)
+  if (props.pinned) void store.pinTab(drag.id, null)
+  else void store.unpinTab(drag.id, null)
 }
 </script>
 

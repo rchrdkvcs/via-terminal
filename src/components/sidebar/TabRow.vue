@@ -10,7 +10,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { useAppStore } from '@/stores/app'
-import { activeDrag, endSidebarDrag } from '@/lib/sidebar-dnd'
+import { activeDrag, endSidebarDrag, readSidebarDrag, startSidebarDrag } from '@/lib/sidebar-dnd'
 
 const props = defineProps<{
   id: string
@@ -53,16 +53,14 @@ function commitRename() {
 const running = () => props.state === 'online' || props.state === 'pending'
 
 function beginDrag(event: DragEvent) {
-  if (!event.dataTransfer) return
-  event.dataTransfer.effectAllowed = 'move'
-  event.dataTransfer.setData('application/x-terminarr-tab', props.id)
-  activeDrag.value = { type: 'tab', id: props.id }
+  startSidebarDrag(event, { type: 'tab', id: props.id })
 }
 
 function dropTab(event: DragEvent) {
-  const id = event.dataTransfer?.getData('application/x-terminarr-tab')
-  if (!id || id === props.id) return
+  const drag = readSidebarDrag(event)
+  if (drag?.type !== 'tab' || drag.id === props.id) return
   event.preventDefault()
+  const id = drag.id
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
   const x = (event.clientX - rect.left) / rect.width
   const y = (event.clientY - rect.top) / rect.height
@@ -75,7 +73,7 @@ function dropTab(event: DragEvent) {
 }
 
 function previewDrop(event: DragEvent) {
-  if (!event.dataTransfer?.types.includes('application/x-terminarr-tab')) return
+  if (activeDrag.value?.type !== 'tab' || activeDrag.value.id === props.id) return
   event.preventDefault()
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
   const x = (event.clientX - rect.left) / rect.width

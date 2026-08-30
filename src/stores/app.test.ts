@@ -91,6 +91,24 @@ describe('application sidebar lifecycle', () => {
     expect(store.sessions.map((session) => session.id)).toContain(originalSession)
   })
 
+  it('extends one split group to four tabs and rejects a fifth', async () => {
+    const store = useAppStore()
+    store.applySnapshot(snapshot())
+    await store.createTerminal()
+    await store.splitActivePane('vertical')
+    const anchor = store.tabs[0].id
+    for (let size = 3; size <= 4; size += 1) {
+      await store.createTerminal()
+      await store.linkTabs(store.activeTabId, anchor, 'right')
+      expect(store.splitGroups[0].tabIds).toHaveLength(size)
+    }
+    await store.createTerminal()
+    await store.linkTabs(store.activeTabId, anchor, 'right')
+
+    expect(store.splitGroups[0].tabIds).toHaveLength(4)
+    expect(new Set(store.tabs.map((tab) => tab.id)).size).toBe(5)
+  })
+
   it('does not restore temporary tabs from a snapshot', () => {
     const store = useAppStore()
     const data = snapshot()
@@ -112,5 +130,39 @@ describe('application sidebar lifecycle', () => {
     store.applySnapshot(data)
 
     expect(store.tabs).toHaveLength(0)
+  })
+
+  it('removes a stopped pinned tab without cloning a Vue proxy', async () => {
+    const store = useAppStore()
+    store.applySnapshot(snapshot())
+    await store.createTerminal()
+    const id = store.activeTabId
+    await store.pinTab(id)
+    await store.stopTab(id)
+
+    await expect(store.closeTab(id, { force: true })).resolves.toBeUndefined()
+
+    expect(store.tabs).toHaveLength(0)
+  })
+
+  it('projects a foldered tab exactly once inside its folder', async () => {
+    const store = useAppStore()
+    store.applySnapshot(snapshot())
+    await store.createTerminal()
+    const tab = store.tabs[0]
+    tab.organized = true
+    tab.folderId = 'folder'
+    store.sidebarNodes.push({
+      id: 'folder',
+      workspaceId: WORKSPACE,
+      parentId: null,
+      kind: 'folder',
+      label: 'Projet',
+      targetId: null,
+      position: 0,
+    })
+
+    expect(store.pinnedTabs).toHaveLength(0)
+    expect(store.tree[0].children.map((node) => node.tabId)).toEqual([tab.id])
   })
 })
