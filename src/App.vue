@@ -5,6 +5,7 @@ import AppSidebar from '@/components/sidebar/AppSidebar.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
 import LockScreen from '@/components/LockScreen.vue'
 import PaneLayout from '@/components/workspace/PaneLayout.vue'
+import SplitGroupLayout from '@/components/workspace/SplitGroupLayout.vue'
 import SettingsPage from '@/components/settings/SettingsPage.vue'
 import TargetDialog from '@/components/TargetDialog.vue'
 import TerminalSearch from '@/components/TerminalSearch.vue'
@@ -43,7 +44,10 @@ const deletingWorkspace = computed(
 )
 
 const sidebarWidth = computed(() =>
-  Math.min(480, Math.max(180, store.preferences.sidebarWidth || 256)),
+  Math.min(
+    Math.max(240, window.innerWidth * 0.4),
+    Math.max(180, store.preferences.sidebarWidth || 256),
+  ),
 )
 const resizingSidebar = ref(false)
 
@@ -134,7 +138,11 @@ watch(
     if (!notice) return
     const show =
       notice.kind === 'error' ? toast.error : notice.kind === 'success' ? toast.success : toast
-    show(notice.message)
+    show(notice.message, {
+      action: notice.action
+        ? { label: notice.action.label, onClick: notice.action.run }
+        : undefined,
+    })
     store.dismissNotice(notice.id)
   },
 )
@@ -198,6 +206,7 @@ window.addEventListener('beforeunload', () => {
             aria-valuemax="480"
             tabindex="0"
             @pointerdown="startSidebarResize"
+            @dblclick="store.updatePreferences({ sidebarWidth: 256 })"
           >
             <span
               class="absolute top-1/2 end-0.5 h-10 w-0.5 -translate-y-1/2 rounded-full bg-border opacity-0 transition-opacity group-hover:opacity-100"
@@ -244,6 +253,7 @@ window.addEventListener('beforeunload', () => {
             aria-valuemax="480"
             tabindex="0"
             @pointerdown="startSidebarResize"
+            @dblclick="store.updatePreferences({ sidebarWidth: 256 })"
             @pointerenter="scheduleReveal"
           >
             <span
@@ -255,7 +265,14 @@ window.addEventListener('beforeunload', () => {
       </template>
 
       <main
-        class="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/50 bg-card"
+        class="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl"
+        :class="
+          store.route === 'settings' ||
+          (store.activeSession &&
+            !['closed', 'failed', 'restorable'].includes(store.activeSession.status))
+            ? 'border border-border/50 bg-card'
+            : ''
+        "
       >
         <SettingsPage v-if="store.route === 'settings'" @add-resource="targetDialog = 'resource'" />
 
@@ -263,7 +280,23 @@ window.addEventListener('beforeunload', () => {
           <TerminalSearch />
 
           <div v-if="store.activeTab" class="flex min-h-0 flex-1 overflow-hidden">
+            <SplitGroupLayout v-if="store.activeSplitGroup" :node="store.activeSplitGroup.root" />
+            <div
+              v-else-if="
+                store.activeSession &&
+                ['closed', 'failed', 'restorable'].includes(store.activeSession.status)
+              "
+              class="flex min-h-0 flex-1 flex-col items-center justify-center gap-4"
+            >
+              <p class="text-sm text-muted-foreground">
+                {{ store.activeSession.message || 'Terminal arrêté.' }}
+              </p>
+              <Button @click="store.startStoppedTab(store.activeTab.id)">
+                {{ store.activeSession.kind === 'ssh' ? 'Reconnecter' : 'Démarrer' }}
+              </Button>
+            </div>
             <PaneLayout
+              v-else
               :key="store.activeTab.id"
               :node="store.activeTab.root"
               :closable="store.activeTab.root.kind === 'split'"
@@ -304,25 +337,6 @@ window.addEventListener('beforeunload', () => {
     <TargetDialog :mode="targetDialog" @close="targetDialog = null" />
     <LockScreen />
     <Toaster position="bottom-right" :duration="6000" close-button />
-
-    <!-- Crash recovery is offered, never forced, and replays nothing. -->
-    <Dialog :open="store.recoveryAvailable" @update:open="store.dismissRecovery(false)">
-      <DialogContent class="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Restaurer la session précédente ?</DialogTitle>
-          <DialogDescription>
-            Terminarr s’est arrêté sans fermeture propre. La disposition peut être rétablie. Aucune
-            commande n’est rejouée et aucune connexion SSH n’est rouverte automatiquement.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="ghost" @click="store.dismissRecovery(false)">Démarrage propre</Button>
-          <Button class="active:scale-[0.96]" @click="store.dismissRecovery(true)">
-            Restaurer la disposition
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
 
     <Dialog
       :open="Boolean(deletingWorkspace)"

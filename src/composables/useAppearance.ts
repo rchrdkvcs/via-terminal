@@ -2,7 +2,7 @@ import { watch } from 'vue'
 import { useAppStore } from '@/stores/app'
 
 /**
- * Keeps `<html>` in sync with the resolved appearance and density.
+ * Keeps `<html>` in sync with the resolved appearance.
  *
  * A theme flip repaints colour, background, border and shadow on nearly every
  * element at once. Suppressing transitions for one frame makes the switch snap
@@ -27,14 +27,6 @@ export function useAppearance() {
       document.documentElement.classList.toggle('dark', appearance === 'dark')
       document.documentElement.style.colorScheme = appearance
       store.applyPresentation()
-    },
-    { immediate: true },
-  )
-
-  watch(
-    () => store.settings.density,
-    (density) => {
-      document.documentElement.dataset.density = density
     },
     { immediate: true },
   )

@@ -57,6 +57,7 @@ impl DomainService {
         name: String,
         icon: String,
         color: String,
+        default_shell: Option<String>,
     ) -> Result<Workspace, String> {
         self.mutate(|d| {
             let workspace_id = Uuid::new_v4();
@@ -69,11 +70,14 @@ impl DomainService {
                 position: d.workspaces.len() as i64,
                 default_profile_id: Some(profile_id),
             };
-            let executable = if d.settings.default_shell.trim().is_empty() {
-                crate::domain::default_shell()
-            } else {
-                d.settings.default_shell.clone()
-            };
+            let executable =
+                if let Some(shell) = default_shell.filter(|shell| !shell.trim().is_empty()) {
+                    shell
+                } else if d.settings.default_shell.trim().is_empty() {
+                    crate::domain::default_shell()
+                } else {
+                    d.settings.default_shell.clone()
+                };
             d.profiles.push(LocalProfile {
                 id: profile_id,
                 workspace_id,
@@ -86,150 +90,36 @@ impl DomainService {
             Ok(w)
         })
     }
-    pub fn duplicate_workspace(&self, id: Id, name: String) -> Result<Workspace, String> {
+    pub fn move_workspace(&self, id: Id, before_id: Option<Id>) -> Result<Workspace, String> {
         self.mutate(|d| {
-            let source = d
+            let moving = d
                 .workspaces
                 .iter()
-                .find(|w| w.id == id)
+                .find(|workspace| workspace.id == id)
                 .cloned()
                 .ok_or("workspace not found")?;
-            let new_id = Uuid::new_v4();
-            let mut profile_map = std::collections::HashMap::new();
-            let originals: Vec<_> = d
-                .profiles
+            let mut ordered = d.workspaces.clone();
+            ordered.sort_by_key(|workspace| workspace.position);
+            ordered.retain(|workspace| workspace.id != id);
+            let position = before_id
+                .map(|before| {
+                    ordered
+                        .iter()
+                        .position(|workspace| workspace.id == before)
+                        .ok_or("workspace anchor not found")
+                })
+                .transpose()?
+                .unwrap_or(ordered.len());
+            ordered.insert(position, moving.clone());
+            for (position, workspace) in ordered.iter_mut().enumerate() {
+                workspace.position = position as i64;
+            }
+            d.workspaces = ordered;
+            Ok(d.workspaces
                 .iter()
-                .filter(|p| p.workspace_id == id)
+                .find(|workspace| workspace.id == id)
                 .cloned()
-                .collect();
-            for mut p in originals {
-                let old = p.id;
-                p.id = Uuid::new_v4();
-                p.workspace_id = new_id;
-                profile_map.insert(old, p.id);
-                d.profiles.push(p)
-            }
-            let mut identity_map = std::collections::HashMap::new();
-            for mut identity in d
-                .identities
-                .iter()
-                .filter(|item| item.workspace_id == id)
-                .cloned()
-                .collect::<Vec<_>>()
-            {
-                let old = identity.id;
-                identity.id = Uuid::new_v4();
-                identity.workspace_id = new_id;
-                identity_map.insert(old, identity.id);
-                d.identities.push(identity);
-            }
-            let mut resource_map = std::collections::HashMap::new();
-            for mut resource in d
-                .resources
-                .iter()
-                .filter(|item| item.workspace_id == id)
-                .cloned()
-                .collect::<Vec<_>>()
-            {
-                let old = resource.id;
-                resource.id = Uuid::new_v4();
-                resource.workspace_id = new_id;
-                resource.identity_id = resource
-                    .identity_id
-                    .and_then(|identity_id| identity_map.get(&identity_id).copied());
-                resource_map.insert(old, resource.id);
-                d.resources.push(resource);
-            }
-            let mut node_map = std::collections::HashMap::new();
-            let mut copied_nodes = d
-                .sidebar_nodes
-                .iter()
-                .filter(|item| item.workspace_id == id)
-                .cloned()
-                .collect::<Vec<_>>();
-            for node in &mut copied_nodes {
-                let old = node.id;
-                node.id = Uuid::new_v4();
-                node.workspace_id = new_id;
-                node_map.insert(old, node.id);
-            }
-            for node in &mut copied_nodes {
-                node.parent_id = node
-                    .parent_id
-                    .and_then(|parent_id| node_map.get(&parent_id).copied());
-                node.target_id = node
-                    .target_id
-                    .and_then(|target_id| match node.kind.as_str() {
-                        "profile" => profile_map.get(&target_id).copied(),
-                        "resource" => resource_map.get(&target_id).copied(),
-                        _ => None,
-                    });
-            }
-            d.sidebar_nodes.extend(copied_nodes);
-            for mut favorite in d
-                .favorites
-                .iter()
-                .filter(|item| item.workspace_id == id)
-                .cloned()
-                .collect::<Vec<_>>()
-            {
-                favorite.id = Uuid::new_v4();
-                favorite.workspace_id = new_id;
-                favorite.target_id = match favorite.target_kind.as_str() {
-                    "profile" => profile_map[&favorite.target_id],
-                    "resource" => resource_map[&favorite.target_id],
-                    _ => unreachable!("validated favorite kind"),
-                };
-                d.favorites.push(favorite);
-            }
-            let mut session_map = std::collections::HashMap::new();
-            for mut session in d
-                .saved_sessions
-                .iter()
-                .filter(|item| item.workspace_id == id)
-                .cloned()
-                .collect::<Vec<_>>()
-            {
-                let old = session.id;
-                session.id = Uuid::new_v4();
-                session.workspace_id = new_id;
-                session.target_id = match session.target_kind.as_str() {
-                    "profile" => profile_map[&session.target_id],
-                    "resource" => resource_map[&session.target_id],
-                    _ => unreachable!("validated saved session kind"),
-                };
-                session_map.insert(old, session.id);
-                d.saved_sessions.push(session);
-            }
-            for mut tab in d
-                .tabs
-                .iter()
-                .filter(|item| item.workspace_id == id)
-                .cloned()
-                .collect::<Vec<_>>()
-            {
-                tab.id = Uuid::new_v4();
-                tab.workspace_id = new_id;
-                tab.folder_id = tab
-                    .folder_id
-                    .and_then(|folder_id| node_map.get(&folder_id).copied());
-                if let Some(root) = &mut tab.root {
-                    remap_pane_sessions(root, &session_map);
-                }
-                d.tabs.push(tab);
-            }
-            let w = Workspace {
-                id: new_id,
-                name,
-                icon: source.icon,
-                color: source.color,
-                position: d.workspaces.len() as i64,
-                default_profile_id: source
-                    .default_profile_id
-                    .and_then(|x| profile_map.get(&x).copied()),
-            };
-            d.workspaces.push(w.clone());
-            Ok(w)
+                .unwrap())
         })
     }
     pub fn update_workspace(
@@ -237,6 +127,7 @@ impl DomainService {
         id: Id,
         name: String,
         icon: String,
+        default_shell: Option<String>,
     ) -> Result<Workspace, String> {
         let name = name.trim().to_string();
         let icon = icon.trim().to_string();
@@ -254,7 +145,20 @@ impl DomainService {
                 .ok_or("workspace not found")?;
             workspace.name = name;
             workspace.icon = icon;
-            Ok(workspace.clone())
+            let updated = workspace.clone();
+            if let Some(shell) = default_shell.filter(|shell| !shell.trim().is_empty()) {
+                if let Some(profile_id) = updated.default_profile_id {
+                    if let Some(profile) = d
+                        .profiles
+                        .iter_mut()
+                        .find(|profile| profile.id == profile_id)
+                    {
+                        profile.name = crate::domain::shell_label(&shell);
+                        profile.executable = shell;
+                    }
+                }
+            }
+            Ok(updated)
         })
     }
 
@@ -394,6 +298,26 @@ impl DomainService {
                 None => data.tabs.push(tab.clone()),
             }
             Ok(tab)
+        })
+    }
+    pub fn save_split_group(&self, group: SplitGroup) -> Result<SplitGroup, String> {
+        self.mutate(|data| {
+            match data
+                .split_groups
+                .iter_mut()
+                .find(|item| item.id == group.id)
+            {
+                Some(existing) => *existing = group.clone(),
+                None => data.split_groups.push(group.clone()),
+            }
+            Ok(group)
+        })
+    }
+
+    pub fn delete_split_group(&self, id: Id) -> Result<(), String> {
+        self.mutate(|data| {
+            data.split_groups.retain(|group| group.id != id);
+            Ok(())
         })
     }
     pub fn save_window_state(&self, window: WindowState) -> Result<WindowState, String> {
@@ -714,6 +638,13 @@ impl DomainService {
                 .into_iter()
                 .collect();
             d.tabs.retain(|tab| tab.id != id);
+            for group in &mut d.split_groups {
+                group.tab_ids.retain(|tab_id| *tab_id != id);
+                if let Some(root) = prune_split_tab(group.root.clone(), id) {
+                    group.root = root;
+                }
+            }
+            d.split_groups.retain(|group| group.tab_ids.len() >= 2);
             d.saved_sessions
                 .retain(|session| !sessions.contains(&session.id));
             for window in &mut d.windows {
@@ -881,6 +812,31 @@ fn pane_session_ids(tree: &PaneTree) -> Vec<Id> {
     }
 }
 
+fn prune_split_tab(tree: SplitTabTree, removed: Id) -> Option<SplitTabTree> {
+    match tree {
+        SplitTabTree::Tab { tab_id } if tab_id == removed => None,
+        SplitTabTree::Tab { .. } => Some(tree),
+        SplitTabTree::Split {
+            direction,
+            ratio,
+            first,
+            second,
+        } => match (
+            prune_split_tab(*first, removed),
+            prune_split_tab(*second, removed),
+        ) {
+            (Some(first), Some(second)) => Some(SplitTabTree::Split {
+                direction,
+                ratio,
+                first: Box::new(first),
+                second: Box::new(second),
+            }),
+            (Some(remaining), None) | (None, Some(remaining)) => Some(remaining),
+            (None, None) => None,
+        },
+    }
+}
+
 fn remap_pane_sessions(tree: &mut PaneTree, sessions: &std::collections::HashMap<Id, Id>) {
     match tree {
         PaneTree::Pane { session_id } => *session_id = sessions[session_id],
@@ -893,14 +849,24 @@ fn remap_pane_sessions(tree: &mut PaneTree, sessions: &std::collections::HashMap
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
-    fn duplicate_has_independent_ids() {
-        let s = DomainService::new(Repository::memory().unwrap());
-        let source = s.snapshot().unwrap().workspaces[0].clone();
-        let copy = s.duplicate_workspace(source.id, "Copy".into()).unwrap();
-        assert_ne!(source.id, copy.id);
-        assert_ne!(source.default_profile_id, copy.default_profile_id)
+    fn removing_a_split_leaf_collapses_its_parent() {
+        let removed = Uuid::new_v4();
+        let remaining = Uuid::new_v4();
+        let tree = SplitTabTree::Split {
+            direction: SplitDirection::Vertical,
+            ratio: 0.5,
+            first: Box::new(SplitTabTree::Tab { tab_id: removed }),
+            second: Box::new(SplitTabTree::Tab { tab_id: remaining }),
+        };
+
+        assert!(matches!(
+            prune_split_tab(tree, removed),
+            Some(SplitTabTree::Tab { tab_id }) if tab_id == remaining
+        ));
     }
+
     #[test]
     fn export_import_remaps_ids() {
         let s = DomainService::new(Repository::memory().unwrap());
@@ -959,61 +925,6 @@ mod tests {
         });
         data
     }
-
-    #[test]
-    fn duplicate_workspace_copies_complete_organization_with_independent_ids() {
-        let repo = Repository::memory().unwrap();
-        repo.save(&organized_data()).unwrap();
-        let service = DomainService::new(repo);
-        let source = service.snapshot().unwrap().workspaces[0].id;
-        let copy = service.duplicate_workspace(source, "Copy".into()).unwrap();
-        let snapshot = service.snapshot().unwrap();
-        assert_eq!(
-            snapshot
-                .identities
-                .iter()
-                .filter(|x| x.workspace_id == copy.id)
-                .count(),
-            1
-        );
-        assert_eq!(
-            snapshot
-                .resources
-                .iter()
-                .filter(|x| x.workspace_id == copy.id)
-                .count(),
-            1
-        );
-        assert_eq!(
-            snapshot
-                .sidebar_nodes
-                .iter()
-                .filter(|x| x.workspace_id == copy.id)
-                .count(),
-            2
-        );
-        assert_eq!(
-            snapshot
-                .favorites
-                .iter()
-                .filter(|x| x.workspace_id == copy.id)
-                .count(),
-            1
-        );
-        let copied_resource = snapshot
-            .resources
-            .iter()
-            .find(|x| x.workspace_id == copy.id)
-            .unwrap();
-        let copied_identity = snapshot
-            .identities
-            .iter()
-            .find(|x| x.workspace_id == copy.id)
-            .unwrap();
-        assert_eq!(copied_resource.identity_id, Some(copied_identity.id));
-        assert!(snapshot.validate().is_ok());
-    }
-
     #[test]
     fn update_workspace_persists_name_and_icon() {
         let repo = Repository::memory().unwrap();
@@ -1023,7 +934,7 @@ mod tests {
         let service = DomainService::new(repo);
 
         let updated = service
-            .update_workspace(workspace_id, " Operations ".into(), "server".into())
+            .update_workspace(workspace_id, " Operations ".into(), "server".into(), None)
             .unwrap();
 
         assert_eq!(updated.name, "Operations");
@@ -1037,7 +948,7 @@ mod tests {
         let service = DomainService::new(Repository::memory().unwrap());
         let first = service.snapshot().unwrap().workspaces[0].id;
         let second = service
-            .create_workspace("Ops".into(), "server".into(), "#67e8f9".into())
+            .create_workspace("Ops".into(), "server".into(), "#67e8f9".into(), None)
             .unwrap();
 
         service.delete_workspace(second.id).unwrap();
@@ -1051,7 +962,7 @@ mod tests {
     fn create_workspace_keeps_the_launch_profile_off_the_sidebar() {
         let service = DomainService::new(Repository::memory().unwrap());
         let workspace = service
-            .create_workspace("Ops".into(), "server".into(), "#67e8f9".into())
+            .create_workspace("Ops".into(), "server".into(), "#67e8f9".into(), None)
             .unwrap();
         let snapshot = service.snapshot().unwrap();
         assert!(snapshot
@@ -1218,13 +1129,13 @@ mod tests {
     }
 
     #[test]
-    fn a_folder_cannot_be_moved_into_its_own_subtree() {
+    fn folders_cannot_be_nested() {
         let service = DomainService::new(Repository::memory().unwrap());
         let workspace = service.snapshot().unwrap().workspaces[0].id;
         let parent = service
             .create_sidebar_node(workspace, "folder".into(), "Parent".into(), None, None)
             .unwrap();
-        let child = service
+        let error = service
             .create_sidebar_node(
                 workspace,
                 "folder".into(),
@@ -1232,12 +1143,8 @@ mod tests {
                 Some(parent.id),
                 None,
             )
-            .unwrap();
-
-        let error = service
-            .move_sidebar_node(parent.id, Some(child.id), 0)
             .unwrap_err();
-        assert_eq!(error, "sidebar parent cycle");
+        assert_eq!(error, "folders cannot be nested");
     }
 
     #[test]

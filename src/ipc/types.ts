@@ -88,6 +88,23 @@ export interface Tab {
   folderId?: Id | null
 }
 
+export type SplitTabTree =
+  | { kind: 'tab'; tabId: Id }
+  | {
+      kind: 'split'
+      direction: SplitDirection
+      ratio: number
+      first: SplitTabTree
+      second: SplitTabTree
+    }
+
+export interface SplitGroupRecord {
+  id: Id
+  workspaceId: Id
+  tabIds: Id[]
+  root: SplitTabTree
+}
+
 export interface WindowState {
   id: Id
   activeWorkspaceId: Id | null
@@ -106,15 +123,12 @@ export interface AppState {
 }
 
 export type ThemePreference = 'dark' | 'light' | 'system'
-export type Density = 'comfortable' | 'compact'
 
 /** Exactly the fields `domain::Settings` persists — no more, no less. */
 export interface Settings {
   theme: ThemePreference
-  density: Density
   fontFamily: string
   fontSize: number
-  restoreLocalSessions: boolean
   /** Executable used when « Nouveau terminal » opens a local shell. */
   defaultShell: string
 }
@@ -128,6 +142,7 @@ export interface AppData {
   favorites: FavoriteRecord[]
   savedSessions: SavedSession[]
   tabs: Tab[]
+  splitGroups: SplitGroupRecord[]
   windows: WindowState[]
   settings: Settings
   appState: AppState
@@ -187,9 +202,7 @@ export interface SessionExitedEvent {
 
 export const defaultSettings: Settings = {
   theme: 'system',
-  density: 'comfortable',
   fontFamily: 'Cascadia Mono',
   fontSize: 14,
-  restoreLocalSessions: false,
   defaultShell: 'powershell.exe',
 }

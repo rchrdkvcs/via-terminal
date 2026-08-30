@@ -1,6 +1,19 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+.workspace-switcher--overflowing:not(.workspace-switcher--active):not(:hover)
+  > button:first-of-type {
+  transform: scale(0.22);
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.workspace-switcher--overflowing:not(.workspace-switcher--active):not(:hover)
+  > button:first-of-type
+  > * {
+  opacity: 0;
+}
+
 @keyframes workspace-next {
   from {
     opacity: 0;

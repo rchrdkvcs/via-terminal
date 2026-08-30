@@ -120,6 +120,33 @@ pub struct Tab {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum SplitTabTree {
+    Tab {
+        tab_id: Id,
+    },
+    Split {
+        direction: SplitDirection,
+        ratio: f32,
+        first: Box<SplitTabTree>,
+        second: Box<SplitTabTree>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SplitGroup {
+    pub id: Id,
+    pub workspace_id: Id,
+    pub tab_ids: Vec<Id>,
+    pub root: SplitTabTree,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct WindowState {
     pub id: Id,
@@ -171,10 +198,8 @@ impl Default for AppState {
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub theme: String,
-    pub density: String,
     pub font_family: String,
     pub font_size: u16,
-    pub restore_local_sessions: bool,
     /// Executable used by every workspace default launch profile.
     #[serde(default = "default_shell")]
     pub default_shell: String,
@@ -183,10 +208,8 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             theme: "system".into(),
-            density: "comfortable".into(),
             font_family: "Cascadia Mono".into(),
             font_size: 14,
-            restore_local_sessions: false,
             default_shell: default_shell(),
         }
     }
@@ -210,6 +233,8 @@ pub struct AppData {
     pub saved_sessions: Vec<SavedSession>,
     #[serde(default)]
     pub tabs: Vec<Tab>,
+    #[serde(default)]
+    pub split_groups: Vec<SplitGroup>,
     #[serde(default)]
     pub windows: Vec<WindowState>,
     #[serde(default)]
@@ -255,6 +280,7 @@ impl AppData {
             .chain(self.favorites.iter().map(|x| x.id))
             .chain(self.saved_sessions.iter().map(|x| x.id))
             .chain(self.tabs.iter().map(|x| x.id))
+            .chain(self.split_groups.iter().map(|x| x.id))
             .chain(self.windows.iter().map(|x| x.id))
         {
             if !ids.insert(id) {
@@ -304,6 +330,9 @@ impl AppData {
                 return Err("sidebar node references missing workspace".into());
             }
             if let Some(parent_id) = node.parent_id {
+                if node.kind == "folder" {
+                    return Err("folders cannot be nested".into());
+                }
                 let parent = self
                     .sidebar_nodes
                     .iter()
@@ -393,12 +422,50 @@ impl AppData {
                 return Err("tab references missing workspace".into());
             }
             if let Some(root) = &tab.root {
+                if !matches!(root, PaneTree::Pane { .. }) {
+                    return Err("a tab represents exactly one session".into());
+                }
                 validate_pane_tree(
                     root,
                     tab.workspace_id,
                     &self.saved_sessions,
                     &mut pane_sessions,
                 )?;
+            }
+            if let Some(folder_id) = tab.folder_id {
+                let folder = self
+                    .sidebar_nodes
+                    .iter()
+                    .find(|node| node.id == folder_id && node.kind == "folder")
+                    .ok_or("tab folder missing")?;
+                if folder.workspace_id != tab.workspace_id || !tab.organized {
+                    return Err("tab folder requires a pinned tab in the same workspace".into());
+                }
+            }
+        }
+        let mut grouped_tabs = HashSet::new();
+        for group in &self.split_groups {
+            if group.tab_ids.len() < 2 || group.tab_ids.len() > 4 {
+                return Err("split group must contain two to four tabs".into());
+            }
+            let mut members = HashSet::new();
+            for tab_id in &group.tab_ids {
+                if !members.insert(*tab_id) || !grouped_tabs.insert(*tab_id) {
+                    return Err("tab belongs to multiple split groups".into());
+                }
+                let tab = self
+                    .tabs
+                    .iter()
+                    .find(|tab| tab.id == *tab_id)
+                    .ok_or("split tab missing")?;
+                if tab.workspace_id != group.workspace_id || !tab.organized {
+                    return Err("split group members must be pinned in one workspace".into());
+                }
+            }
+            let mut leaves = Vec::new();
+            split_tab_leaves(&group.root, &mut leaves)?;
+            if leaves != group.tab_ids {
+                return Err("split tree does not match members".into());
             }
         }
         for window in &self.windows {
@@ -425,6 +492,25 @@ impl AppData {
         }
         Ok(())
     }
+}
+
+fn split_tab_leaves(tree: &SplitTabTree, leaves: &mut Vec<Id>) -> Result<(), String> {
+    match tree {
+        SplitTabTree::Tab { tab_id } => leaves.push(*tab_id),
+        SplitTabTree::Split {
+            ratio,
+            first,
+            second,
+            ..
+        } => {
+            if !ratio.is_finite() || *ratio < 0.15 || *ratio > 0.85 {
+                return Err("invalid split group ratio".into());
+            }
+            split_tab_leaves(first, leaves)?;
+            split_tab_leaves(second, leaves)?;
+        }
+    }
+    Ok(())
 }
 
 fn validate_pane_tree(
@@ -549,7 +635,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_sidebar_parent_cycles() {
+    fn rejects_nested_folders() {
         let mut data = AppData::seed();
         let workspace_id = data.workspaces[0].id;
         let first = Uuid::new_v4();
@@ -572,7 +658,7 @@ mod tests {
             target_id: None,
             position: 0,
         });
-        assert_eq!(data.validate().unwrap_err(), "sidebar parent cycle");
+        assert_eq!(data.validate().unwrap_err(), "folders cannot be nested");
     }
 
     #[test]

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { useDraggable } from 'vue-draggable-plus'
-import { Pencil, Trash2, X } from '@lucide/vue'
+import { FolderPlus, Pencil, Trash2, X } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +24,6 @@ import {
   rowZone,
   startSidebarDrag,
 } from '@/lib/sidebar-dnd'
-import { tabSortableOptions } from '@/lib/tab-dnd'
 import TabRow from './TabRow.vue'
 
 defineOptions({ name: 'SidebarTree' })
@@ -36,8 +34,6 @@ const props = withDefaults(
 )
 
 const store = useAppStore()
-const list = ref<HTMLElement | null>(null)
-useDraggable(list, tabSortableOptions(Boolean(props.parentId)))
 const collapsed = computed(() => ({ has: (id: string) => store.isFolderCollapsed(id) }))
 const editing = ref<string | null>(null)
 const draft = ref('')
@@ -244,7 +240,6 @@ function pin(drag: SidebarDrag, beforeId: string | null) {
 
 <template>
   <ul
-    ref="list"
     class="flex w-full min-w-0 flex-col gap-1"
     :data-tab-container="props.parentId ? 'folder' : undefined"
     :data-folder-id="props.parentId ?? undefined"
@@ -258,7 +253,14 @@ function pin(drag: SidebarDrag, beforeId: string | null) {
         :detail="store.sessionById.get(node.sessionIds[0])?.detail"
         :state="rowState(node)"
         :depth="node.depth"
+        pinned
+        :grouped="store.splitGroups.some((group) => group.tabIds.includes(node.tabId!))"
         @move="moveTabByKey(node, $event)"
+        @drop-tab="
+          $event.edge
+            ? store.linkTabs($event.id, node.tabId!, $event.edge)
+            : store.placeTab($event.id, props.parentId, node.tabId ?? null)
+        "
       />
       <SidebarMenuItem
         v-else
@@ -343,6 +345,13 @@ function pin(drag: SidebarDrag, beforeId: string | null) {
             <DropdownMenuItem @select="beginRename(node)">
               <Pencil :stroke-width="1.5" />
               Renommer
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              v-if="node.kind === 'folder'"
+              @select="store.createFolderAfter(node.id)"
+            >
+              <FolderPlus :stroke-width="1.5" />
+              Nouveau dossier après
             </DropdownMenuItem>
             <DropdownMenuItem v-if="canClose(node)" @select="closeUnique(node)">
               <X :stroke-width="1.5" />

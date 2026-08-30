@@ -1,17 +1,8 @@
 <script setup lang="ts">
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import SettingRow from '../SettingRow.vue'
 import SettingsSection from '../SettingsSection.vue'
-import { densityLabels } from '@/lib/preferences'
-import type { Density } from '@/ipc/types'
 import { useAppStore } from '@/stores/app'
 
 const store = useAppStore()
@@ -19,24 +10,6 @@ const store = useAppStore()
 
 <template>
   <SettingsSection title="Général" description="Comportement de la fenêtre et des sessions.">
-    <SettingRow
-      label="Densité"
-      description="Hauteur des lignes de la barre latérale."
-      for-id="density"
-    >
-      <Select
-        :model-value="store.settings.density"
-        @update:model-value="store.setDensity($event as Density)"
-      >
-        <SelectTrigger id="density" class="w-44"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          <SelectItem v-for="(label, value) in densityLabels" :key="value" :value="value">
-            {{ label }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    </SettingRow>
-
     <SettingRow
       label="Délai de réapparition de la barre latérale"
       description="Temps que le pointeur doit rester sur le bord gauche avant l’ouverture. En millisecondes."
@@ -86,14 +59,14 @@ const store = useAppStore()
     </SettingRow>
 
     <SettingRow
-      label="Relancer les shells locaux au démarrage"
-      description="Les connexions SSH ne sont jamais rétablies automatiquement et aucune commande n’est rejouée."
-      for-id="restore-local"
+      label="Connexion manuelle des favoris"
+      description="Sélectionner un favori arrêté sans démarrer immédiatement son terminal ou sa connexion."
+      for-id="manual-favorites"
     >
       <Switch
-        id="restore-local"
-        :model-value="store.settings.restoreLocalSessions"
-        @update:model-value="store.updateSettings({ restoreLocalSessions: $event })"
+        id="manual-favorites"
+        :model-value="store.preferences.startFavoritesManually"
+        @update:model-value="store.updatePreferences({ startFavoritesManually: $event })"
       />
     </SettingRow>
   </SettingsSection>

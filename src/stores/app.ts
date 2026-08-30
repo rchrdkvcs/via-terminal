@@ -4,7 +4,6 @@ import { api, describeError, isNative } from '@/ipc/client'
 import { on } from '@/ipc/events'
 import type {
   AppData,
-  Density,
   FavoriteRecord,
   Id,
   Identity,
@@ -15,6 +14,7 @@ import type {
   Settings,
   SidebarNodeRecord,
   SplitDirection,
+  SplitTabTree,
   Tab,
   TargetKind,
   ThemePreference,
@@ -80,6 +80,25 @@ export interface RuntimeTab {
   folderId: Id | null
 }
 
+export type RuntimeSplitTree =
+  | { kind: 'tab'; tabId: Id }
+  | {
+      kind: 'split'
+      id: string
+      direction: SplitDirection
+      ratio: number
+      first: RuntimeSplitTree
+      second: RuntimeSplitTree
+    }
+
+export interface RuntimeSplitGroup {
+  id: Id
+  workspaceId: Id
+  windowId: Id
+  tabIds: Id[]
+  root: RuntimeSplitTree
+}
+
 export interface TreeNode {
   id: Id
   parentId: Id | null
@@ -98,6 +117,7 @@ export interface Notice {
   id: string
   kind: 'info' | 'error' | 'success'
   message: string
+  action?: { label: string; run: () => void }
 }
 
 const identifier = () =>
@@ -114,6 +134,7 @@ const emptyData = (): AppData => ({
   favorites: [],
   savedSessions: [],
   tabs: [],
+  splitGroups: [],
   windows: [],
   settings: { ...defaultSettings },
   appState: { cleanShutdown: true, recoveryAvailable: false },
@@ -137,6 +158,7 @@ export const useAppStore = defineStore('app', () => {
   /* -------------------------------------------------------------- runtime */
   const sessions = ref<SessionSummary[]>([])
   const tabs = ref<RuntimeTab[]>([])
+  const splitGroups = ref<RuntimeSplitGroup[]>([])
   const activeWorkspaceId = ref<Id>('')
   /** Remembered per workspace so switching back restores the same tab. */
   const activeTabPerWorkspace = ref<Record<Id, Id | undefined>>({})
@@ -218,7 +240,7 @@ export const useAppStore = defineStore('app', () => {
     )
     const records = sidebarNodes.value
       .filter((node) => node.workspaceId === activeWorkspaceId.value)
-      .filter((node) => node.kind !== 'profile')
+      .filter((node) => node.kind === 'folder')
       .filter((node) => !node.targetId || !favoriteTargetIds.has(node.targetId))
       .filter((node) => {
         const tab = node.targetId ? openTabByTarget.get(node.targetId) : undefined
@@ -373,6 +395,9 @@ export const useAppStore = defineStore('app', () => {
   const activeTab = computed(
     () => visibleTabs.value.find((tab) => tab.id === activeTabId.value) ?? null,
   )
+  const activeSplitGroup = computed(() =>
+    splitGroups.value.find((group) => group.tabIds.includes(activeTabId.value)),
+  )
 
   const sessionById = computed(() => {
     const map = new Map<Id, SessionSummary>()
@@ -419,15 +444,6 @@ export const useAppStore = defineStore('app', () => {
       : [...paneSessionIds(node.first), ...paneSessionIds(node.second)]
   }
 
-  function replacePane(node: PaneNode, id: string, replacement: PaneNode): PaneNode {
-    if (node.kind === 'pane') return node.id === id ? replacement : node
-    return {
-      ...node,
-      first: replacePane(node.first, id, replacement),
-      second: replacePane(node.second, id, replacement),
-    }
-  }
-
   /** Removing a leaf collapses its split into the surviving sibling. */
   function removePane(node: PaneNode, id: string): PaneNode | null {
     if (node.kind === 'pane') return node.id === id ? null : node
@@ -450,9 +466,34 @@ export const useAppStore = defineStore('app', () => {
         }
   }
 
+  function splitToWire(node: RuntimeSplitTree): SplitTabTree {
+    return node.kind === 'tab'
+      ? { kind: 'tab', tabId: node.tabId }
+      : {
+          kind: 'split',
+          direction: node.direction,
+          ratio: node.ratio,
+          first: splitToWire(node.first),
+          second: splitToWire(node.second),
+        }
+  }
+
+  function splitFromWire(node: SplitTabTree): RuntimeSplitTree {
+    return node.kind === 'tab'
+      ? { kind: 'tab', tabId: node.tabId }
+      : {
+          kind: 'split',
+          id: identifier(),
+          direction: node.direction,
+          ratio: node.ratio,
+          first: splitFromWire(node.first),
+          second: splitFromWire(node.second),
+        }
+  }
+
   /* -------------------------------------------------------------- notices */
-  function notify(kind: Notice['kind'], message: string) {
-    const notice: Notice = { id: identifier(), kind, message }
+  function notify(kind: Notice['kind'], message: string, action?: Notice['action']) {
+    const notice: Notice = { id: identifier(), kind, message, action }
     notices.value = [...notices.value.slice(-4), notice]
     return notice
   }
@@ -471,14 +512,14 @@ export const useAppStore = defineStore('app', () => {
   /** TECHNICAL.md: layout writes are debounced and committed atomically. */
   function scheduleLayoutSave(tabId: Id) {
     if (!isNative()) return
-    if (!tabs.value.find((item) => item.id === tabId)) return
+    if (!tabs.value.find((item) => item.id === tabId && item.organized)) return
     if (layoutTimer) clearTimeout(layoutTimer)
     layoutTimer = setTimeout(() => void persistTab(tabId), 400)
   }
 
   async function persistTab(tabId: Id) {
     const tab = tabs.value.find((item) => item.id === tabId)
-    if (!tab) return
+    if (!tab || !tab.organized) return
     const descriptors: SavedSession[] = paneSessionIds(tab.root).flatMap((sessionId) => {
       const session = sessionById.value.get(sessionId)
       if (!session) return []
@@ -510,6 +551,19 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  async function persistSplitGroup(group: RuntimeSplitGroup) {
+    if (!isNative()) return
+    if (!group.tabIds.every((id) => tabs.value.find((tab) => tab.id === id)?.organized)) return
+    await api
+      .saveSplitGroup({
+        id: group.id,
+        workspaceId: group.workspaceId,
+        tabIds: [...group.tabIds],
+        root: splitToWire(group.root),
+      })
+      .catch((error) => report('Impossible d’enregistrer le groupe de splits', error))
+  }
+
   async function persistWindowState() {
     if (!isNative()) return
     try {
@@ -539,6 +593,13 @@ export const useAppStore = defineStore('app', () => {
     favoriteRecords.value = data.favorites
     savedSessions.value = data.savedSessions
     savedTabs.value = data.tabs
+    splitGroups.value = data.splitGroups.map((group) => ({
+      id: group.id,
+      workspaceId: group.workspaceId,
+      windowId: windowId.value,
+      tabIds: [...group.tabIds],
+      root: splitFromWire(group.root),
+    }))
     settings.value = { ...defaultSettings, ...data.settings }
     if (!workspaces.value.some((item) => item.id === activeWorkspaceId.value))
       activeWorkspaceId.value = workspaces.value[0]?.id ?? ''
@@ -564,18 +625,18 @@ export const useAppStore = defineStore('app', () => {
       return
     }
     try {
-      const [data, isLocked, recovery, shells] = await Promise.all([
+      const [data, isLocked, shells] = await Promise.all([
         api.snapshot(),
         api.isLocked(),
-        api.recoveryState(),
         api.detectProfiles().catch(() => [] as string[]),
       ])
       applySnapshot(data)
       locked.value = isLocked
       pinConfigured.value = isLocked
-      recoveryAvailable.value = recovery.recoveryAvailable
+      recoveryAvailable.value = false
       detectedShells.value = shells
-      if (!recovery.recoveryAvailable) restoreLayout()
+      restoreLayout()
+      await api.finishRecovery().catch(() => undefined)
     } catch (error) {
       report('Démarrage incomplet', error)
     } finally {
@@ -591,7 +652,7 @@ export const useAppStore = defineStore('app', () => {
   function restoreLayout() {
     const descriptors = new Map(savedSessions.value.map((item) => [item.id, item]))
     for (const saved of savedTabs.value) {
-      if (!saved.root) continue
+      if (!saved.root || !saved.organized) continue
       // `initialize` and an accepted recovery can both reach this point, and a
       // dev reload runs it again; restoring a tab twice used to duplicate every
       // pane and its placeholder session.
@@ -615,7 +676,6 @@ export const useAppStore = defineStore('app', () => {
         folderId: saved.folderId ?? null,
       }
       tabs.value.push(runtime)
-      activeTabPerWorkspace.value[saved.workspaceId] ??= runtime.id
     }
   }
 
@@ -744,11 +804,11 @@ export const useAppStore = defineStore('app', () => {
     saveSidebarNavigation(sidebarNavigation.value)
   }
 
-  async function createWorkspace(name: string, icon = 'terminal') {
+  async function createWorkspace(name: string, icon = 'terminal', defaultShell?: string) {
     const trimmed = name.trim()
     if (!trimmed) return
     try {
-      const workspace = await api.createWorkspace(trimmed, icon)
+      const workspace = await api.createWorkspace(trimmed, icon, undefined, defaultShell)
       applySnapshot(await api.snapshot())
       switchWorkspace(workspace.id)
       notify('success', `Espace de travail « ${workspace.name} » créé.`)
@@ -757,25 +817,24 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function duplicateWorkspace(id: Id, name: string) {
-    try {
-      const workspace = await api.duplicateWorkspace(id, name.trim())
-      applySnapshot(await api.snapshot())
-      switchWorkspace(workspace.id)
-      notify('success', `Espace de travail dupliqué en « ${workspace.name} ».`)
-    } catch (error) {
-      report('Duplication impossible', error)
-    }
-  }
-
-  async function updateWorkspace(id: Id, changes: { name?: string; icon?: string }) {
+  async function updateWorkspace(
+    id: Id,
+    changes: { name?: string; icon?: string; defaultShell?: string },
+  ) {
     const current = workspaces.value.find((workspace) => workspace.id === id)
     if (!current) return false
     const name = changes.name?.trim() ?? current.name
     const icon = changes.icon?.trim() ?? current.icon
-    if (!name || !icon || (name === current.name && icon === current.icon)) return false
+    if (!name || !icon) return false
     try {
-      const updated = await api.updateWorkspace(id, name, icon)
+      const updated = await api.updateWorkspace(id, name, icon, changes.defaultShell)
+      if (changes.defaultShell) {
+        const profile = profiles.value.find((item) => item.id === updated.defaultProfileId)
+        if (profile) {
+          profile.executable = changes.defaultShell
+          profile.name = changes.defaultShell.split(/[\\/]/).pop() || changes.defaultShell
+        }
+      }
       const index = workspaces.value.findIndex((workspace) => workspace.id === id)
       workspaces.value.splice(index, 1, updated)
       notify('success', `Espace de travail « ${updated.name} » mis à jour.`)
@@ -783,6 +842,25 @@ export const useAppStore = defineStore('app', () => {
     } catch (error) {
       report('Modification de l’espace de travail impossible', error)
       return false
+    }
+  }
+
+  async function reorderWorkspace(id: Id, beforeId: Id | null) {
+    const moving = workspaces.value.find((workspace) => workspace.id === id)
+    if (!moving || id === beforeId) return
+    const ordered = workspaces.value.filter((workspace) => workspace.id !== id)
+    const index = beforeId
+      ? ordered.findIndex((workspace) => workspace.id === beforeId)
+      : ordered.length
+    if (beforeId && index < 0) return
+    ordered.splice(index, 0, moving)
+    workspaces.value = ordered.map((workspace, position) => ({ ...workspace, position }))
+    if (!isNative()) return
+    try {
+      await api.moveWorkspace(id, beforeId)
+    } catch (error) {
+      report('Impossible de réordonner les espaces de travail', error)
+      await refresh()
     }
   }
 
@@ -932,7 +1010,6 @@ export const useAppStore = defineStore('app', () => {
     }
     tabs.value.push(tab)
     activeTabPerWorkspace.value[session.workspaceId] = tab.id
-    scheduleLayoutSave(tab.id)
     return tab
   }
 
@@ -957,12 +1034,29 @@ export const useAppStore = defineStore('app', () => {
     return findPaneBySession(node.first, sessionId) ?? findPaneBySession(node.second, sessionId)
   }
 
-  function selectTab(id: Id) {
+  async function selectTab(id: Id, forceStart = false) {
     const tab = tabs.value.find((item) => item.id === id)
     if (!tab) return
     activeTabPerWorkspace.value[tab.workspaceId] = id
     const pane = findPane(tab.root, tab.activePaneId) ?? firstPane(tab.root)
-    if (pane) terminals.focus(pane.sessionId)
+    if (!pane) return
+    const stopped = sessionById.value.get(pane.sessionId)
+    if (stopped && ['closed', 'failed', 'restorable'].includes(stopped.status)) {
+      if (preferences.value.startFavoritesManually && !forceStart) return
+      const replacement = await startSession(stopped.targetKind, stopped.targetId)
+      if (!replacement) return
+      tab.root = rewriteSession(tab.root, stopped.id, replacement.id)
+      tab.activePaneId = findPaneBySession(tab.root, replacement.id)?.id ?? tab.activePaneId
+      sessions.value = sessions.value.filter((session) => session.id !== stopped.id)
+      scheduleLayoutSave(tab.id)
+      terminals.focus(replacement.id)
+      return
+    }
+    terminals.focus(pane.sessionId)
+  }
+
+  async function startStoppedTab(id: Id) {
+    await selectTab(id, true)
   }
 
   function selectPane(paneId: string) {
@@ -1003,25 +1097,184 @@ export const useAppStore = defineStore('app', () => {
   async function splitActivePane(direction: SplitDirection) {
     const tab = activeTab.value
     if (!tab) return
-    const current = findPane(tab.root, tab.activePaneId) ?? firstPane(tab.root)
-    if (!current) return
-    const source = sessionById.value.get(current.sessionId)
-    const targetKind = source?.targetKind ?? 'profile'
-    const targetId = source?.targetKind === 'profile' ? source.targetId : defaultProfileId.value
-    if (!targetId) return
-    const session = await startSession(targetKind === 'resource' ? 'profile' : targetKind, targetId)
+    const profileId = defaultProfileId.value
+    if (!profileId) return
+    const session = await startSession('profile', profileId)
     if (!session) return
-    const paneId = identifier()
-    tab.root = replacePane(tab.root, current.id, {
-      kind: 'split',
+    const created = openSessionInTab(session, tab.organized)
+    created.folderId = tab.folderId
+    const group = splitGroups.value.find((item) => item.tabIds.includes(tab.id))
+    if (group) {
+      if (group.tabIds.length >= 4) {
+        await closeTab(created.id, { force: true })
+        notify('error', 'Un groupe de splits est limité à quatre terminaux.')
+        return
+      }
+      group.tabIds.push(created.id)
+      group.root = {
+        kind: 'split',
+        id: identifier(),
+        direction,
+        ratio: 0.5,
+        first: group.root,
+        second: { kind: 'tab', tabId: created.id },
+      }
+      if (created.organized) await persistTab(created.id)
+      await persistSplitGroup(group)
+      return
+    }
+    const createdGroup: RuntimeSplitGroup = {
       id: identifier(),
-      direction,
-      ratio: 0.5,
-      first: current,
-      second: { kind: 'pane', id: paneId, sessionId: session.id },
+      workspaceId: tab.workspaceId,
+      windowId: windowId.value,
+      tabIds: [tab.id, created.id],
+      root: {
+        kind: 'split',
+        id: identifier(),
+        direction,
+        ratio: 0.5,
+        first: { kind: 'tab', tabId: tab.id },
+        second: { kind: 'tab', tabId: created.id },
+      },
+    }
+    splitGroups.value.push(createdGroup)
+    if (tab.organized) await Promise.all([persistTab(tab.id), persistTab(created.id)])
+    await persistSplitGroup(createdGroup)
+  }
+
+  function detachFromSplit(tabId: Id) {
+    const group = splitGroups.value.find((item) => item.tabIds.includes(tabId))
+    if (!group) return
+    const remove = (node: RuntimeSplitTree): RuntimeSplitTree | null => {
+      if (node.kind === 'tab') return node.tabId === tabId ? null : node
+      const first = remove(node.first)
+      const second = remove(node.second)
+      if (!first) return second
+      if (!second) return first
+      return { ...node, first, second }
+    }
+    group.tabIds = group.tabIds.filter((id) => id !== tabId)
+    group.root = remove(group.root) ?? { kind: 'tab', tabId: group.tabIds[0] }
+    if (group.tabIds.length < 2) {
+      splitGroups.value = splitGroups.value.filter((item) => item.id !== group.id)
+      if (isNative()) void api.deleteSplitGroup(group.id).catch(() => undefined)
+    } else void persistSplitGroup(group)
+  }
+
+  async function linkTabs(
+    sourceTabId: Id,
+    targetTabId: Id,
+    edge: 'left' | 'right' | 'top' | 'bottom',
+  ) {
+    if (sourceTabId === targetTabId) return
+    const source = tabs.value.find((tab) => tab.id === sourceTabId)
+    const target = tabs.value.find((tab) => tab.id === targetTabId)
+    if (!source || !target || source.workspaceId !== target.workspaceId) return
+    if (
+      splitGroups.value.some(
+        (group) => group.tabIds.includes(sourceTabId) || group.tabIds.includes(targetTabId),
+      )
+    ) {
+      notify('error', 'Deux groupes de splits existants ne peuvent pas être fusionnés.')
+      return
+    }
+    const pinned = source.organized || target.organized
+    const folderId = target.folderId
+    source.organized = pinned
+    target.organized = pinned
+    source.folderId = folderId
+    target.folderId = folderId
+    const sourceFirst = edge === 'left' || edge === 'top'
+    const first = sourceFirst ? source : target
+    const second = sourceFirst ? target : source
+    const createdGroup: RuntimeSplitGroup = {
+      id: identifier(),
+      workspaceId: source.workspaceId,
+      windowId: windowId.value,
+      tabIds: [first.id, second.id],
+      root: {
+        kind: 'split',
+        id: identifier(),
+        direction: edge === 'left' || edge === 'right' ? 'vertical' : 'horizontal',
+        ratio: 0.5,
+        first: { kind: 'tab', tabId: first.id },
+        second: { kind: 'tab', tabId: second.id },
+      },
+    }
+    splitGroups.value.push(createdGroup)
+    const ordered = tabs.value
+      .filter(
+        (item) =>
+          item.workspaceId === source.workspaceId && item.id !== source.id && item.id !== target.id,
+      )
+      .sort((a, b) => a.position - b.position)
+    ordered.splice(Math.min(source.position, target.position, ordered.length), 0, first, second)
+    ordered.forEach((item, position) => (item.position = position))
+    activeTabPerWorkspace.value[source.workspaceId] = source.id
+    if (pinned) {
+      await Promise.all([persistTab(first.id), persistTab(second.id)])
+      await persistSplitGroup(createdGroup)
+    }
+  }
+
+  async function transferTab(tabId: Id, workspaceId: Id, wholeGroup = false) {
+    const tab = tabs.value.find((item) => item.id === tabId)
+    const workspace = workspaces.value.find((item) => item.id === workspaceId)
+    if (!tab || !workspace || tab.workspaceId === workspaceId) return
+    const group = splitGroups.value.find((item) => item.tabIds.includes(tabId))
+    const memberIds = wholeGroup && group ? group.tabIds : [tabId]
+    const members = memberIds.flatMap((id) => {
+      const member = tabs.value.find((item) => item.id === id)
+      return member ? [member] : []
     })
-    tab.activePaneId = paneId
-    scheduleLayoutSave(tab.id)
+    const memberSessions = members.flatMap((member) =>
+      paneSessionIds(member.root).flatMap((id) => {
+        const session = sessionById.value.get(id)
+        return session ? [session] : []
+      }),
+    )
+    if (memberSessions.some((session) => session.targetKind === 'resource')) {
+      notify('error', 'La ressource SSH doit d’abord exister dans l’espace de destination.')
+      return
+    }
+    const profileId = workspace.defaultProfileId
+    if (!profileId) {
+      notify('error', 'L’espace de destination ne possède pas de profil terminal.')
+      return
+    }
+    if (group && !wholeGroup) detachFromSplit(tabId)
+    const sourceWorkspaceId = tab.workspaceId
+    for (const member of members) {
+      member.workspaceId = workspaceId
+      member.folderId = null
+      member.position = nextPosition(workspaceId)
+      for (const sessionId of paneSessionIds(member.root)) {
+        const session = sessionById.value.get(sessionId)
+        if (!session) continue
+        session.workspaceId = workspaceId
+        session.targetId = profileId
+      }
+      if (member.organized) await persistTab(member.id)
+    }
+    if (wholeGroup && group) {
+      group.workspaceId = workspaceId
+      await persistSplitGroup(group)
+    }
+    if (activeTabPerWorkspace.value[sourceWorkspaceId] === tabId)
+      activeTabPerWorkspace.value[sourceWorkspaceId] = undefined
+    notify('success', `Transféré vers « ${workspace.name} ».`)
+  }
+
+  function setGroupSplitRatio(splitId: string, ratio: number) {
+    const group = activeSplitGroup.value
+    if (!group) return
+    const apply = (node: RuntimeSplitTree): RuntimeSplitTree => {
+      if (node.kind === 'tab') return node
+      if (node.id === splitId) return { ...node, ratio: Math.min(0.85, Math.max(0.15, ratio)) }
+      return { ...node, first: apply(node.first), second: apply(node.second) }
+    }
+    group.root = apply(group.root)
+    void persistSplitGroup(group)
   }
 
   function setSplitRatio(splitId: string, ratio: number) {
@@ -1060,6 +1313,19 @@ export const useAppStore = defineStore('app', () => {
     })
   }
 
+  async function stopTab(id: Id) {
+    const tab = tabs.value.find((item) => item.id === id)
+    if (!tab) return
+    for (const sessionId of paneSessionIds(tab.root)) {
+      terminals.release(sessionId)
+      const session = sessionById.value.get(sessionId)
+      if (!session || ['closed', 'failed', 'restorable'].includes(session.status)) continue
+      if (isNative()) await api.closeSession(sessionId).catch(() => undefined)
+      session.status = 'closed'
+      session.message = 'Processus arrêté.'
+    }
+  }
+
   async function closeTab(id: Id, options: { force?: boolean } = {}) {
     const index = tabs.value.findIndex((item) => item.id === id)
     if (index < 0) return
@@ -1070,11 +1336,32 @@ export const useAppStore = defineStore('app', () => {
     }
     pendingTabClose.value = null
     const workspaceId = tab.workspaceId
+    const undoTab = structuredClone(tab)
+    const undoSessions = paneSessionIds(tab.root).flatMap((sessionId) => {
+      const session = sessionById.value.get(sessionId)
+      return session ? [structuredClone(session)] : []
+    })
+    const canUndo = tab.organized && !hasLiveSessions(tab)
+    detachFromSplit(id)
     const siblings = visibleTabs.value.filter((item) => item.id !== id)
     for (const sessionId of paneSessionIds(tab.root)) await terminateSession(sessionId)
     tabs.value.splice(index, 1)
     activeTabPerWorkspace.value[workspaceId] = siblings[0]?.id
     if (isNative()) await api.deleteTab(id).catch(() => undefined)
+    if (canUndo)
+      notify('info', `« ${tab.name} » supprimé.`, {
+        label: 'Annuler',
+        run: () => {
+          if (tabs.value.some((item) => item.id === undoTab.id)) return
+          tabs.value.push(undoTab)
+          sessions.value.push(
+            ...undoSessions.filter(
+              (session) => !sessions.value.some((current) => current.id === session.id),
+            ),
+          )
+          void persistTab(undoTab.id)
+        },
+      })
   }
 
   const pendingTabClose = ref<Id | null>(null)
@@ -1187,10 +1474,6 @@ export const useAppStore = defineStore('app', () => {
     updateSettings({ theme })
   }
 
-  function setDensity(density: Density) {
-    updateSettings({ density })
-  }
-
   /* ------------------------------------------------------------------ lock */
   async function lock() {
     if (isNative()) await api.lock().catch((error) => report('Verrouillage impossible', error))
@@ -1217,22 +1500,35 @@ export const useAppStore = defineStore('app', () => {
     applySnapshot(await api.snapshot())
   }
 
-  async function createFolder(label: string, parentId: Id | null = null) {
+  async function createFolder(label: string, _parentId: Id | null = null) {
     if (!activeWorkspaceId.value || !label.trim()) return
     try {
       const folder = await api.createSidebarNode(
         activeWorkspaceId.value,
         'folder',
         label.trim(),
-        parentId,
+        null,
       )
-      if (parentId) setFolderCollapsed(parentId, false)
       await refresh()
       await nextTick()
       renamingNodeId.value = folder.id
       return folder
     } catch (error) {
       report('Création du dossier impossible', error)
+    }
+  }
+
+  async function createFolderAfter(afterId: Id) {
+    const after = sidebarNodes.value.find((node) => node.id === afterId && node.kind === 'folder')
+    if (!after) return
+    const folder = await createFolder('Nouveau dossier')
+    if (!folder) return
+    try {
+      await api.moveSidebarNode(folder.id, null, after.position + 1)
+      await refresh()
+      renamingNodeId.value = folder.id
+    } catch (error) {
+      report('Positionnement du dossier impossible', error)
     }
   }
 
@@ -1317,7 +1613,7 @@ export const useAppStore = defineStore('app', () => {
   /** Section-scoped reset, so one page never silently clears another. */
   function restoreDefaults(section: string) {
     if (section === 'general') {
-      updateSettings({ density: defaultSettings.density, restoreLocalSessions: false })
+      updateSettings({ ...defaultSettings })
       updatePreferences({ sidebarRevealDelay: 50, sidebarHideDelay: 300, confirmOnClose: true })
     } else if (section === 'appearance') {
       updateSettings({ theme: defaultSettings.theme })
@@ -1374,10 +1670,22 @@ export const useAppStore = defineStore('app', () => {
           return Boolean(session && removedTargets.has(session.targetId))
         }),
       )
+      const deletedFolder = sidebarNodes.value.find(
+        (node) => node.id === id && node.kind === 'folder',
+      )
+      const folderTabs = tabs.value
+        .filter((tab) => tab.folderId === id)
+        .sort((a, b) => a.position - b.position)
+      folderTabs.forEach((tab, index) => {
+        tab.folderId = null
+        tab.organized = true
+        tab.position = (deletedFolder?.position ?? tab.position) + index
+      })
       for (const tab of tabs.value) {
         if (tab.folderId && removed.has(tab.folderId)) tab.folderId = null
       }
       await api.deleteSidebarNode(id)
+      await Promise.all(folderTabs.map((tab) => persistTab(tab.id)))
       for (const tab of affectedTabs) await closeTab(tab.id, { force: true })
       await refresh()
     } catch (error) {
@@ -1428,7 +1736,8 @@ export const useAppStore = defineStore('app', () => {
 
   async function reparentNode(id: Id, parentId: Id | null, beforeId: Id | null) {
     const record = sidebarNodes.value.find((item) => item.id === id)
-    if (!record || id === parentId || id === beforeId) return
+    if (!record || id === parentId || id === beforeId || (record.kind === 'folder' && parentId))
+      return
     try {
       await api.moveSidebarNode(
         id,
@@ -1498,8 +1807,13 @@ export const useAppStore = defineStore('app', () => {
     const parent = sidebarNodes.value.find((item) => item.id === parentId)
     if (!parent || parent.kind !== 'folder') return
     setFolderCollapsed(parentId, false)
-    tab.folderId = parentId
-    tab.organized = false
+    const group = splitGroups.value.find((item) => item.tabIds.includes(tabId))
+    for (const memberId of group?.tabIds ?? [tabId]) {
+      const member = tabs.value.find((item) => item.id === memberId)
+      if (!member) continue
+      member.folderId = parentId
+      member.organized = true
+    }
     await reorderTabInFolder(tab.id, beforeId)
   }
 
@@ -1512,7 +1826,7 @@ export const useAppStore = defineStore('app', () => {
     const anchor = beforeTabId ? ordered.findIndex((item) => item.id === beforeTabId) : -1
     ordered.splice(anchor >= 0 ? anchor : ordered.length, 0, tab)
     ordered.forEach((item, position) => (item.position = position))
-    await Promise.all(ordered.map((item) => persistTab(item.id)))
+    await Promise.all(ordered.filter((item) => item.organized).map((item) => persistTab(item.id)))
   }
 
   async function pinTarget(targetId: Id, beforeFavoriteId: Id | null) {
@@ -1565,19 +1879,33 @@ export const useAppStore = defineStore('app', () => {
   async function moveTab(tabId: Id, pinned: boolean, beforeTabId: Id | null = null) {
     const tab = tabs.value.find((item) => item.id === tabId)
     if (!tab || tabId === beforeTabId) return
+    const group = splitGroups.value.find((item) => item.tabIds.includes(tabId))
+    const movingIds = new Set(group?.tabIds ?? [tabId])
+    const moving = (group?.tabIds ?? [tabId]).flatMap((id) => {
+      const member = tabs.value.find((item) => item.id === id)
+      return member ? [member] : []
+    })
     const siblings = tabs.value
-      .filter((item) => item.workspaceId === tab.workspaceId && item.id !== tabId)
+      .filter((item) => item.workspaceId === tab.workspaceId && !movingIds.has(item.id))
       .sort((a, b) => a.position - b.position)
     const pinnedSiblings = siblings.filter((item) => item.organized)
     const openSiblings = siblings.filter((item) => !item.organized)
-    tab.organized = pinned
-    tab.folderId = null
+    for (const member of moving) {
+      member.organized = pinned
+      member.folderId = null
+    }
     const bucket = pinned ? pinnedSiblings : openSiblings
     const index = beforeTabId ? bucket.findIndex((item) => item.id === beforeTabId) : -1
-    bucket.splice(index >= 0 ? index : bucket.length, 0, tab)
+    bucket.splice(index >= 0 ? index : bucket.length, 0, ...moving)
     const ordered = pinned ? [...bucket, ...openSiblings] : [...pinnedSiblings, ...bucket]
     ordered.forEach((item, position) => (item.position = position))
-    await Promise.all(ordered.map((item) => persistTab(item.id)))
+    if (!pinned && isNative())
+      await Promise.all(moving.map((item) => api.deleteTab(item.id).catch(() => undefined)))
+    await Promise.all(ordered.filter((item) => item.organized).map((item) => persistTab(item.id)))
+    if (group) {
+      if (pinned) await persistSplitGroup(group)
+      else if (isNative()) await api.deleteSplitGroup(group.id).catch(() => undefined)
+    }
   }
 
   async function pinTab(tabId: Id, beforeTabId: Id | null = null) {
@@ -1640,11 +1968,14 @@ export const useAppStore = defineStore('app', () => {
         replacementSessionId: payload.replacementSessionId,
       })
     })
-    // A local shell that exits keeps its scrollback on screen; only its state
-    // changes, so the user can read the last output before closing the pane.
     const unsubscribeExit = on('session-exited', ({ sessionId }) => {
       const session = sessions.value.find((item) => item.id === sessionId)
       if (!session || session.kind !== 'local') return
+      const tab = tabs.value.find((item) => paneSessionIds(item.root).includes(sessionId))
+      if (tab && !tab.organized && !tab.folderId) {
+        void closeTab(tab.id, { force: true })
+        return
+      }
       session.status = 'closed'
       session.message = 'Processus terminé.'
     })
@@ -1667,6 +1998,7 @@ export const useAppStore = defineStore('app', () => {
     detectedShells,
     sessions,
     tabs,
+    splitGroups,
     notices,
     ready,
     sidebarPinned,
@@ -1698,6 +2030,7 @@ export const useAppStore = defineStore('app', () => {
     pinnedTabs,
     activeTabId,
     activeTab,
+    activeSplitGroup,
     activeSession,
     activePaneSessionId,
     sessionById,
@@ -1717,8 +2050,8 @@ export const useAppStore = defineStore('app', () => {
     switchWorkspace,
     cycleWorkspace,
     createWorkspace,
-    duplicateWorkspace,
     updateWorkspace,
+    reorderWorkspace,
     deleteWorkspace,
     isFolderCollapsed,
     setFolderCollapsed,
@@ -1730,22 +2063,28 @@ export const useAppStore = defineStore('app', () => {
     reconnectSession,
     focusSession,
     selectTab,
+    startStoppedTab,
     selectPane,
     renameTab,
     organizeTab,
     splitActivePane,
+    linkTabs,
+    transferTab,
+    setGroupSplitRatio,
+    detachFromSplit,
     setSplitRatio,
     closePane,
+    stopTab,
     closeTab,
     dismissRecovery,
     updateSettings,
     updatePreferences,
     setTheme,
-    setDensity,
     lock,
     unlock,
     configurePin,
     createFolder,
+    createFolderAfter,
     createLocalProfile,
     createSshResource,
     nodeIdForTarget,

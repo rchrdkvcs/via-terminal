@@ -8,9 +8,13 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar'
 import SessionRows from './SessionRows.vue'
-import SidebarTree from './SidebarTree.vue'
+import PinnedArea from './PinnedArea.vue'
 import WorkspaceBar from './WorkspaceBar.vue'
 import WorkspaceIndicator from './WorkspaceIndicator.vue'
+import WorkspaceForm from './WorkspaceForm.vue'
+import { ref } from 'vue'
+import { Plus } from '@lucide/vue'
+import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { useAppStore } from '@/stores/app'
 import {
   acceptDrop,
@@ -23,6 +27,13 @@ import {
 const emit = defineEmits<{ addResource: [] }>()
 
 const store = useAppStore()
+const workspaceFormId = ref<string | undefined>()
+const workspaceFormOpen = ref(false)
+
+function openWorkspaceForm(id?: string) {
+  workspaceFormId.value = id
+  workspaceFormOpen.value = true
+}
 
 function onWheel(event: WheelEvent) {
   if (!event.ctrlKey) return
@@ -49,6 +60,7 @@ function dropAtRoot(event: DragEvent) {
     void store.reparentNode(drag.id, null, null)
     return
   }
+  if (drag.type === 'tab') void store.pinTab(drag.id, null)
 }
 
 function treeHint() {
@@ -74,11 +86,18 @@ function onLeave(event: DragEvent) {
     @dragleave="onLeave"
     @dragend="endSidebarDrag()"
   >
-    <SidebarHeader class="gap-0 p-2 pb-1">
+    <SidebarHeader v-if="!workspaceFormOpen" class="gap-0 p-2 pb-1">
       <WorkspaceIndicator @add-resource="emit('addResource')" />
     </SidebarHeader>
 
+    <WorkspaceForm
+      v-if="workspaceFormOpen"
+      :workspace-id="workspaceFormId"
+      @close="workspaceFormOpen = false"
+    />
+
     <SidebarContent
+      v-else
       class="thin-scrollbar gap-0 overflow-x-hidden transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none"
       :class="[
         store.isSwitchingWorkspace
@@ -114,8 +133,7 @@ function onLeave(event: DragEvent) {
             @dragover="overTree"
             @drop="dropAtRoot"
           >
-            <SessionRows pinned />
-            <SidebarTree v-if="store.tree.length" :nodes="store.tree" />
+            <PinnedArea />
             <div
               v-if="draggingTab() && !store.pinnedTabs.length && !store.tree.length"
               class="pointer-events-none flex h-8 items-center justify-center rounded-md border border-dashed border-sidebar-border text-xs text-sidebar-foreground/50"
@@ -130,13 +148,30 @@ function onLeave(event: DragEvent) {
         </div>
       </Transition>
 
+      <SidebarGroup class="p-2 py-1" aria-label="Créer un terminal">
+        <SidebarMenuItem>
+          <SidebarMenuButton class="text-sidebar-foreground/70" @click="store.createTerminal()">
+            <Plus :stroke-width="1.5" />
+            <span>Nouveau terminal</span>
+            <kbd
+              class="ms-auto shrink-0 rounded border px-1 py-px font-mono text-[10px] text-sidebar-foreground/50"
+            >
+              Ctrl T
+            </kbd>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarGroup>
+
       <SidebarGroup class="p-2 py-1" aria-label="Sessions ouvertes">
         <SessionRows />
       </SidebarGroup>
     </SidebarContent>
 
     <SidebarFooter class="p-2">
-      <WorkspaceBar @add-resource="emit('addResource')" />
+      <WorkspaceBar
+        @create-workspace="openWorkspaceForm()"
+        @edit-workspace="openWorkspaceForm($event)"
+      />
     </SidebarFooter>
   </Sidebar>
 </template>

@@ -109,20 +109,33 @@ fn workspace_create(
     name: String,
     icon: Option<String>,
     color: Option<String>,
+    default_shell: Option<String>,
 ) -> Result<Workspace, String> {
     state.domain.create_workspace(
         name,
         icon.unwrap_or_else(|| "terminal".into()),
         color.unwrap_or_else(|| "#7c6ef6".into()),
+        default_shell,
     )
 }
 #[tauri::command]
-fn workspace_duplicate(
+fn split_group_save(state: State<BackendState>, group: SplitGroup) -> Result<SplitGroup, String> {
+    state.require_unlocked()?;
+    state.domain.save_split_group(group)
+}
+#[tauri::command]
+fn split_group_delete(state: State<BackendState>, id: Uuid) -> Result<(), String> {
+    state.require_unlocked()?;
+    state.domain.delete_split_group(id)
+}
+#[tauri::command]
+fn workspace_move(
     state: State<BackendState>,
     id: Uuid,
-    name: String,
+    before_id: Option<Uuid>,
 ) -> Result<Workspace, String> {
-    state.domain.duplicate_workspace(id, name)
+    state.require_unlocked()?;
+    state.domain.move_workspace(id, before_id)
 }
 #[tauri::command]
 fn workspace_update(
@@ -130,9 +143,10 @@ fn workspace_update(
     id: Uuid,
     name: String,
     icon: String,
+    default_shell: Option<String>,
 ) -> Result<Workspace, String> {
     state.require_unlocked()?;
-    state.domain.update_workspace(id, name, icon)
+    state.domain.update_workspace(id, name, icon, default_shell)
 }
 #[tauri::command]
 fn workspace_delete(state: State<BackendState>, id: Uuid) -> Result<(), String> {
@@ -708,13 +722,15 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             app_snapshot,
             tab_save,
+            split_group_save,
+            split_group_delete,
             window_state_save,
             app_recovery_state,
             app_recovery_finish,
             app_mark_clean_shutdown,
             workspace_list,
             workspace_create,
-            workspace_duplicate,
+            workspace_move,
             workspace_update,
             workspace_delete,
             identity_create,

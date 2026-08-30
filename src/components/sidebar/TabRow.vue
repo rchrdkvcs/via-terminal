@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
-import { Pencil, Pin, PinOff, SquareTerminal, X } from '@lucide/vue'
+import { Minus, Pencil, Pin, PinOff, SquareTerminal, X } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +10,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { useAppStore } from '@/stores/app'
+import { activeDrag, endSidebarDrag } from '@/lib/sidebar-dnd'
 
 const props = defineProps<{
   id: string
@@ -17,14 +18,22 @@ const props = defineProps<{
   detail?: string
   state: 'online' | 'offline' | 'pending' | 'idle'
   pinned?: boolean
+  grouped?: boolean
   depth?: number
 }>()
-const emit = defineEmits<{ move: [direction: -1 | 1] }>()
+const emit = defineEmits<{
+  move: [direction: -1 | 1]
+  dropTab: [
+    payload: { id: string; zone?: 'before' | 'after'; edge?: 'left' | 'right' | 'top' | 'bottom' },
+  ]
+}>()
 const store = useAppStore()
 const editing = ref(false)
 const draft = ref('')
 const input = ref<InstanceType<typeof Input> | null>(null)
 const menuOpen = ref(false)
+const isGrouped = () => store.splitGroups.some((group) => group.tabIds.includes(props.id))
+const dragHint = ref<'before' | 'after' | 'left' | 'right' | 'top' | 'bottom' | null>(null)
 
 async function beginRename() {
   draft.value = props.label
@@ -40,14 +49,82 @@ function commitRename() {
   editing.value = false
   if (value && value !== props.label) store.renameTab(props.id, value)
 }
+
+const running = () => props.state === 'online' || props.state === 'pending'
+
+function beginDrag(event: DragEvent) {
+  if (!event.dataTransfer) return
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('application/x-terminarr-tab', props.id)
+  activeDrag.value = { type: 'tab', id: props.id }
+}
+
+function dropTab(event: DragEvent) {
+  const id = event.dataTransfer?.getData('application/x-terminarr-tab')
+  if (!id || id === props.id) return
+  event.preventDefault()
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const x = (event.clientX - rect.left) / rect.width
+  const y = (event.clientY - rect.top) / rect.height
+  if (x < 0.18) emit('dropTab', { id, edge: 'left' })
+  else if (x > 0.82) emit('dropTab', { id, edge: 'right' })
+  else if (y < 0.22) emit('dropTab', { id, edge: 'top' })
+  else if (y > 0.78) emit('dropTab', { id, edge: 'bottom' })
+  else emit('dropTab', { id, zone: y < 0.5 ? 'before' : 'after' })
+  dragHint.value = null
+}
+
+function previewDrop(event: DragEvent) {
+  if (!event.dataTransfer?.types.includes('application/x-terminarr-tab')) return
+  event.preventDefault()
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const x = (event.clientX - rect.left) / rect.width
+  const y = (event.clientY - rect.top) / rect.height
+  dragHint.value =
+    x < 0.18
+      ? 'left'
+      : x > 0.82
+        ? 'right'
+        : y < 0.22
+          ? 'top'
+          : y > 0.78
+            ? 'bottom'
+            : y < 0.5
+              ? 'before'
+              : 'after'
+}
+
+function runTrailingAction() {
+  if (running()) void store.stopTab(props.id)
+  else void store.closeTab(props.id, { force: true })
+}
 </script>
 
 <template>
   <SidebarMenuItem
     class="terminal-tab relative transition-opacity"
+    :class="props.grouped ? 'border-s-2 border-sidebar-ring/50 ps-0.5' : ''"
     :data-tab-id="id"
+    draggable="true"
+    @dragstart="beginDrag"
+    @dragend="endSidebarDrag"
+    @dragover="previewDrop"
+    @dragleave="dragHint = null"
+    @drop.stop="dropTab"
     @contextmenu.prevent="menuOpen = true"
   >
+    <span
+      v-if="dragHint"
+      class="pointer-events-none absolute z-10 rounded-sm bg-sidebar-ring/20"
+      :class="{
+        'inset-x-0 top-0 h-0.5 bg-sidebar-ring': dragHint === 'before',
+        'inset-x-0 bottom-0 h-0.5 bg-sidebar-ring': dragHint === 'after',
+        'inset-y-1 left-0 w-1/4': dragHint === 'left',
+        'inset-y-1 right-0 w-1/4': dragHint === 'right',
+        'inset-x-1 top-0 h-1/3': dragHint === 'top',
+        'inset-x-1 bottom-0 h-1/3': dragHint === 'bottom',
+      }"
+    />
     <SidebarMenuButton
       :as="editing ? 'div' : 'button'"
       role="tab"
@@ -92,10 +169,11 @@ function commitRename() {
     <SidebarMenuAction
       data-tab-action
       show-on-hover
-      :aria-label="`Fermer ${label}`"
-      @click.stop="store.closeTab(id)"
+      :aria-label="`${running() ? 'Arrêter' : 'Supprimer'} ${label}`"
+      @click.stop="runTrailingAction"
     >
-      <X :stroke-width="1.5" />
+      <Minus v-if="running()" :stroke-width="1.5" />
+      <X v-else :stroke-width="1.5" />
     </SidebarMenuAction>
     <DropdownMenu :open="menuOpen" @update:open="menuOpen = $event">
       <DropdownMenuTrigger as-child>
@@ -117,8 +195,31 @@ function commitRename() {
         <DropdownMenuItem @select="beginRename">
           <Pencil :stroke-width="1.5" />Renommer
         </DropdownMenuItem>
-        <DropdownMenuItem variant="destructive" @select="store.closeTab(id)">
-          <X :stroke-width="1.5" />Fermer
+        <DropdownMenuItem v-if="isGrouped()" @select="store.detachFromSplit(id)">
+          Détacher du split
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          v-for="workspace in store.workspaces.filter(
+            (item) => item.id !== store.activeWorkspaceId,
+          )"
+          :key="workspace.id"
+          @select="store.transferTab(id, workspace.id, false)"
+        >
+          Transférer cet onglet vers {{ workspace.name }}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          v-for="workspace in isGrouped()
+            ? store.workspaces.filter((item) => item.id !== store.activeWorkspaceId)
+            : []"
+          :key="`group-${workspace.id}`"
+          @select="store.transferTab(id, workspace.id, true)"
+        >
+          Transférer le groupe vers {{ workspace.name }}
+        </DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" @select="runTrailingAction">
+          <Minus v-if="running()" :stroke-width="1.5" />
+          <X v-else :stroke-width="1.5" />
+          {{ running() ? 'Arrêter' : 'Supprimer' }}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

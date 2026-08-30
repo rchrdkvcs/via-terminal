@@ -15,6 +15,7 @@ import type {
   SshStatus,
   SshTarget,
   Tab,
+  SplitGroupRecord,
   TargetKind,
   WindowState,
   Workspace,
@@ -50,12 +51,17 @@ export const api = {
 
   /* ------------------------------------------------------------ workspaces */
   listWorkspaces: () => call<Workspace[]>('workspace_list'),
-  createWorkspace: (name: string, icon?: string, color?: string) =>
-    call<Workspace>('workspace_create', { name, icon: icon ?? null, color: color ?? null }),
-  duplicateWorkspace: (id: Id, name: string) =>
-    call<Workspace>('workspace_duplicate', { id, name }),
-  updateWorkspace: (id: Id, name: string, icon: string) =>
-    call<Workspace>('workspace_update', { id, name, icon }),
+  createWorkspace: (name: string, icon?: string, color?: string, defaultShell?: string) =>
+    call<Workspace>('workspace_create', {
+      name,
+      icon: icon ?? null,
+      color: color ?? null,
+      defaultShell: defaultShell ?? null,
+    }),
+  moveWorkspace: (id: Id, beforeId: Id | null) =>
+    call<Workspace>('workspace_move', { id, beforeId }),
+  updateWorkspace: (id: Id, name: string, icon: string, defaultShell?: string) =>
+    call<Workspace>('workspace_update', { id, name, icon, defaultShell: defaultShell ?? null }),
   deleteWorkspace: (id: Id) => call<void>('workspace_delete', { id }),
 
   /* ------------------------------------------------- profiles and resources */
@@ -109,6 +115,9 @@ export const api = {
 
   /* ---------------------------------------------------------------- layout */
   saveTab: (tab: Tab, sessions: SavedSession[]) => call<Tab>('tab_save', { tab, sessions }),
+  saveSplitGroup: (group: SplitGroupRecord) =>
+    call<SplitGroupRecord>('split_group_save', { group }),
+  deleteSplitGroup: (id: Id) => call<void>('split_group_delete', { id }),
   deleteTab: (id: Id) => call<void>('tab_delete', { id }),
   saveWindowState: (window: WindowState) => call<WindowState>('window_state_save', { window }),
 

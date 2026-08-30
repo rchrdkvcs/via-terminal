@@ -1,4 +1,4 @@
-import type { Density, ThemePreference } from '@/ipc/types'
+import type { ThemePreference } from '@/ipc/types'
 
 /**
  * Presentation choices the Rust `Settings` record does not carry. Keeping them
@@ -17,6 +17,8 @@ export interface LocalPreferences {
   scrollback: number
   /** Ask before closing a tab that still owns a live session. */
   confirmOnClose: boolean
+  /** Keep stopped favorites selected until Start is explicitly requested. */
+  startFavoritesManually: boolean
   systemPrefersDark: boolean
   /** Sidebar width in pixels; shared between the pinned panel and the peek overlay. */
   sidebarWidth: number
@@ -31,7 +33,8 @@ const fallback: LocalPreferences = {
   sidebarRevealDelay: 50,
   sidebarHideDelay: 300,
   scrollback: 10000,
-  confirmOnClose: true,
+  confirmOnClose: false,
+  startFavoritesManually: false,
   systemPrefersDark: true,
   sidebarWidth: 256,
 }
@@ -62,9 +65,4 @@ export const themeLabels: Record<ThemePreference, string> = {
   dark: 'Sombre',
   light: 'Clair',
   system: 'Système',
-}
-
-export const densityLabels: Record<Density, string> = {
-  comfortable: 'Confortable',
-  compact: 'Compacte',
 }

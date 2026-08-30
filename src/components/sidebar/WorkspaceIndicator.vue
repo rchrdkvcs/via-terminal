@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
-import { ChevronDown, Copy, FolderPlus, Pencil, Trash2 } from '@lucide/vue'
+import { ChevronDown, FolderPlus, Pencil, Trash2 } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -111,17 +111,6 @@ function openContextMenu() {
       <DropdownMenuContent side="bottom" align="start" class="w-56">
         <DropdownMenuItem @select="beginRename">
           <Pencil :stroke-width="1.5" />Renommer
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          v-if="store.activeWorkspace"
-          @select="
-            store.duplicateWorkspace(
-              store.activeWorkspace.id,
-              `${store.activeWorkspace.name} (copie)`,
-            )
-          "
-        >
-          <Copy :stroke-width="1.5" />Dupliquer
         </DropdownMenuItem>
         <DropdownMenuItem @select="store.createFolder('Nouveau dossier')">
           <FolderPlus :stroke-width="1.5" />Nouveau dossier

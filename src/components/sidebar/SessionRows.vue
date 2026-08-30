@@ -1,16 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Plus } from '@lucide/vue'
-import { useDraggable } from 'vue-draggable-plus'
-import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import { computed } from 'vue'
 import { useAppStore } from '@/stores/app'
-import { tabSortableOptions } from '@/lib/tab-dnd'
 import TabRow from './TabRow.vue'
 
 const props = withDefaults(defineProps<{ pinned?: boolean }>(), { pinned: false })
 const store = useAppStore()
-const list = ref<HTMLElement | null>(null)
-useDraggable(list, tabSortableOptions())
 
 const rows = computed(() =>
   (props.pinned ? store.pinnedTabs : store.unfavoritedTabs).map((tab) => {
@@ -29,6 +23,7 @@ const rows = computed(() =>
       label: tab.name,
       detail: store.sessionById.get(ids[0])?.detail ?? '',
       state,
+      grouped: store.splitGroups.some((group) => group.tabIds.includes(tab.id)),
     } as const
   }),
 )
@@ -40,16 +35,40 @@ function moveByKey(index: number, direction: -1 | 1) {
   if (props.pinned) void store.pinTab(rows.value[index].id, target?.id ?? null)
   else void store.unpinTab(rows.value[index].id, target?.id ?? null)
 }
+
+function dropTab(
+  payload: { id: string; zone?: 'before' | 'after'; edge?: 'left' | 'right' | 'top' | 'bottom' },
+  targetIndex: number,
+) {
+  const targetId = rows.value[targetIndex]?.id
+  if (payload.edge && targetId) {
+    void store.linkTabs(payload.id, targetId, payload.edge)
+    return
+  }
+  const zone = payload.zone ?? 'after'
+  const beforeId = zone === 'before' ? rows.value[targetIndex]?.id : rows.value[targetIndex + 1]?.id
+  if (props.pinned) void store.pinTab(payload.id, beforeId ?? null)
+  else void store.unpinTab(payload.id, beforeId ?? null)
+}
+
+function dropAtEnd(event: DragEvent) {
+  const tabId = event.dataTransfer?.getData('application/x-terminarr-tab')
+  if (!tabId) return
+  event.preventDefault()
+  if (props.pinned) void store.pinTab(tabId, null)
+  else void store.unpinTab(tabId, null)
+}
 </script>
 
 <template>
   <ul
-    ref="list"
     class="flex w-full min-w-0 flex-col gap-1"
     role="tablist"
     :aria-label="props.pinned ? 'Onglets épinglés' : 'Sessions ouvertes'"
     aria-orientation="vertical"
     :data-tab-container="props.pinned ? 'pinned' : 'open'"
+    @dragover.prevent
+    @drop.self="dropAtEnd"
   >
     <TabRow
       v-for="(row, index) in rows"
@@ -59,19 +78,9 @@ function moveByKey(index: number, direction: -1 | 1) {
       :detail="row.detail"
       :state="row.state"
       :pinned="props.pinned"
+      :grouped="row.grouped"
       @move="moveByKey(index, $event)"
+      @drop-tab="dropTab($event, index)"
     />
-
-    <SidebarMenuItem v-if="!pinned">
-      <SidebarMenuButton class="text-sidebar-foreground/60" @click="store.createTerminal()">
-        <Plus :stroke-width="1.5" />
-        <span>Nouveau terminal</span>
-        <kbd
-          class="ms-auto shrink-0 rounded border px-1 py-px font-mono text-[10px] text-sidebar-foreground/50"
-        >
-          Ctrl T
-        </kbd>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
   </ul>
 </template>
