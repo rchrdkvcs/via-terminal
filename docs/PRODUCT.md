@@ -2,46 +2,68 @@
 
 ## Promise
 
-Terminarr is a fast, pleasant native terminal workspace for IT technicians. It unifies local shells, SSH access, and durable organization without replacing the user's trusted shell or OpenSSH configuration.
+Terminarr is a fast, pleasant native terminal workspace for IT technicians: a Zen Browser-like navigator for local shells and SSH sessions, with durable organization and reliable spatial behavior.
 
 ## Audience and platform
 
 - Primary audience: IT technicians, support engineers, and system administrators.
 - Official V1 platform: Windows.
-- Architecture should not deliberately prevent later macOS/Linux support.
-- Distribution: open source under Apache-2.0; no account is required.
+- Architecture must not deliberately prevent later macOS or Linux support.
+- Distribution is open source under Apache-2.0; no account is required.
 
-## V1 experience
+## Core experience
 
-- One default local shell (PowerShell, CMD, WSL, or Zsh-in-WSL), chosen in settings.
-- Arc/Zen-inspired sidebar with visual favorites, nested folders, temporary sessions, and workspace icons at the bottom.
-- Workspace switching by click, command palette, `Alt+1…9`, and `Ctrl+wheel` over the sidebar.
-- Tabs containing horizontal or vertical split panes.
-- Resources and identities isolated by workspace, even when destinations match.
-- System OpenSSH integration with direct use of existing SSH config, keys, known hosts, and agent.
-- One application instance with multiple windows; sessions continue across workspace and window navigation.
-- Dark and light themes, normal and compact density, and configurable terminal typography.
-- Keyboard-complete UI targeting WCAG 2.2 AA outside terminal-rendered content.
+- A resizable, hideable Zen-inspired sidebar is the primary product surface.
+- One tab represents one session and one sidebar row; identity is never duplicated.
+- Workspaces isolate organization, resources, identities, default profiles, and tabs.
+- Favorites and one-level folders live above the divider.
+- New Terminal and runtime-only temporary tabs live below it.
+- Tabs can link into groups of two to four split panes.
+- A bottom workspace strip follows Zen's horizontal overflow behavior.
+- Workspace switching works by click, palette, Alt+1…9, and Ctrl+wheel over the sidebar.
+- Tabs transfer between workspaces only through an explicit context menu.
+- One application instance supports multiple native windows.
+- The UI is keyboard-complete and targets WCAG 2.2 AA outside terminal-rendered content.
 
-## Key behavior
+The exhaustive sidebar contract is in [SIDEBAR.md](./SIDEBAR.md).
 
-- Clicking an open favorite focuses its existing session; a secondary action opens another.
-- Clicking a saved SSH resource activates its unique tab and CLI; it does not create a second row.
-- Changing workspace does not stop sessions.
-- Closing a secondary window detaches its views rather than killing its sessions.
-- An SSH disconnect keeps terminal output visible and offers bounded reconnection attempts followed by a manual action.
-- Session layout is restored, but remote connections and previous commands never run silently.
-- Multiline paste is transmitted immediately and unchanged; bracketed paste is honored when available.
-- Only ended or disconnected temporary sessions may be cleaned automatically.
+## Terminal and connection behavior
+
+- Each workspace has a default local profile: PowerShell, CMD, WSL, or Zsh-in-WSL.
+- New Terminal appends and starts a temporary tab with that profile.
+- Alternative profiles and SSH resources are available from a secondary selector.
+- Activating a stopped favorite starts it immediately unless manual connection is enabled.
+- A successful temporary-session exit removes its tab; failures remain inspectable.
+- Running sessions continue across workspace navigation and sidebar organization.
+- SSH uses the operating system OpenSSH configuration, keys, known hosts, and agent.
+- Unknown host keys remain OpenSSH prompts.
+- Unexpected SSH disconnects retain output and offer bounded reconnection attempts.
+
+## Durable and temporary state
+
+Persist workspaces, favorites, folders, pinned split layout, names, ordering, sidebar state, and window state. Never persist temporary tabs, live processes, terminal contents, scrollback, command history, passwords, or secrets.
+
+Normal exit and crash have the same restoration contract: durable organization returns stopped, no temporary tab returns, no recovery prompt appears, and no process starts automatically.
+
+## Visual behavior
+
+- Selected sidebar rows use restrained hierarchy rather than card borders.
+- Folder icons themselves communicate open and closed state.
+- Stop and remove actions appear on hover and keyboard focus.
+- The main surface has no card background or border when no process is displayed.
+- Motion explains spatial changes, remains interruptible, and respects reduced motion.
+- Compact sidebar mode and compact-density settings are outside V1.
 
 ## Explicitly outside V1
 
-SFTP, port forwarding, tunnels, ProxyJump/bastions, command snippets, multi-machine execution, cloud synchronization, team collaboration, AI, plugins, monitoring, and persistent processes after the application exits.
+SFTP, port forwarding, tunnels, ProxyJump/bastions, command snippets, multi-machine execution, cloud synchronization, team collaboration, AI, plugins, monitoring, persistent processes after application exit, nested folders, workspace duplication, workspace theme editing, cross-workspace drag-and-drop, split-group merging, and temporary-tab restoration.
 
 ## Success criteria
 
+- A drag or keyboard move cannot duplicate, lose, or restart a tab.
+- Invalid targets leave canonical state unchanged.
 - Input feels immediate and sustained output never freezes the surrounding UI.
 - A usable window appears within 1.5 seconds on the documented reference machine, excluding first-time WebView installation.
 - Workspace data never crosses isolation boundaries implicitly.
 - No terminal content, command history, or SSH password is persisted.
-- The core experience works fully offline except for intentional remote connections and update checks.
+- The core experience works offline except for intentional remote connections and update checks.

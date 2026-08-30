@@ -10,7 +10,7 @@ Terminarr is an open-source native terminal workspace for IT technicians. It com
 - Local PowerShell, CMD, WSL, and Zsh-in-WSL sessions through a native PTY.
 - Strictly isolated workspaces with their own resources and identities.
 - System OpenSSH integration, including existing SSH config, keys, and agent.
-- Favorites, folders, temporary sessions, tabs, split panes, and command palette.
+- Zen-inspired favorites, one-level folders, runtime-only temporary tabs, linked split panes, and command palette.
 - A single application instance with multiple native windows.
 - Local-first storage, explicit export/import, and no terminal-content persistence.
 
@@ -24,7 +24,7 @@ SFTP, port forwarding, bastions, cloud sync, plugins, AI, monitoring, and multi-
 - SQLite
 - The operating system's OpenSSH client
 
-Architecture and security boundaries are documented in [docs/TECHNICAL.md](docs/TECHNICAL.md). Canonical product terms live in [CONTEXT.md](CONTEXT.md).
+The sidebar contract lives in [docs/SIDEBAR.md](docs/SIDEBAR.md). Architecture and security boundaries are documented in [docs/TECHNICAL.md](docs/TECHNICAL.md). Canonical product terms live in [CONTEXT.md](CONTEXT.md).
 
 ## Development
 
@@ -57,6 +57,7 @@ The authoritative commands are in [.github/workflows/ci.yml](.github/workflows/c
 ## Documentation
 
 - [Product scope](docs/PRODUCT.md)
+- [Sidebar specification](docs/SIDEBAR.md)
 - [Technical architecture](docs/TECHNICAL.md)
 - [Acceptance scenarios](docs/ACCEPTANCE.md)
 - [Privacy and local data](docs/PRIVACY.md)
