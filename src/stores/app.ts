@@ -30,6 +30,7 @@ import {
 } from '@/lib/sidebar-state'
 
 export type SessionKind = 'local' | 'ssh'
+const MAIN_WINDOW_ID = '00000000-0000-0000-0000-000000000001'
 
 export type SessionStatus =
   | 'connecting'
@@ -51,6 +52,7 @@ export interface SessionSummary {
   status: SessionStatus
   detail: string
   message?: string
+  contextTitle?: string
 }
 
 function clonePlain<T>(value: T): T {
@@ -192,7 +194,7 @@ export const useAppStore = defineStore('app', () => {
   const locked = ref(false)
   const pinConfigured = ref(false)
   const recoveryAvailable = ref(false)
-  const windowId = ref<Id>(identifier())
+  const windowId = ref<Id>(MAIN_WINDOW_ID)
 
   /* ----------------------------------------------------------- derived data */
   const activeWorkspace = computed(
@@ -571,6 +573,21 @@ export const useAppStore = defineStore('app', () => {
   /* ------------------------------------------------------------ bootstrap */
   function applySnapshot(data: AppData) {
     workspaces.value = [...data.workspaces].sort((a, b) => a.position - b.position)
+    const savedWindow = !ready.value
+      ? (data.windows.find((window) => window.id === windowId.value) ??
+        (windowId.value === MAIN_WINDOW_ID ? data.windows[data.windows.length - 1] : undefined))
+      : undefined
+    if (savedWindow) {
+      if (
+        savedWindow.activeWorkspaceId &&
+        workspaces.value.some((workspace) => workspace.id === savedWindow.activeWorkspaceId)
+      ) {
+        activeWorkspaceId.value = savedWindow.activeWorkspaceId
+        if (savedWindow.activeTabId)
+          activeTabPerWorkspace.value[savedWindow.activeWorkspaceId] = savedWindow.activeTabId
+      }
+      sidebarPinned.value = !savedWindow.sidebarHidden
+    }
     profiles.value = data.profiles
     resources.value = data.resources
     identities.value = data.identities
@@ -610,6 +627,9 @@ export const useAppStore = defineStore('app', () => {
       return
     }
     try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window')
+      const label = getCurrentWindow().label
+      if (label.startsWith('window-')) windowId.value = label.slice('window-'.length)
       const [data, isLocked, shells] = await Promise.all([
         api.snapshot(),
         api.isLocked(),
@@ -874,6 +894,11 @@ export const useAppStore = defineStore('app', () => {
   /* --------------------------------------------------------------- sessions */
   function registerSession(session: SessionSummary) {
     sessions.value.push(session)
+  }
+
+  function setSessionContext(sessionId: Id, title: string) {
+    const session = sessions.value.find((item) => item.id === sessionId)
+    if (session) session.contextTitle = title || undefined
   }
 
   async function startSession(
@@ -1773,6 +1798,31 @@ export const useAppStore = defineStore('app', () => {
         parentId,
         nodePosition(record.workspaceId, parentId, beforeId, id),
       )
+      if (!parentId) {
+        const roots = [
+          ...tabs.value
+            .filter(
+              (tab) => tab.workspaceId === record.workspaceId && tab.organized && !tab.folderId,
+            )
+            .map((tab) => ({ id: tab.id, position: tab.position })),
+          ...sidebarNodes.value
+            .filter(
+              (node) =>
+                node.workspaceId === record.workspaceId &&
+                node.kind === 'folder' &&
+                !node.parentId &&
+                node.id !== id,
+            )
+            .map((node) => ({ id: node.id, position: node.position })),
+        ].sort((a, b) => a.position - b.position)
+        const index = beforeId ? roots.findIndex((item) => item.id === beforeId) : -1
+        roots.splice(index >= 0 ? index : roots.length, 0, { id, position: 0 })
+        if (isNative())
+          await api.saveSidebarRootOrder(
+            record.workspaceId,
+            roots.map((item) => item.id),
+          )
+      }
       await refresh()
     } catch (error) {
       report('Déplacement impossible', error)
@@ -1832,7 +1882,53 @@ export const useAppStore = defineStore('app', () => {
   async function placeTab(tabId: Id, parentId: Id | null, beforeId: Id | null) {
     const tab = tabs.value.find((item) => item.id === tabId)
     if (!tab) return
-    if (!parentId) return
+    if (!parentId) {
+      const group = splitGroups.value.find((item) => item.tabIds.includes(tabId))
+      const movingIds = group?.tabIds ?? [tabId]
+      const rootItems = [
+        ...tabs.value
+          .filter(
+            (item) =>
+              item.workspaceId === tab.workspaceId &&
+              item.organized &&
+              !item.folderId &&
+              !movingIds.includes(item.id),
+          )
+          .map((item) => ({ kind: 'tab' as const, id: item.id, position: item.position })),
+        ...sidebarNodes.value
+          .filter(
+            (item) =>
+              item.workspaceId === tab.workspaceId && item.kind === 'folder' && !item.parentId,
+          )
+          .map((item) => ({ kind: 'folder' as const, id: item.id, position: item.position })),
+      ].sort((a, b) => a.position - b.position)
+      const index = beforeId ? rootItems.findIndex((item) => item.id === beforeId) : -1
+      const moving = movingIds.map((id) => ({ kind: 'tab' as const, id, position: 0 }))
+      rootItems.splice(index >= 0 ? index : rootItems.length, 0, ...moving)
+      for (const [position, item] of rootItems.entries()) {
+        if (item.kind === 'tab') {
+          const member = tabs.value.find((candidate) => candidate.id === item.id)
+          if (!member) continue
+          member.organized = true
+          member.folderId = null
+          member.position = position
+        } else {
+          const folder = sidebarNodes.value.find((candidate) => candidate.id === item.id)
+          if (folder) folder.position = position
+        }
+      }
+      await Promise.all(
+        rootItems.filter((item) => item.kind === 'tab').map((item) => persistTab(item.id)),
+      )
+      if (isNative()) {
+        await api.saveSidebarRootOrder(
+          tab.workspaceId,
+          rootItems.map((item) => item.id),
+        )
+      }
+      if (group) await persistSplitGroup(group)
+      return
+    }
     const parent = sidebarNodes.value.find((item) => item.id === parentId)
     if (!parent || parent.kind !== 'folder') return
     setFolderCollapsed(parentId, false)
@@ -2101,6 +2197,7 @@ export const useAppStore = defineStore('app', () => {
     createTerminal,
     activateRestorableSession,
     reconnectSession,
+    setSessionContext,
     focusSession,
     selectTab,
     startStoppedTab,

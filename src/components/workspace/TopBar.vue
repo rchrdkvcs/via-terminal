@@ -52,7 +52,7 @@ function toggleMaximize(event: MouseEvent) {
 const title = computed(() => {
   const session = store.activeSession
   if (!session) return 'Rechercher une action, une ressource, un espace…'
-  return session.kind === 'ssh' && session.detail ? session.detail : session.name
+  return session.contextTitle || session.detail || session.name
 })
 </script>
 

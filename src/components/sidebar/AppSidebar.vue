@@ -12,23 +12,22 @@ import PinnedArea from './PinnedArea.vue'
 import WorkspaceBar from './WorkspaceBar.vue'
 import WorkspaceIndicator from './WorkspaceIndicator.vue'
 import WorkspaceForm from './WorkspaceForm.vue'
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Plus } from '@lucide/vue'
 import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { useAppStore } from '@/stores/app'
-import {
-  acceptDrop,
-  activeDrag,
-  dropHint,
-  endSidebarDrag,
-  readSidebarDrag,
-} from '@/lib/sidebar-dnd'
+import { activeDrag, dropHint, registerSidebarDrop } from '@/lib/sidebar-dnd'
+import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
 
 const emit = defineEmits<{ addResource: [] }>()
 
 const store = useAppStore()
 const workspaceFormId = ref<string | undefined>()
 const workspaceFormOpen = ref(false)
+const pinnedDrop = ref<HTMLElement>()
+let cleanupPinnedDrop: (() => void) | undefined
+const contentScroll = ref<HTMLElement | { $el: HTMLElement }>()
+let cleanupAutoScroll: (() => void) | undefined
 
 function openWorkspaceForm(id?: string) {
   workspaceFormId.value = id
@@ -45,17 +44,7 @@ function draggingTab() {
   return activeDrag.value?.type === 'tab'
 }
 
-function overTree(event: DragEvent) {
-  if (!activeDrag.value) return
-  acceptDrop(event)
-  dropHint.value = 'tree:into'
-}
-
-function dropAtRoot(event: DragEvent) {
-  event.preventDefault()
-  const drag = readSidebarDrag(event)
-  endSidebarDrag()
-  if (!drag) return
+function dropAtRoot(drag: NonNullable<typeof activeDrag.value>) {
   if (drag.type === 'node') {
     void store.reparentNode(drag.id, null, null)
     return
@@ -64,14 +53,30 @@ function dropAtRoot(event: DragEvent) {
   else if (drag.type === 'favorite') void store.pinTarget(drag.targetId, null)
 }
 
+watch(pinnedDrop, (element) => {
+  cleanupPinnedDrop?.()
+  cleanupPinnedDrop = element
+    ? registerSidebarDrop(element, {
+        onMove: () => (dropHint.value = 'tree:into'),
+        onLeave: () => (dropHint.value = null),
+        onDrop: (drag) => dropAtRoot(drag),
+      })
+    : undefined
+})
+onMounted(() => {
+  const value = contentScroll.value
+  const element = value instanceof HTMLElement ? value : value?.$el
+  if (element)
+    cleanupAutoScroll = autoScrollForElements({
+      element,
+      getAllowedAxis: () => 'vertical',
+    })
+})
+onBeforeUnmount(() => cleanupPinnedDrop?.())
+onBeforeUnmount(() => cleanupAutoScroll?.())
+
 function treeHint() {
   return dropHint.value === 'tree:into' ? 'rounded-md ring-2 ring-sidebar-ring ring-inset' : ''
-}
-
-/** Leaving the sidebar entirely must not leave a drop marker behind. */
-function onLeave(event: DragEvent) {
-  const next = event.relatedTarget as Node | null
-  if (!next || !(event.currentTarget as HTMLElement).contains(next)) dropHint.value = null
 }
 </script>
 
@@ -80,13 +85,7 @@ function onLeave(event: DragEvent) {
     `collapsible="none"` because the shell animates this panel itself: pinned it
     sits in the flow, peeked it floats over the terminal so no reflow happens.
   -->
-  <Sidebar
-    collapsible="none"
-    class="h-full w-full border-0 bg-transparent"
-    @wheel="onWheel"
-    @dragleave="onLeave"
-    @dragend="endSidebarDrag()"
-  >
+  <Sidebar collapsible="none" class="h-full w-full border-0 bg-transparent" @wheel="onWheel">
     <SidebarHeader v-if="!workspaceFormOpen" class="gap-0 p-2 pb-1">
       <WorkspaceIndicator @add-resource="emit('addResource')" />
     </SidebarHeader>
@@ -99,6 +98,7 @@ function onLeave(event: DragEvent) {
 
     <SidebarContent
       v-else
+      ref="contentScroll"
       class="thin-scrollbar gap-0 overflow-x-hidden transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none"
       :class="[
         store.isSwitchingWorkspace
@@ -130,16 +130,15 @@ function onLeave(event: DragEvent) {
               treeHint(),
             ]"
             aria-label="Épinglés et dossiers"
-            @dragenter="overTree"
-            @dragover="overTree"
-            @drop="dropAtRoot"
           >
-            <PinnedArea />
-            <div
-              v-if="draggingTab() && !store.pinnedTabs.length && !store.tree.length"
-              class="pointer-events-none flex h-8 items-center justify-center rounded-md border border-dashed border-sidebar-border text-xs text-sidebar-foreground/50"
-            >
-              Déposer ici pour épingler
+            <div class="min-h-8">
+              <PinnedArea />
+              <div
+                ref="pinnedDrop"
+                data-drop-zone="pinned-root"
+                class="flex h-8 items-center justify-center rounded-md text-xs text-sidebar-foreground/50 transition-colors duration-100"
+                :class="draggingTab() ? 'bg-sidebar-accent/50' : ''"
+              ></div>
             </div>
           </SidebarGroup>
           <SidebarSeparator

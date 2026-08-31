@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, type ObjectDirective } from 'vue'
 import { FolderPlus, Lock, Pencil, Plus, Terminal, Trash2 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,6 +12,9 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { workspaceIcon } from '@/lib/icons'
 import { useAppStore } from '@/stores/app'
+import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
+import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
 
 const store = useAppStore()
 const emit = defineEmits<{
@@ -20,25 +23,91 @@ const emit = defineEmits<{
 }>()
 const menuFor = ref<string | null>(null)
 const draggingId = ref<string | null>(null)
+const dropHint = ref<{ id: string; side: 'before' | 'after' } | null>(null)
+const workspaceStrip = ref<HTMLElement>()
+let cleanupStrip: (() => void) | undefined
 
 function openWorkspaceMenu(id: string) {
   menuFor.value = null
   void nextTick(() => (menuFor.value = id))
 }
 
-function startDrag(event: DragEvent, id: string) {
-  draggingId.value = id
-  event.dataTransfer?.setData('application/x-terminarr-workspace', id)
-  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+function workspaceId(data: Record<string, unknown>) {
+  return data.type === 'workspace' && typeof data.id === 'string' ? data.id : null
 }
 
-function dropWorkspace(event: DragEvent, beforeId: string | null) {
-  const id = event.dataTransfer?.getData('application/x-terminarr-workspace')
+function dropWorkspace(id: string, beforeId: string | null) {
   draggingId.value = null
+  dropHint.value = null
   if (!id || id === beforeId) return
-  event.preventDefault()
   void store.reorderWorkspace(id, beforeId)
 }
+
+const workspaceCleanups = new WeakMap<HTMLElement, () => void>()
+const vWorkspaceDrag: ObjectDirective<HTMLElement, string> = {
+  mounted(element, { value: id }) {
+    workspaceCleanups.set(
+      element,
+      combine(
+        draggable({
+          element,
+          getInitialData: () => ({ type: 'workspace', id }),
+          onDragStart: () => (draggingId.value = id),
+          onDrop: () => (draggingId.value = null),
+        }),
+        dropTargetForElements({
+          element,
+          canDrop: ({ source }) => Boolean(workspaceId(source.data)),
+          onDrag: ({ location }) => {
+            if (location.current.dropTargets[0]?.element !== element) return
+            const bounds = element.getBoundingClientRect()
+            dropHint.value = {
+              id,
+              side:
+                location.current.input.clientX < bounds.left + bounds.width / 2
+                  ? 'before'
+                  : 'after',
+            }
+          },
+          onDragLeave: () => {
+            if (dropHint.value?.id === id) dropHint.value = null
+          },
+          onDrop: ({ source, location }) => {
+            if (location.current.dropTargets[0]?.element !== element) return
+            const sourceId = workspaceId(source.data)
+            const side = dropHint.value?.id === id ? dropHint.value.side : 'before'
+            const index = store.workspaces.findIndex((workspace) => workspace.id === id)
+            const beforeId = side === 'before' ? id : (store.workspaces[index + 1]?.id ?? null)
+            if (sourceId) dropWorkspace(sourceId, beforeId)
+          },
+        }),
+      ),
+    )
+  },
+  unmounted(element) {
+    workspaceCleanups.get(element)?.()
+  },
+}
+
+onMounted(() => {
+  if (!workspaceStrip.value) return
+  cleanupStrip = combine(
+    dropTargetForElements({
+      element: workspaceStrip.value,
+      canDrop: ({ source }) => Boolean(workspaceId(source.data)),
+      onDrop: ({ source, location }) => {
+        if (location.current.dropTargets[0]?.element !== workspaceStrip.value) return
+        const sourceId = workspaceId(source.data)
+        if (sourceId) dropWorkspace(sourceId, null)
+      },
+    }),
+    autoScrollForElements({
+      element: workspaceStrip.value,
+      getAllowedAxis: () => 'horizontal',
+    }),
+  )
+})
+onBeforeUnmount(() => cleanupStrip?.())
 </script>
 
 <template>
@@ -59,24 +128,24 @@ function dropWorkspace(event: DragEvent, beforeId: string | null) {
     </Tooltip>
 
     <div
+      ref="workspaceStrip"
       class="no-scrollbar flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto scroll-smooth"
-      @dragover.prevent
-      @drop="dropWorkspace($event, null)"
     >
       <div
         v-for="(workspace, index) in store.workspaces"
+        v-workspace-drag="workspace.id"
         :key="workspace.id"
         class="workspace-switcher group relative shrink-0"
         :class="{
           'workspace-switcher--overflowing': store.workspaces.length > 7,
           'workspace-switcher--active': workspace.id === store.activeWorkspaceId,
         }"
-        draggable="true"
-        @dragstart="startDrag($event, workspace.id)"
-        @dragend="draggingId = null"
-        @dragover.prevent
-        @drop.stop="dropWorkspace($event, workspace.id)"
       >
+        <span
+          v-if="dropHint?.id === workspace.id"
+          class="pointer-events-none absolute inset-y-1 z-10 w-0.5 rounded-full bg-sidebar-primary"
+          :class="dropHint.side === 'before' ? '-left-0.5' : '-right-0.5'"
+        />
         <Tooltip>
           <TooltipTrigger as-child>
             <button
@@ -89,7 +158,7 @@ function dropWorkspace(event: DragEvent, beforeId: string | null) {
               :aria-current="workspace.id === store.activeWorkspaceId ? 'true' : undefined"
               :aria-label="workspace.name"
               @click="store.switchWorkspace(workspace.id)"
-              @contextmenu.prevent="openWorkspaceMenu(workspace.id)"
+              @contextmenu.stop.prevent="openWorkspaceMenu(workspace.id)"
             >
               <component :is="workspaceIcon(workspace.icon)" :size="16" :stroke-width="1.5" />
             </button>

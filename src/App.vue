@@ -159,18 +159,28 @@ watch(
 onMounted(async () => {
   unbind = store.bindNativeEvents()
   await store.initialize()
+  if (isNative()) {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window')
+    const currentWindow = getCurrentWindow()
+    unlistenClose = await currentWindow.onCloseRequested(async (event) => {
+      if (closingWindow) return
+      event.preventDefault()
+      closingWindow = true
+      await store.persistWindowState()
+      terminals.releaseAll()
+      await currentWindow.destroy()
+    })
+  }
 })
 
 onBeforeUnmount(() => {
   clearPeekTimers()
   unbind?.()
+  unlistenClose?.()
 })
 
-// Closing the window detaches its views; the sessions stay owned by Rust.
-window.addEventListener('beforeunload', () => {
-  void store.persistWindowState()
-  terminals.releaseAll()
-})
+let unlistenClose: (() => void) | undefined
+let closingWindow = false
 </script>
 
 <template>

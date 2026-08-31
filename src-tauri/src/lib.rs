@@ -598,6 +598,15 @@ fn sidebar_node_move(
     state.domain.move_sidebar_node(id, parent_id, position)
 }
 #[tauri::command]
+fn sidebar_root_order_save(
+    state: State<BackendState>,
+    workspace_id: Uuid,
+    ids: Vec<Uuid>,
+) -> Result<(), String> {
+    state.require_unlocked()?;
+    state.domain.save_sidebar_root_order(workspace_id, ids)
+}
+#[tauri::command]
 fn sidebar_node_delete(state: State<BackendState>, id: Uuid) -> Result<(), String> {
     state.require_unlocked()?;
     state.domain.delete_sidebar_node(id)
@@ -739,6 +748,7 @@ pub fn run() {
             sidebar_node_create,
             sidebar_node_rename,
             sidebar_node_move,
+            sidebar_root_order_save,
             sidebar_node_delete,
             favorite_set,
             favorite_move,

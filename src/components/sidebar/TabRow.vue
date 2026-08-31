@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
-import { Minus, Pencil, Pin, PinOff, SquareTerminal, X } from '@lucide/vue'
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { FolderInput, Minus, Pencil, Pin, PinOff, SquareTerminal, Unlink, X } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { useAppStore } from '@/stores/app'
-import { activeDrag, endSidebarDrag, readSidebarDrag, startSidebarDrag } from '@/lib/sidebar-dnd'
+import { registerSidebarDragAndDrop } from '@/lib/sidebar-dnd'
 
 const props = defineProps<{
   id: string
@@ -34,6 +34,13 @@ const input = ref<InstanceType<typeof Input> | null>(null)
 const menuOpen = ref(false)
 const isGrouped = () => store.splitGroups.some((group) => group.tabIds.includes(props.id))
 const dragHint = ref<'before' | 'after' | 'left' | 'right' | 'top' | 'bottom' | null>(null)
+const row = ref<HTMLElement | { $el: HTMLElement }>()
+let cleanupDragAndDrop: (() => void) | undefined
+
+function rowElement() {
+  const value = row.value
+  return value instanceof HTMLElement ? value : value?.$el
+}
 
 async function beginRename() {
   draft.value = props.label
@@ -52,33 +59,13 @@ function commitRename() {
 
 const running = () => props.state === 'online' || props.state === 'pending'
 
-function beginDrag(event: DragEvent) {
-  startSidebarDrag(event, { type: 'tab', id: props.id })
-}
-
-function dropTab(event: DragEvent) {
-  const drag = readSidebarDrag(event)
-  if (drag?.type !== 'tab' || drag.id === props.id) return
-  event.preventDefault()
-  const id = drag.id
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  const x = (event.clientX - rect.left) / rect.width
-  const y = (event.clientY - rect.top) / rect.height
-  if (x < 0.18) emit('dropTab', { id, edge: 'left' })
-  else if (x > 0.82) emit('dropTab', { id, edge: 'right' })
-  else if (y < 0.22) emit('dropTab', { id, edge: 'top' })
-  else if (y > 0.78) emit('dropTab', { id, edge: 'bottom' })
-  else emit('dropTab', { id, zone: y < 0.5 ? 'before' : 'after' })
-  dragHint.value = null
-}
-
-function previewDrop(event: DragEvent) {
-  if (activeDrag.value?.type !== 'tab' || activeDrag.value.id === props.id) return
-  event.preventDefault()
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  const x = (event.clientX - rect.left) / rect.width
-  const y = (event.clientY - rect.top) / rect.height
-  dragHint.value =
+function zone(input: { clientX: number; clientY: number }) {
+  const element = rowElement()
+  if (!element) return null
+  const rect = element.getBoundingClientRect()
+  const x = (input.clientX - rect.left) / rect.width
+  const y = (input.clientY - rect.top) / rect.height
+  return (
     x < 0.18
       ? 'left'
       : x > 0.82
@@ -90,7 +77,31 @@ function previewDrop(event: DragEvent) {
             : y < 0.5
               ? 'before'
               : 'after'
+  ) as typeof dragHint.value
 }
+
+onMounted(() => {
+  const element = rowElement()
+  if (!element) return
+  cleanupDragAndDrop = registerSidebarDragAndDrop(
+    element,
+    { type: 'tab', id: props.id },
+    {
+      canDrop: (drag) => drag.type === 'tab' && drag.id !== props.id,
+      onMove: (_drag, input) => (dragHint.value = zone(input)),
+      onLeave: () => (dragHint.value = null),
+      onDrop: (drag, input) => {
+        if (drag.type !== 'tab') return
+        const target = zone(input)
+        if (target === 'left' || target === 'right' || target === 'top' || target === 'bottom')
+          emit('dropTab', { id: drag.id, edge: target })
+        else if (target) emit('dropTab', { id: drag.id, zone: target })
+        dragHint.value = null
+      },
+    },
+  )
+})
+onBeforeUnmount(() => cleanupDragAndDrop?.())
 
 function runTrailingAction() {
   if (running()) void store.stopTab(props.id)
@@ -100,16 +111,11 @@ function runTrailingAction() {
 
 <template>
   <SidebarMenuItem
+    ref="row"
     class="terminal-tab relative transition-opacity"
     :class="props.grouped ? 'border-s-2 border-sidebar-ring/50 ps-0.5' : ''"
     :data-tab-id="id"
-    draggable="true"
-    @dragstart="beginDrag"
-    @dragend="endSidebarDrag"
-    @dragover="previewDrop"
-    @dragleave="dragHint = null"
-    @drop.stop="dropTab"
-    @contextmenu.prevent="menuOpen = true"
+    @contextmenu.stop.prevent="menuOpen = true"
   >
     <span
       v-if="dragHint"
@@ -183,7 +189,7 @@ function runTrailingAction() {
           @contextmenu.prevent
         />
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="right" align="start">
+      <DropdownMenuContent side="right" align="start" class="w-56">
         <DropdownMenuItem v-if="pinned" @select="store.unpinTab(id)">
           <PinOff :stroke-width="1.5" />Détacher
         </DropdownMenuItem>
@@ -194,6 +200,7 @@ function runTrailingAction() {
           <Pencil :stroke-width="1.5" />Renommer
         </DropdownMenuItem>
         <DropdownMenuItem v-if="isGrouped()" @select="store.detachFromSplit(id)">
+          <Unlink :stroke-width="1.5" />
           Détacher du split
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -203,6 +210,7 @@ function runTrailingAction() {
           :key="workspace.id"
           @select="store.transferTab(id, workspace.id, false)"
         >
+          <FolderInput :stroke-width="1.5" />
           Transférer cet onglet vers {{ workspace.name }}
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -212,6 +220,7 @@ function runTrailingAction() {
           :key="`group-${workspace.id}`"
           @select="store.transferTab(id, workspace.id, true)"
         >
+          <FolderInput :stroke-width="1.5" />
           Transférer le groupe vers {{ workspace.name }}
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" @select="runTrailingAction">

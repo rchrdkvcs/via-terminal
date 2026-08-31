@@ -36,9 +36,19 @@ interface Entry {
   rows: number
   resizeFrame: number | null
   disposers: Array<() => void>
+  onTitle?: (title: string) => void
 }
 
 const MAX_DIMENSION = 1000
+const outputDecoder = new TextDecoder()
+
+function terminalContext(bytes: Uint8Array): string | null {
+  const text = outputDecoder.decode(bytes)
+  const powershell = [...text.matchAll(/(?:^|[\r\n])PS ([^>\r\n]+)>/g)].pop()?.[1]
+  if (powershell) return powershell.trim()
+  const cmd = [...text.matchAll(/(?:^|[\r\n])([A-Za-z]:\\[^>\r\n]*)>/g)].pop()?.[1]
+  return cmd?.trim() || null
+}
 
 /**
  * Owns every live xterm instance, keyed by session identifier.
@@ -96,6 +106,8 @@ class TerminalRegistry {
         const payload = concatBytes(entry.queue)
         entry.queue.length = 0
         entry.terminal.write(payload)
+        const context = terminalContext(payload)
+        if (context) entry.onTitle?.(context)
       }
       this.dirty.clear()
     })
@@ -141,10 +153,16 @@ class TerminalRegistry {
    * Moving the container is what preserves scrollback across tab and window
    * moves: the element leaves one parent and joins another, never the DOM.
    */
-  attach(sessionId: Id, host: HTMLElement, onData?: (data: string) => void): void {
+  attach(
+    sessionId: Id,
+    host: HTMLElement,
+    onData?: (data: string) => void,
+    onTitle?: (title: string) => void,
+  ): void {
     this.subscribe()
     let entry = this.entries.get(sessionId)
-    if (!entry) entry = this.create(sessionId, onData)
+    if (!entry) entry = this.create(sessionId, onData, onTitle)
+    else entry.onTitle = onTitle
     if (entry.container.parentElement !== host) host.appendChild(entry.container)
     this.scheduleFit(entry)
   }
@@ -207,7 +225,11 @@ class TerminalRegistry {
     this.entries.get(sessionId)?.terminal.write(text)
   }
 
-  private create(sessionId: Id, onData?: (data: string) => void): Entry {
+  private create(
+    sessionId: Id,
+    onData?: (data: string) => void,
+    onTitle?: (title: string) => void,
+  ): Entry {
     const container = document.createElement('div')
     container.className = 'h-full w-full'
 
@@ -262,6 +284,7 @@ class TerminalRegistry {
       rows: terminal.rows,
       resizeFrame: null,
       disposers: [],
+      onTitle,
     }
 
     const data = terminal.onData((value) => {
@@ -275,9 +298,11 @@ class TerminalRegistry {
       this.lastKnownSize = { cols, rows }
       void api.resizeSession(entry.sessionId, cols, rows).catch(() => undefined)
     })
+    const title = terminal.onTitleChange((value) => entry.onTitle?.(value.trim()))
     entry.disposers.push(
       () => data.dispose(),
       () => resize.dispose(),
+      () => title.dispose(),
     )
 
     this.entries.set(sessionId, entry)

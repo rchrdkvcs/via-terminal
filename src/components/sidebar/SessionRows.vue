@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useAppStore } from '@/stores/app'
 import TabRow from './TabRow.vue'
-import { readSidebarDrag } from '@/lib/sidebar-dnd'
+import { registerSidebarDrop } from '@/lib/sidebar-dnd'
 
 const props = withDefaults(defineProps<{ pinned?: boolean }>(), { pinned: false })
 const store = useAppStore()
+const endDrop = ref<HTMLElement>()
+let cleanupDrop: (() => void) | undefined
 
 const rows = computed(() =>
   (props.pinned ? store.pinnedTabs : store.unfavoritedTabs).map((tab) => {
@@ -52,13 +54,20 @@ function dropTab(
   else void store.unpinTab(payload.id, beforeId ?? null)
 }
 
-function dropAtEnd(event: DragEvent) {
-  const drag = readSidebarDrag(event)
+function dropAtEnd(drag: { type: 'tab' | 'node' | 'favorite'; id: string }) {
   if (drag?.type !== 'tab') return
-  event.preventDefault()
   if (props.pinned) void store.pinTab(drag.id, null)
   else void store.unpinTab(drag.id, null)
 }
+
+onMounted(() => {
+  if (!endDrop.value) return
+  cleanupDrop = registerSidebarDrop(endDrop.value, {
+    canDrop: (drag) => drag.type === 'tab',
+    onDrop: dropAtEnd,
+  })
+})
+onBeforeUnmount(() => cleanupDrop?.())
 </script>
 
 <template>
@@ -68,8 +77,6 @@ function dropAtEnd(event: DragEvent) {
     :aria-label="props.pinned ? 'Onglets épinglés' : 'Sessions ouvertes'"
     aria-orientation="vertical"
     :data-tab-container="props.pinned ? 'pinned' : 'open'"
-    @dragover.prevent
-    @drop.self="dropAtEnd"
   >
     <TabRow
       v-for="(row, index) in rows"
@@ -82,6 +89,13 @@ function dropAtEnd(event: DragEvent) {
       :grouped="row.grouped"
       @move="moveByKey(index, $event)"
       @drop-tab="dropTab($event, index)"
+    />
+    <li
+      ref="endDrop"
+      class="h-7 rounded-md transition-colors duration-100"
+      :class="store.tabs.length ? '' : 'bg-sidebar-accent/30'"
+      data-drop-zone="temporary-end"
+      aria-hidden="true"
     />
   </ul>
 </template>

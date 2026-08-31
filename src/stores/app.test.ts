@@ -13,6 +13,8 @@ vi.mock('@/ipc/client', () => ({
     deleteSplitGroup: vi.fn(async () => undefined),
     deleteTab: vi.fn(async () => undefined),
     closeSession: vi.fn(async () => undefined),
+    moveSidebarNode: vi.fn(async () => undefined),
+    saveSidebarRootOrder: vi.fn(async () => undefined),
   },
 }))
 
@@ -132,6 +134,34 @@ describe('application sidebar lifecycle', () => {
     expect(store.tabs).toHaveLength(0)
   })
 
+  it('restores the last active workspace from the saved window', () => {
+    const store = useAppStore()
+    const data = snapshot()
+    data.workspaces.push({
+      id: 'second',
+      name: 'Second',
+      icon: 'terminal',
+      color: '#000000',
+      position: 1,
+      defaultProfileId: null,
+    })
+    data.windows.push({
+      id: 'window',
+      activeWorkspaceId: 'second',
+      activeTabId: null,
+      x: null,
+      y: null,
+      width: 1100,
+      height: 720,
+      maximized: false,
+      sidebarHidden: false,
+    })
+
+    store.applySnapshot(data)
+
+    expect(store.activeWorkspaceId).toBe('second')
+  })
+
   it('removes a stopped pinned tab without cloning a Vue proxy', async () => {
     const store = useAppStore()
     store.applySnapshot(snapshot())
@@ -164,5 +194,33 @@ describe('application sidebar lifecycle', () => {
 
     expect(store.pinnedTabs).toHaveLength(0)
     expect(store.tree[0].children.map((node) => node.tabId)).toEqual([tab.id])
+  })
+
+  it('pins a temporary tab at a precise root position next to a folder', async () => {
+    const store = useAppStore()
+    store.applySnapshot(snapshot())
+    await store.createTerminal()
+    const pinned = store.activeTabId
+    await store.pinTab(pinned)
+    store.sidebarNodes.push({
+      id: 'folder',
+      workspaceId: WORKSPACE,
+      parentId: null,
+      kind: 'folder',
+      label: 'Projet',
+      targetId: null,
+      position: 1,
+    })
+    await store.createTerminal()
+    const temporary = store.activeTabId
+
+    await store.placeTab(temporary, null, 'folder')
+
+    expect(store.tabs.find((tab) => tab.id === temporary)).toMatchObject({
+      organized: true,
+      folderId: null,
+      position: 1,
+    })
+    expect(store.tabs.find((tab) => tab.id === pinned)?.position).toBe(0)
   })
 })

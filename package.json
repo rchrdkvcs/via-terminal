@@ -19,6 +19,8 @@
     "test:smoke": "node .ai/cdp-smoke.mjs"
   },
   "dependencies": {
+    "@atlaskit/pragmatic-drag-and-drop": "^3.1.0",
+    "@atlaskit/pragmatic-drag-and-drop-auto-scroll": "^3.2.0",
     "@lucide/vue": "^1.34.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "^2",

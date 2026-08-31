@@ -4,12 +4,16 @@ import { Plug, Terminal as TerminalIcon } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { terminals } from '@/terminal/registry'
 import { useAppStore } from '@/stores/app'
+import { registerSidebarDrop } from '@/lib/sidebar-dnd'
 
 const props = defineProps<{ sessionId: string; paneId: string; closable: boolean }>()
 
 const store = useAppStore()
 const host = ref<HTMLElement>()
 let observer: ResizeObserver | undefined
+let cleanupDrop: (() => void) | undefined
+const surface = ref<HTMLElement>()
+const splitHint = ref<'left' | 'right' | 'top' | 'bottom' | null>(null)
 
 const session = computed(() => store.sessionById.get(props.sessionId) ?? null)
 const isActive = computed(() => store.activeTab?.activePaneId === props.paneId)
@@ -18,12 +22,42 @@ const isPlaceholder = computed(() => session.value?.status === 'restorable')
 
 function mountTerminal() {
   if (!host.value || isPlaceholder.value) return
-  terminals.attach(props.sessionId, host.value)
+  terminals.attach(props.sessionId, host.value, undefined, (title) =>
+    store.setSessionContext(props.sessionId, title),
+  )
   if (isActive.value) terminals.focus(props.sessionId)
+}
+
+function targetTabId() {
+  return store.tabs.find((tab) => store.paneSessionIds(tab.root).includes(props.sessionId))?.id
+}
+
+function splitEdge(input: { clientX: number; clientY: number }) {
+  if (!surface.value) return null
+  const rect = surface.value.getBoundingClientRect()
+  const x = (input.clientX - rect.left) / rect.width
+  const y = (input.clientY - rect.top) / rect.height
+  if (x < 0.25) return 'left'
+  if (x > 0.75) return 'right'
+  if (y < 0.25) return 'top'
+  if (y > 0.75) return 'bottom'
+  return null
 }
 
 onMounted(() => {
   mountTerminal()
+  if (surface.value)
+    cleanupDrop = registerSidebarDrop(surface.value, {
+      canDrop: (drag) => drag.type === 'tab' && drag.id !== targetTabId(),
+      onMove: (_drag, input) => (splitHint.value = splitEdge(input)),
+      onLeave: () => (splitHint.value = null),
+      onDrop: (drag, input) => {
+        const target = targetTabId()
+        const edge = splitEdge(input)
+        if (drag.type === 'tab' && target && edge) void store.linkTabs(drag.id, target, edge)
+        splitHint.value = null
+      },
+    })
   if (host.value) {
     observer = new ResizeObserver(() => terminals.requestFit(props.sessionId))
     observer.observe(host.value)
@@ -33,6 +67,7 @@ onMounted(() => {
 // The registry keeps the renderer alive; only this view of it goes away.
 onBeforeUnmount(() => {
   observer?.disconnect()
+  cleanupDrop?.()
   terminals.detach(props.sessionId)
 })
 
@@ -47,10 +82,21 @@ watch(isActive, (active) => {
 
 <template>
   <section
+    ref="surface"
     class="relative flex min-h-0 min-w-0 flex-1 flex-col bg-card transition-shadow duration-150"
     :aria-label="session?.name ?? 'Terminal'"
     @mousedown="store.selectPane(paneId)"
   >
+    <div
+      v-if="splitHint"
+      class="pointer-events-none absolute z-20 rounded-md bg-ring/15 ring-1 ring-ring/50"
+      :class="{
+        'inset-y-2 left-2 w-[30%]': splitHint === 'left',
+        'inset-y-2 right-2 w-[30%]': splitHint === 'right',
+        'inset-x-2 top-2 h-[30%]': splitHint === 'top',
+        'inset-x-2 bottom-2 h-[30%]': splitHint === 'bottom',
+      }"
+    />
     <!-- The registry appends its own element here; Vue never owns the xterm DOM. -->
     <div v-show="!isPlaceholder" ref="host" class="terminal-surface min-h-0 flex-1" />
 

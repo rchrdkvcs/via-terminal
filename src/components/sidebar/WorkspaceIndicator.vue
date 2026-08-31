@@ -78,7 +78,7 @@ function openContextMenu() {
       :aria-expanded="!store.workspaceContentCollapsed"
       aria-controls="workspace-sidebar-content"
       @click="store.toggleWorkspaceContent()"
-      @contextmenu.prevent="openContextMenu"
+      @contextmenu.stop.prevent="openContextMenu"
     >
       <component
         :is="workspaceIcon(store.activeWorkspace?.icon)"

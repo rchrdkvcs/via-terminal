@@ -508,6 +508,42 @@ impl DomainService {
         })
     }
 
+    /// Persist the single canonical order shared by organized tabs and root folders.
+    pub fn save_sidebar_root_order(&self, workspace_id: Id, ids: Vec<Id>) -> Result<(), String> {
+        self.mutate(|d| {
+            let expected: std::collections::HashSet<Id> = d
+                .tabs
+                .iter()
+                .filter(|tab| {
+                    tab.workspace_id == workspace_id && tab.organized && tab.folder_id.is_none()
+                })
+                .map(|tab| tab.id)
+                .chain(
+                    d.sidebar_nodes
+                        .iter()
+                        .filter(|node| {
+                            node.workspace_id == workspace_id
+                                && node.kind == "folder"
+                                && node.parent_id.is_none()
+                        })
+                        .map(|node| node.id),
+                )
+                .collect();
+            let provided: std::collections::HashSet<Id> = ids.iter().copied().collect();
+            if provided.len() != ids.len() || provided != expected {
+                return Err("invalid sidebar root order".into());
+            }
+            for (position, id) in ids.into_iter().enumerate() {
+                if let Some(tab) = d.tabs.iter_mut().find(|tab| tab.id == id) {
+                    tab.position = position as i64;
+                } else if let Some(node) = d.sidebar_nodes.iter_mut().find(|node| node.id == id) {
+                    node.position = position as i64;
+                }
+            }
+            Ok(())
+        })
+    }
+
     /// Remove a node, its descendants and everything that referenced their
     /// targets, so the snapshot stays valid in a single transaction.
     pub fn delete_sidebar_node(&self, id: Id) -> Result<(), String> {

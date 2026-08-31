@@ -108,6 +108,8 @@ export const api = {
     call<SidebarNodeRecord>('sidebar_node_rename', { id, label }),
   moveSidebarNode: (id: Id, parentId: Id | null, position: number) =>
     call<SidebarNodeRecord>('sidebar_node_move', { id, parentId, position }),
+  saveSidebarRootOrder: (workspaceId: Id, ids: Id[]) =>
+    call<void>('sidebar_root_order_save', { workspaceId, ids }),
   deleteSidebarNode: (id: Id) => call<void>('sidebar_node_delete', { id }),
   setFavorite: (workspaceId: Id, targetKind: TargetKind, targetId: Id, pinned: boolean) =>
     call<void>('favorite_set', { workspaceId, targetKind, targetId, pinned }),

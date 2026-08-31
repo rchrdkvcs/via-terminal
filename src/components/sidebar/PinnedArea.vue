@@ -63,7 +63,7 @@ function dropTab(
           )
         "
       />
-      <SidebarTree v-else :nodes="[item.node]" />
+      <SidebarTree v-else :nodes="[item.node]" :next-root-id="items[index + 1]?.id ?? null" />
     </template>
   </ul>
 </template>
