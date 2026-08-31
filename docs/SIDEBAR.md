@@ -1,6 +1,6 @@
 # Sidebar specification
 
-This is the functional source of truth for Terminarr's sidebar. Its behavior is inspired by [Zen Browser](https://github.com/zen-browser/desktop), adapted to terminals; Zen's implementation is not copied.
+This is the functional source of truth for via terminal's sidebar. Its behavior is inspired by [Zen Browser](https://github.com/zen-browser/desktop), adapted to terminals; Zen's implementation is not copied.
 
 ## Principle and layout
 

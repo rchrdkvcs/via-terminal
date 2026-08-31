@@ -12,7 +12,7 @@ const store = useAppStore()
 <template>
   <SettingsSection
     title="Ressources SSH"
-    description="Terminarr lit votre configuration OpenSSH et ne la modifie jamais. Les clés, les phrases de passe et l’agent restent gérés par OpenSSH."
+    description="via terminal lit votre configuration OpenSSH et ne la modifie jamais. Les clés, les phrases de passe et l’agent restent gérés par OpenSSH."
   >
     <div v-if="!store.workspaceResources.length" class="py-6 text-sm text-muted-foreground">
       Aucune ressource SSH dans cet espace de travail.

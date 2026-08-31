@@ -638,7 +638,7 @@ fn tab_delete(state: State<BackendState>, id: Uuid) -> Result<(), String> {
 fn window_create(app: tauri::AppHandle) -> Result<(), String> {
     let label = format!("window-{}", Uuid::new_v4());
     tauri::WebviewWindowBuilder::new(&app, label, tauri::WebviewUrl::App("index.html".into()))
-        .title("Terminarr")
+        .title("via terminal")
         .inner_size(1100.0, 720.0)
         // The native drop target of the webview swallows every HTML5 drag
         // event, which stops the sidebar drag and drop. Windows created here do
@@ -714,7 +714,7 @@ pub fn run() {
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
-            let repo = Repository::open(data_dir.join("terminarr.sqlite"))
+            let repo = Repository::open(data_dir.join("via-terminal.sqlite"))
                 .map_err(std::io::Error::other)?;
             let domain = DomainService::new(repo);
             domain.begin_run().map_err(std::io::Error::other)?;
@@ -773,7 +773,7 @@ pub fn run() {
             app_unlock
         ])
         .build(tauri::generate_context!())
-        .expect("error while building Terminarr");
+        .expect("error while building via terminal");
     app.run(|app_handle, event| {
         if matches!(event, tauri::RunEvent::Exit) {
             let state = app_handle.state::<BackendState>();

@@ -115,7 +115,7 @@ Creation and editing use one atomic command with icon, name, and default profile
 
 ## SSH
 
-V1 starts the operating system OpenSSH client in a PTY. Terminarr reads but never rewrites user SSH configuration. OpenSSH owns host-key prompts, known_hosts, keys, passphrases, and agent use. Terminarr never auto-accepts fingerprints or stores passwords.
+V1 starts the operating system OpenSSH client in a PTY. via terminal reads but never rewrites user SSH configuration. OpenSSH owns host-key prompts, known_hosts, keys, passphrases, and agent use. via terminal never auto-accepts fingerprints or stores passwords.
 
 Unexpected disconnects retain output and may retry after 1, 2, and 5 seconds before a manual reconnect action. Reconnect targets the same tab and never creates another row.
 

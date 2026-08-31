@@ -5,7 +5,7 @@
  *   WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333 pnpm tauri dev
  *
  * The WebGL renderer paints to a canvas, so terminal contents are read through
- * the dev-only `window.__terminarr` handle rather than the DOM. The interface is
+ * the dev-only `window.__viaTerminal` handle rather than the DOM. The interface is
  * driven by accessible name, so moving a control between the sidebar and the
  * top bar does not break the check.
  */
@@ -13,7 +13,7 @@ const PORT = process.env.CDP_PORT ?? '9333'
 
 const targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json()
 const page = targets.find((t) => t.type === 'page' && t.url.includes('localhost:1420'))
-if (!page) throw new Error(`no Terminarr page target: ${JSON.stringify(targets.map((t) => t.url))}`)
+if (!page) throw new Error(`no via terminal page target: ${JSON.stringify(targets.map((t) => t.url))}`)
 
 const socket = new WebSocket(page.webSocketDebuggerUrl)
 await new Promise((resolve) => socket.addEventListener('open', resolve))
@@ -74,7 +74,7 @@ const helpers = [
   '  node.click();',
   '  return true;',
   '};',
-  'window.__buffer = (id) => window.__terminarr.terminals.readBuffer(id);',
+  'window.__buffer = (id) => window.__viaTerminal.terminals.readBuffer(id);',
 ].join('\n')
 
 await evaluate(helpers)
@@ -84,7 +84,7 @@ const boot = await evaluate(`(() => {
   return {
     title: document.title,
     workspace: store.workspaces.find((w) => w.id === store.activeWorkspaceId)?.name ?? null,
-    hasRegistry: Boolean(window.__terminarr),
+    hasRegistry: Boolean(window.__viaTerminal),
     sidebarRows: document.querySelectorAll('[data-sidebar="menu-button"]').length,
   }
 })()`)
@@ -131,12 +131,12 @@ check(
   JSON.stringify(sidebarTabs),
 )
 
-await send('Input.insertText', { text: 'echo terminarr-smoke-ok\r' })
+await send('Input.insertText', { text: 'echo via-terminal-smoke-ok\r' })
 await wait(3000)
 const echoed = first ? await evaluate(`window.__buffer(${JSON.stringify(first)})`) : ''
 check(
   'typed input round-tripped through the PTY',
-  typeof echoed === 'string' && echoed.includes('terminarr-smoke-ok'),
+  typeof echoed === 'string' && echoed.includes('via-terminal-smoke-ok'),
   String(echoed).slice(-240),
 )
 
@@ -156,7 +156,7 @@ check(
   split.sessions === 2 &&
     split.surfaces === 2 &&
     split.separators === 1 &&
-    String(preserved).includes('terminarr-smoke-ok'),
+    String(preserved).includes('via-terminal-smoke-ok'),
   JSON.stringify(split),
 )
 
@@ -168,7 +168,7 @@ await wait(1200)
 const afterSwitch = first ? await evaluate(`window.__buffer(${JSON.stringify(first)})`) : ''
 check(
   'the scrollback survives a session switch',
-  String(afterSwitch).includes('terminarr-smoke-ok'),
+  String(afterSwitch).includes('via-terminal-smoke-ok'),
   String(afterSwitch).slice(-200),
 )
 
@@ -230,7 +230,7 @@ check(
 const stillAlive = first ? await evaluate(`window.__buffer(${JSON.stringify(first)})`) : ''
 check(
   'sessions survive a visit to the settings page',
-  String(stillAlive).includes('terminarr-smoke-ok'),
+  String(stillAlive).includes('via-terminal-smoke-ok'),
   String(stillAlive).slice(-160),
 )
 

@@ -118,7 +118,7 @@ onBeforeUnmount(() => cleanupStrip?.())
           variant="ghost"
           size="icon-sm"
           class="shrink-0 text-sidebar-foreground/60"
-          aria-label="Verrouiller Terminarr"
+          aria-label="Verrouiller via terminal"
           @click="store.lock()"
         >
           <Lock :stroke-width="1.5" />

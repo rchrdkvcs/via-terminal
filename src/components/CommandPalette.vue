@@ -94,7 +94,7 @@ const commands = computed<Action[]>(() => [
   },
   {
     id: 'lock',
-    label: 'Verrouiller Terminarr',
+    label: 'Verrouiller via terminal',
     detail: 'Ctrl Maj L',
     icon: Lock,
     run: () => store.lock(),

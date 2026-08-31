@@ -10,13 +10,13 @@
  *
  * The run works in a scratch workspace, but it writes to the live database.
  * Back it up first:
- *   cp "$APPDATA/dev.terminarr.desktop/terminarr.sqlite" .ai/terminarr-backup.sqlite
+ *   cp "$APPDATA/dev.viaterminal.desktop/via-terminal.sqlite" .ai/via-terminal-backup.sqlite
  */
 const PORT = process.env.CDP_PORT ?? '9333'
 
 const targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json()
 const page = targets.find((t) => t.type === 'page' && t.url.includes('localhost:1420'))
-if (!page) throw new Error(`no Terminarr page target: ${JSON.stringify(targets.map((t) => t.url))}`)
+if (!page) throw new Error(`no via terminal page target: ${JSON.stringify(targets.map((t) => t.url))}`)
 
 const socket = new WebSocket(page.webSocketDebuggerUrl)
 await new Promise((resolve) => socket.addEventListener('open', resolve))

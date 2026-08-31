@@ -81,7 +81,7 @@ These are release-level outcomes. The detailed behavior is defined in [SIDEBAR.m
 ## SSH, privacy, and accessibility
 
 - Connect using SSH alias, key, and running agent while respecting user configuration.
-- Verify OpenSSH handles unknown host keys and Terminarr never accepts them silently.
+- Verify OpenSSH handles unknown host keys and via terminal never accepts them silently.
 - Disconnect unexpectedly; retain output, retry at the documented bounds, and expose manual reconnect.
 - Confirm passwords, terminal content, and commands are absent from storage, logs, diagnostics, and export.
 - Complete primary flows with keyboard and NVDA at 200% zoom in both themes and reduced-motion mode.

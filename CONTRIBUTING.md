@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping build Terminarr. The project is focused on the Windows V1 described in [docs/PRODUCT.md](docs/PRODUCT.md).
+Thanks for helping build via terminal. The project is focused on the Windows V1 described in [docs/PRODUCT.md](docs/PRODUCT.md).
 
 ## Before starting
 

@@ -44,9 +44,9 @@ const store = useAppStore()
       >
         <p>
           <span class="text-[#5fd58a]">rchrdkvcs@hom01</span>:<span class="text-[#7aa5ef]">~</span>$
-          terminarr --version
+          via-terminal --version
         </p>
-        <p>Terminarr 0.1.0</p>
+        <p>via terminal 0.1.0</p>
       </div>
     </SettingRow>
   </SettingsSection>

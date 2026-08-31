@@ -5,7 +5,7 @@ export interface SidebarNavigationState {
   collapsedWorkspaces: Id[]
 }
 
-const STORAGE_KEY = 'terminarr.sidebar-navigation'
+const STORAGE_KEY = 'via-terminal.sidebar-navigation'
 const emptyState = (): SidebarNavigationState => ({ collapsedFolders: {}, collapsedWorkspaces: [] })
 
 export function loadSidebarNavigation(): SidebarNavigationState {

@@ -1,13 +1,13 @@
 [package]
-name = "terminarr"
+name = "via-terminal"
 version = "0.1.0"
 description = "A workspace-oriented native terminal"
-authors = ["Terminarr contributors"]
+authors = ["via terminal contributors"]
 edition = "2021"
 license = "Apache-2.0"
 
 [lib]
-name = "terminarr_lib"
+name = "via_terminal_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
