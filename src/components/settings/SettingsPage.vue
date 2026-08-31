@@ -83,7 +83,7 @@ function restoreDefaults() {
       aria-label="Sections des réglages"
     >
       <div class="flex h-12 items-center gap-2 px-3">
-        <img src="/logo.png" alt="" class="size-5 shrink-0 rounded" />
+        <img src="/logo.svg" alt="" class="size-5 shrink-0 rounded" />
         <span class="truncate text-sm font-semibold">via terminal</span>
       </div>
 
