@@ -2,7 +2,7 @@
 
 ## Promise
 
-Terminarr is a fast, pleasant native terminal workspace for IT technicians: a Zen Browser-like navigator for local shells and SSH sessions, with durable organization and reliable spatial behavior.
+via terminal is a fast, pleasant native terminal workspace for IT technicians: a Zen Browser-like navigator for local shells and SSH sessions, with durable organization and reliable spatial behavior.
 
 ## Audience and platform
 

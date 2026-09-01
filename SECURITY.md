@@ -12,7 +12,7 @@ Maintainers aim to acknowledge a report within 7 days, validate severity, coordi
 
 ## Security boundaries
 
-- Terminarr uses the operating system's OpenSSH client and does not silently accept host fingerprints.
+- via terminal uses the operating system's OpenSSH client and does not silently accept host fingerprints.
 - SSH passwords are entered interactively and are not saved.
 - Workspace isolation prevents implicit sharing but is not an operating-system security boundary.
 - The application lock is a privacy screen; it does not encrypt SQLite metadata.

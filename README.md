@@ -1,9 +1,9 @@
-# Terminarr
+# via terminal
 
-Terminarr is an open-source native terminal workspace for IT technicians. It combines fast local terminals, organized SSH resources, tabs, split panes, and Arc/Zen-style workspaces in one focused Windows application.
+via terminal is an open-source native terminal workspace for IT technicians. It combines fast local terminals, organized SSH resources, tabs, split panes, and Arc/Zen-style workspaces in one focused Windows application.
 
 > [!WARNING]
-> Terminarr is pre-release software. Do not rely on it as the only way to access production systems. The project name is provisional.
+> via terminal is pre-release software. Do not rely on it as the only way to access production systems.
 
 ## V1 goals
 

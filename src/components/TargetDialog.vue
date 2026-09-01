@@ -97,7 +97,7 @@ async function submit() {
       <DialogHeader>
         <DialogTitle>Nouvelle ressource SSH</DialogTitle>
         <DialogDescription>
-          Terminarr lit votre configuration OpenSSH, il ne la modifie jamais.
+          via terminal lit votre configuration OpenSSH, il ne la modifie jamais.
         </DialogDescription>
       </DialogHeader>
 

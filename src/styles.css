@@ -58,7 +58,7 @@
   in the window comes from the shell's own ANSI output and from the three
   session-state dots declared further down.
 
-  Terminarr ships no webfont: the Tauri CSP forbids remote stylesheets and
+  via terminal ships no webfont: the Tauri CSP forbids remote stylesheets and
   PRODUCT.md requires the core experience to work fully offline.
 */
 :root {

@@ -83,8 +83,8 @@ function restoreDefaults() {
       aria-label="Sections des réglages"
     >
       <div class="flex h-12 items-center gap-2 px-3">
-        <SquareTerminal :size="16" :stroke-width="1.5" class="shrink-0" />
-        <span class="truncate text-sm font-semibold">Terminarr</span>
+        <img src="/logo.svg" alt="" class="size-5 shrink-0 rounded" />
+        <span class="truncate text-sm font-semibold">via terminal</span>
       </div>
 
       <div class="px-2 pb-2">

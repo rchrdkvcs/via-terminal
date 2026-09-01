@@ -24,7 +24,7 @@ export interface LocalPreferences {
   sidebarWidth: number
 }
 
-const STORAGE_KEY = 'terminarr.preferences'
+const STORAGE_KEY = 'via-terminal.preferences'
 
 const fallback: LocalPreferences = {
   cursorStyle: 'bar',

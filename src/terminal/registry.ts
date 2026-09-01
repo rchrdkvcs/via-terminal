@@ -367,7 +367,7 @@ export const terminals = new TerminalRegistry()
 // The WebGL renderer paints to a canvas, so a terminal's contents are otherwise
 // unreachable from the DOM.
 if (import.meta.env.DEV && typeof window !== 'undefined') {
-  ;(window as unknown as { __terminarr?: unknown }).__terminarr = { terminals }
+  ;(window as unknown as { __viaTerminal?: unknown }).__viaTerminal = { terminals }
 }
 
 /** Shared by the store when reporting a failed terminal operation. */
