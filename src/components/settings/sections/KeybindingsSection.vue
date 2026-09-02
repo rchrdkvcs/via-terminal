@@ -53,13 +53,13 @@ const groups = [
         {{ group.title }}
       </h3>
       <dl class="space-y-1.5">
-        <div v-for="item in group.items" :key="item.keys" class="flex items-center gap-4">
-          <dt class="w-32 shrink-0">
+        <div v-for="item in group.items" :key="item.keys" class="flex items-start gap-3 sm:gap-4">
+          <dt class="w-24 shrink-0 sm:w-32">
             <kbd class="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
               {{ item.keys }}
             </kbd>
           </dt>
-          <dd class="min-w-0 truncate text-sm text-muted-foreground">{{ item.label }}</dd>
+          <dd class="min-w-0 text-sm leading-relaxed text-muted-foreground">{{ item.label }}</dd>
         </div>
       </dl>
     </div>

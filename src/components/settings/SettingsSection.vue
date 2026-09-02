@@ -8,7 +8,7 @@ defineProps<{ title: string; description?: string }>()
       <h2 class="text-lg font-semibold tracking-tight">{{ title }}</h2>
       <p v-if="description" class="pt-1 text-sm text-muted-foreground">{{ description }}</p>
     </header>
-    <div class="divide-y divide-border/60">
+    <div class="space-y-1">
       <slot />
     </div>
   </section>

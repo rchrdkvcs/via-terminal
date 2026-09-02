@@ -76,18 +76,18 @@ function restoreDefaults() {
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-1">
+  <div class="flex min-h-0 flex-1 flex-col sm:flex-row">
     <!-- Rail: the sections, searchable, plus the way back to the terminal. -->
     <nav
-      class="flex w-56 shrink-0 flex-col bg-background text-sidebar-foreground"
+      class="flex w-full shrink-0 flex-col bg-background text-sidebar-foreground sm:w-56"
       aria-label="Sections des réglages"
     >
-      <div class="flex h-12 items-center gap-2 px-3">
+      <div class="hidden h-12 items-center gap-2 px-3 sm:flex">
         <img src="/logo.svg" alt="" class="size-5 shrink-0 rounded" />
         <span class="truncate text-sm font-semibold">Via</span>
       </div>
 
-      <div class="px-2 pb-2">
+      <div class="px-2 py-2 sm:pt-0">
         <div class="relative">
           <Search
             :size="14"
@@ -96,18 +96,20 @@ function restoreDefaults() {
           />
           <Input
             v-model="filter"
-            class="h-8 ps-8 text-sm"
+            class="h-9 ps-8 text-sm"
             placeholder="Rechercher"
             aria-label="Rechercher un réglage"
           />
         </div>
       </div>
 
-      <div class="no-scrollbar min-h-0 flex-1 space-y-px overflow-y-auto px-2 pb-2">
+      <div
+        class="no-scrollbar flex min-h-0 gap-1 overflow-x-auto px-2 pb-2 sm:block sm:flex-1 sm:space-y-1 sm:overflow-y-auto"
+      >
         <button
           v-for="section in matches"
           :key="section.id"
-          class="flex h-8 w-full items-center gap-2 rounded-md px-2 text-sm transition-colors duration-150"
+          class="flex h-9 w-auto shrink-0 items-center gap-2 rounded-md px-2.5 text-sm transition-colors duration-150 sm:w-full"
           :class="
             section.id === store.settingsSection
               ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
@@ -126,7 +128,7 @@ function restoreDefaults() {
 
       <div class="border-t p-2">
         <button
-          class="flex h-8 w-full items-center gap-2 rounded-md px-2 text-sm text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+          class="flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-sm text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
           @click="store.route = 'workspace'"
         >
           <ArrowLeft :size="15" :stroke-width="1.5" />
@@ -137,7 +139,7 @@ function restoreDefaults() {
 
     <!-- Content -->
     <div class="flex min-h-0 min-w-0 flex-1 flex-col bg-card">
-      <header class="flex h-12 shrink-0 items-center justify-between gap-4 px-6">
+      <header class="flex h-12 shrink-0 items-center justify-between gap-3 px-4 sm:px-6">
         <nav class="flex min-w-0 items-center gap-2 text-sm" aria-label="Fil d’Ariane">
           <span class="text-muted-foreground">Réglages</span>
           <span class="text-muted-foreground/60">/</span>
@@ -150,14 +152,14 @@ function restoreDefaults() {
           @click="restoreDefaults"
         >
           <RotateCcw :size="14" :stroke-width="1.5" />
-          Rétablir les valeurs par défaut
+          <span class="hidden md:inline">Rétablir les valeurs par défaut</span>
         </Button>
       </header>
 
       <Separator />
 
       <div class="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
-        <div class="mx-auto max-w-2xl px-6 py-8">
+        <div class="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
           <GeneralSection v-if="active.id === 'general'" />
           <AppearanceSection v-else-if="active.id === 'appearance'" />
           <TerminalSection v-else-if="active.id === 'terminal'" />

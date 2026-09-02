@@ -64,8 +64,12 @@ function resizeWithKeyboard(event: KeyboardEvent) {
     <div
       role="separator"
       tabindex="0"
+      :aria-label="isVertical ? 'Largeur des panneaux' : 'Hauteur des panneaux'"
       :aria-orientation="isVertical ? 'vertical' : 'horizontal'"
-      class="relative shrink-0 bg-border hover:bg-ring focus-visible:bg-ring"
+      :aria-valuenow="Math.round(node.ratio * 100)"
+      aria-valuemin="15"
+      aria-valuemax="85"
+      class="relative shrink-0 bg-border transition-colors duration-150 hover:bg-ring focus-visible:bg-ring focus-visible:outline-2 focus-visible:outline-ring"
       :class="isVertical ? 'w-px cursor-col-resize' : 'h-px cursor-row-resize'"
       @pointerdown.prevent="startDrag"
       @keydown="resizeWithKeyboard"
@@ -73,6 +77,7 @@ function resizeWithKeyboard(event: KeyboardEvent) {
       <span
         class="absolute"
         :class="isVertical ? '-inset-x-1.5 inset-y-0' : 'inset-x-0 -inset-y-1.5'"
+        aria-hidden="true"
       />
     </div>
     <div class="flex min-h-0 min-w-0" :style="{ flex: `${1 - node.ratio} 1 0%` }">

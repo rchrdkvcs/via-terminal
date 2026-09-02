@@ -296,9 +296,9 @@ let closingWindow = false
                 store.activeSession &&
                 ['closed', 'failed', 'restorable'].includes(store.activeSession.status)
               "
-              class="flex min-h-0 flex-1 flex-col items-center justify-center gap-4"
+              class="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-6 text-center"
             >
-              <p class="text-sm text-muted-foreground">
+              <p class="max-w-md text-sm leading-relaxed text-muted-foreground">
                 {{ store.activeSession.message || 'Terminal arrêté.' }}
               </p>
               <Button @click="store.startStoppedTab(store.activeTab.id)">
@@ -314,9 +314,7 @@ let closingWindow = false
           </div>
 
           <div v-else class="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 p-8">
-            <span
-              class="grid size-14 place-items-center rounded-xl border bg-card text-muted-foreground"
-            >
+            <span class="grid size-12 place-items-center text-muted-foreground">
               <Terminal :size="24" :stroke-width="1.5" />
             </span>
             <div class="max-w-sm space-y-2 text-center">

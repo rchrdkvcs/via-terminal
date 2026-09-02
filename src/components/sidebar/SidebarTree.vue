@@ -257,7 +257,10 @@ const vDropTarget: ObjectDirective<HTMLElement, TreeNode> = {
     class="flex w-full min-w-0 flex-col gap-1"
     :data-tab-container="props.parentId ? 'folder' : undefined"
     :data-folder-id="props.parentId ?? undefined"
-    :class="props.parentId && activeDrag?.type === 'tab' ? 'min-h-8' : ''"
+    :class="[
+      props.parentId ? 'min-h-8 py-1 pe-1 ps-3' : '',
+      props.parentId && activeDrag?.type === 'tab' ? 'min-h-10' : '',
+    ]"
   >
     <template v-for="node in nodes" :key="node.id">
       <TabRow
@@ -266,7 +269,6 @@ const vDropTarget: ObjectDirective<HTMLElement, TreeNode> = {
         :label="node.label"
         :detail="store.sessionById.get(node.sessionIds[0])?.detail"
         :state="rowState(node)"
-        :depth="node.depth"
         pinned
         :grouped="store.splitGroups.some((group) => group.tabIds.includes(node.tabId!))"
         @move="moveTabByKey(node, $event)"
@@ -280,8 +282,13 @@ const vDropTarget: ObjectDirective<HTMLElement, TreeNode> = {
         v-else
         v-drag-source="node"
         v-drop-target="node"
-        class="relative transition-opacity"
-        :class="activeDrag?.id === node.id ? 'opacity-40' : ''"
+        class="relative transition-[background-color,opacity] duration-150"
+        :class="[
+          activeDrag?.id === node.id ? 'opacity-40' : '',
+          node.kind === 'folder' && !collapsed.has(node.id)
+            ? 'rounded-lg bg-sidebar-accent/45'
+            : '',
+        ]"
         @contextmenu.stop.prevent="openRowMenu(node.id)"
       >
         <SidebarMenuButton
@@ -289,7 +296,6 @@ const vDropTarget: ObjectDirective<HTMLElement, TreeNode> = {
           :role="node.kind === 'folder' ? undefined : 'tab'"
           :aria-selected="node.kind === 'folder' ? undefined : isActive(node)"
           :aria-expanded="node.kind === 'folder' ? !collapsed.has(node.id) : undefined"
-          :style="{ paddingInlineStart: `${8 + node.depth * 12}px` }"
           :class="hintClass(node)"
           :data-sidebar-drop="node.kind === 'folder' ? 'folder' : undefined"
           :data-drop-id="node.kind === 'folder' ? node.id : undefined"
@@ -301,6 +307,7 @@ const vDropTarget: ObjectDirective<HTMLElement, TreeNode> = {
           <span class="relative flex shrink-0 items-center">
             <component
               :is="nodeIcon(node.kind, node.kind === 'folder' && !collapsed.has(node.id))"
+              :size="16"
               :stroke-width="1.5"
               :class="node.kind === 'folder' ? '' : 'text-sidebar-foreground/60'"
             />
