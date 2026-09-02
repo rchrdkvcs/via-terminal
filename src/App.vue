@@ -257,7 +257,7 @@ let closingWindow = false
             <div
               v-show="store.sidebarPeek"
               data-sidebar-peek-panel
-              class="absolute inset-y-1 start-1 overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl"
+              class="absolute -top-1 -bottom-1 start-1 overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl"
               :style="{ width: `${sidebarWidth}px` }"
             >
               <AppSidebar @add-resource="targetDialog = 'resource'" />
