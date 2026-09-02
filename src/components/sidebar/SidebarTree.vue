@@ -294,7 +294,7 @@ const vDropTarget: ObjectDirective<HTMLElement, TreeNode> = {
         :class="[
           activeDrag?.id === node.id ? 'opacity-40' : '',
           node.kind === 'folder' && !collapsed.has(node.id)
-            ? 'rounded-lg bg-sidebar-accent/45'
+            ? 'rounded-lg hover:bg-sidebar-accent/70'
             : '',
         ]"
         @contextmenu.stop.prevent="openRowMenu(node.id)"

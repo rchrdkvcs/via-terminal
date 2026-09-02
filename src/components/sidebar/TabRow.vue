@@ -121,8 +121,9 @@ function runTrailingAction() {
 <template>
   <SidebarMenuItem
     ref="row"
-    class="terminal-tab relative transition-opacity"
-    :class="props.grouped ? 'border-s-2 border-sidebar-ring/50 ps-0.5' : ''"
+    class="terminal-tab relative transition-[background-color,opacity] duration-150"
+    :class="props.grouped ? 'grouped-tab rounded-xl bg-sidebar-accent/55 p-1' : ''"
+    :data-grouped="props.grouped || undefined"
     :data-tab-id="id"
     @contextmenu.stop.prevent="menuOpen = true"
   >
@@ -144,7 +145,12 @@ function runTrailingAction() {
       :tabindex="id === store.activeTabId ? 0 : -1"
       :is-active="id === store.activeTabId"
       :title="detail || label"
-      class="touch-none"
+      :class="[
+        'touch-none',
+        props.grouped
+          ? 'border border-sidebar-border/80 bg-sidebar shadow-xs hover:bg-sidebar-accent'
+          : '',
+      ]"
       @click="store.selectTab(id)"
       @auxclick.middle.prevent="store.closeTab(id)"
       @keydown.alt.up.prevent="emit('move', -1)"
@@ -238,3 +244,18 @@ function runTrailingAction() {
     </DropdownMenu>
   </SidebarMenuItem>
 </template>
+
+<style scoped>
+.grouped-tab:has(+ .grouped-tab) {
+  padding-bottom: 0.125rem;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.grouped-tab + .grouped-tab {
+  margin-top: -0.25rem;
+  padding-top: 0.125rem;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+</style>
