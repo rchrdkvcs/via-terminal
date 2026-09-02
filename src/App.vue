@@ -249,13 +249,13 @@ let closingWindow = false
           @pointerleave="scheduleHide"
         >
           <Transition
-            enter-active-class="transition-[transform,opacity] duration-200 [transition-timing-function:cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
-            enter-from-class="-translate-x-3 opacity-0 motion-reduce:translate-x-0"
-            leave-active-class="transition-[transform,opacity] duration-160 [transition-timing-function:cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
-            leave-to-class="-translate-x-3 opacity-0 motion-reduce:translate-x-0"
+            enter-active-class="transition-transform duration-250 [transition-timing-function:var(--ease-zen-compact)] motion-reduce:transition-none"
+            enter-from-class="-translate-x-[calc(100%+4px)] motion-reduce:translate-x-0"
+            leave-active-class="transition-transform duration-150 ease-in-out motion-reduce:transition-none"
+            leave-to-class="-translate-x-[calc(100%+4px)] motion-reduce:translate-x-0"
           >
             <div
-              v-if="store.sidebarPeek"
+              v-show="store.sidebarPeek"
               data-sidebar-peek-panel
               class="absolute inset-y-1 start-1 overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl"
               :style="{ width: `${sidebarWidth}px` }"

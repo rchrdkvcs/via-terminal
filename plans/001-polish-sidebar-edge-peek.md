@@ -60,10 +60,11 @@ const fallback: LocalPreferences = {
   visible de la sidebar.
 - Révéler le panneau après **100 ms**, sans indicateur intermédiaire susceptible
   de produire un clignotement visuel.
-- Faire entrer le panneau depuis `translateX(-12px)` et `opacity: 0` pendant
-  **200 ms** avec la courbe drawer
-  `cubic-bezier(0.32, 0.72, 0, 1)`. Il doit repartir en **160 ms** avec la même
-  courbe. Ne plus le faire parcourir `-100%` de sa largeur.
+- Reprendre le mouvement du mode compact de Zen Browser : entrée depuis
+  `translateX(calc(-100% - 4px))` pendant **250 ms** avec sa courbe spring
+  `linear()` exacte, puis sortie en **150 ms ease-in-out**. Le panneau ne
+  change pas d’opacité. Source :
+  https://github.com/zen-browser/desktop/blob/3655afb/src/zen/compact-mode/sidebar.inc.css
 - Conserver l’interruptibilité via `<Transition>` et des transitions CSS.
 - En réduction de mouvement, supprimer la transition et le déplacement,
   conformément à `docs/TECHNICAL.md`.
@@ -80,10 +81,10 @@ valeurs ne doivent pas changer) :
   @pointerleave="scheduleHide"
 >
   <Transition
-    enter-active-class="transition-[transform,opacity] duration-200 [transition-timing-function:cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
-    enter-from-class="-translate-x-3 opacity-0 motion-reduce:translate-x-0"
-    leave-active-class="transition-[transform,opacity] duration-160 [transition-timing-function:cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
-    leave-to-class="-translate-x-3 opacity-0 motion-reduce:translate-x-0"
+    enter-active-class="transition-transform duration-250 [transition-timing-function:var(--ease-zen-compact)] motion-reduce:transition-none"
+    enter-from-class="-translate-x-[calc(100%+4px)] motion-reduce:translate-x-0"
+    leave-active-class="transition-transform duration-150 ease-in-out motion-reduce:transition-none"
+    leave-to-class="-translate-x-[calc(100%+4px)] motion-reduce:translate-x-0"
   >
     <div
       v-if="store.sidebarPeek"
@@ -117,9 +118,9 @@ valeurs ne doivent pas changer) :
    préférence utilisateur reste la source de vérité.
 3. Ne pas ajouter d’indicateur intermédiaire dans la zone d’activation : le
    panneau est le seul retour visuel.
-4. Dans `src/App.vue:250-255`, remplacer la translation en pourcentage et le
-   timing de 100 ms par les quatre classes d’entrée/sortie exactes de la cible.
-   Utiliser `transform` plutôt que la propriété CSS indépendante `translate`.
+4. Dans `src/App.vue:250-255`, utiliser les quatre classes d’entrée/sortie
+   exactes de la cible et conserver le panneau monté avec `v-show`. Déclarer la
+   courbe `--ease-zen-compact` dans `src/styles.css` à partir de la source Zen.
 5. Vérifier que le resize handle de `src/App.vue:264-281` reste au bord droit
    du panneau ouvert et que son `@pointerenter="scheduleReveal"` est conservé.
 6. Dans `src/lib/preferences.ts:33`, passer la valeur de repli
@@ -156,8 +157,8 @@ valeurs ne doivent pas changer) :
   - le panneau apparaît après 100 ms sans indicateur ni clignotement préalable ;
   - le panneau est séparé de 4 px en haut, en bas et à gauche et recouvre
     visuellement de 4 px la marge intérieure de 8 px du layout ;
-  - l’entrée part seulement de 12 px vers la gauche, sans balayage brutal sur
-    toute la largeur ;
+  - l’entrée reprend le glissement complet et le très léger dépassement final
+    de Zen Browser, sans fondu ;
   - quitter puis rentrer rapidement ne fait ni clignoter ni repartir le panneau
     depuis `-100%`.
   - Dans DevTools, régler la lecture des animations à 10 % et confirmer que le
