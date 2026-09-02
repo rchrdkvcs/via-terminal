@@ -14,7 +14,7 @@ const ResizablePanelGroupStub = defineComponent({
 
 const stubs = {
   ResizablePanelGroup: ResizablePanelGroupStub,
-  ResizablePanel: { template: '<div><slot /></div>' },
+  ResizablePanel: { template: '<div data-panel><slot /></div>' },
   ResizableHandle: true,
   TerminalPane: true,
 }
@@ -58,5 +58,43 @@ describe('resizable terminal layouts', () => {
     await wrapper.vm.$nextTick()
 
     expect(setRatio).toHaveBeenCalledWith('group-split', 0.6)
+  })
+
+  it('lets every panel fill the available height', () => {
+    const store = useAppStore()
+    store.tabs.push(
+      {
+        id: 'one',
+        root: { kind: 'pane', id: 'first', sessionId: 'one' },
+      } as (typeof store.tabs)[number],
+      {
+        id: 'two',
+        root: { kind: 'pane', id: 'second', sessionId: 'two' },
+      } as (typeof store.tabs)[number],
+    )
+    const paneNode: PaneNode = {
+      kind: 'split',
+      id: 'split',
+      direction: 'horizontal',
+      ratio: 0.5,
+      first: { kind: 'pane', id: 'first', sessionId: 'one' },
+      second: { kind: 'pane', id: 'second', sessionId: 'two' },
+    }
+    const groupNode: RuntimeSplitTree = {
+      kind: 'split',
+      id: 'group-split',
+      direction: 'horizontal',
+      ratio: 0.5,
+      first: { kind: 'tab', tabId: 'one' },
+      second: { kind: 'tab', tabId: 'two' },
+    }
+    const wrappers = [
+      mount(PaneLayout, { props: { node: paneNode, closable: true }, global: { stubs } }),
+      mount(SplitGroupLayout, { props: { node: groupNode }, global: { stubs } }),
+    ]
+
+    for (const wrapper of wrappers)
+      for (const panel of wrapper.findAll('[data-panel]'))
+        expect(panel.classes()).toEqual(expect.arrayContaining(['flex', 'min-h-0', 'min-w-0']))
   })
 })
