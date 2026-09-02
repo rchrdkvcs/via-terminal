@@ -74,7 +74,7 @@ function openContextMenu() {
     />
     <button
       v-else
-      class="flex h-8 w-full min-w-0 items-center gap-2 rounded-md p-2 text-start text-sm transition-colors hover:bg-sidebar-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+      class="flex h-9 w-full min-w-0 items-center gap-2 rounded-md px-2.5 py-2 text-start text-sm transition-colors hover:bg-sidebar-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
       :aria-expanded="!store.workspaceContentCollapsed"
       aria-controls="workspace-sidebar-content"
       @click="store.toggleWorkspaceContent()"
@@ -124,7 +124,7 @@ function openContextMenu() {
             role="radio"
             :aria-checked="store.activeWorkspace?.icon === name"
             :aria-label="name"
-            class="grid aspect-square place-items-center rounded-md hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="grid min-h-8 aspect-square place-items-center rounded-md hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             :class="store.activeWorkspace?.icon === name ? 'bg-accent' : 'text-muted-foreground'"
             @click="
               store.activeWorkspace &&

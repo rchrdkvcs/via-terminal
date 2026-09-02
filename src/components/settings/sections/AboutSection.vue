@@ -34,7 +34,7 @@ const facts = computed(() => [
 <template>
   <SettingsSection title="À propos" description="Via, terminal natif pour techniciens.">
     <SettingRow v-for="fact in facts" :key="fact.label" :label="fact.label">
-      <span class="font-mono text-xs text-muted-foreground">{{ fact.value }}</span>
+      <span class="break-words font-mono text-xs text-muted-foreground">{{ fact.value }}</span>
     </SettingRow>
   </SettingsSection>
 </template>

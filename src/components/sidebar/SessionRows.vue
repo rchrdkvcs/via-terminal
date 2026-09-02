@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useAppStore } from '@/stores/app'
 import TabRow from './TabRow.vue'
-import { registerSidebarDrop } from '@/lib/sidebar-dnd'
+import { activeDrag, registerSidebarDrop } from '@/lib/sidebar-dnd'
 
 const props = withDefaults(defineProps<{ pinned?: boolean }>(), { pinned: false })
 const store = useAppStore()
@@ -92,8 +92,8 @@ onBeforeUnmount(() => cleanupDrop?.())
     />
     <li
       ref="endDrop"
-      class="h-7 rounded-md transition-colors duration-100"
-      :class="store.tabs.length ? '' : 'bg-sidebar-accent/30'"
+      class="rounded-md transition-[height,background-color] duration-100"
+      :class="rows.length || activeDrag?.type === 'tab' ? 'h-7' : 'h-0'"
       data-drop-zone="temporary-end"
       aria-hidden="true"
     />

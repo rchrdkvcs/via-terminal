@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { FolderInput, Minus, Pencil, Pin, PinOff, SquareTerminal, Unlink, X } from '@lucide/vue'
+import { FolderInput, Minus, Pencil, Pin, PinOff, Terminal, Unlink, X } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -136,7 +136,6 @@ function runTrailingAction() {
       :tabindex="id === store.activeTabId ? 0 : -1"
       :is-active="id === store.activeTabId"
       :title="detail || label"
-      :style="{ paddingInlineStart: `${8 + (depth ?? 0) * 12}px` }"
       class="touch-none"
       @click="store.selectTab(id)"
       @auxclick.middle.prevent="store.closeTab(id)"
@@ -144,7 +143,7 @@ function runTrailingAction() {
       @keydown.alt.down.prevent="emit('move', 1)"
     >
       <span class="relative flex shrink-0 items-center">
-        <SquareTerminal :stroke-width="1.5" class="text-sidebar-foreground/60" />
+        <Terminal :size="16" :stroke-width="1.5" class="text-sidebar-foreground/60" />
         <span
           class="absolute -end-0.5 -bottom-0.5 size-1.5 rounded-full ring-2 ring-sidebar"
           :class="{

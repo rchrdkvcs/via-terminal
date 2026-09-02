@@ -21,7 +21,7 @@ const store = useAppStore()
     <div
       v-for="resource in store.workspaceResources"
       :key="resource.id"
-      class="flex items-center gap-3 py-3"
+      class="flex flex-wrap items-center gap-3 py-3"
     >
       <Server :size="16" :stroke-width="1.5" class="shrink-0 text-muted-foreground" />
       <div class="min-w-0 flex-1">
@@ -34,7 +34,7 @@ const store = useAppStore()
       <Button
         variant="ghost"
         size="sm"
-        class="shrink-0 active:scale-[0.96]"
+        class="ms-7 shrink-0 active:scale-[0.96] sm:ms-0"
         :disabled="!resource.identityId"
         @click="store.openTarget('resource', resource.id, { reuse: false })"
       >

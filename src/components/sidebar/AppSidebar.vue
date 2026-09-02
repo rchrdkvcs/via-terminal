@@ -126,14 +126,15 @@ function treeHint() {
             :class="[
               store.pinnedTabs.length || store.tree.length || draggingTab()
                 ? 'min-h-12 p-2 py-1'
-                : 'h-0 overflow-hidden',
+                : 'h-0 overflow-hidden p-0',
               treeHint(),
             ]"
             aria-label="Épinglés et dossiers"
           >
-            <div class="min-h-8">
+            <div>
               <PinnedArea />
               <div
+                v-if="store.pinnedTabs.length || store.tree.length || draggingTab()"
                 ref="pinnedDrop"
                 data-drop-zone="pinned-root"
                 class="flex h-8 items-center justify-center rounded-md text-xs text-sidebar-foreground/50 transition-colors duration-100"
@@ -148,7 +149,7 @@ function treeHint() {
         </div>
       </Transition>
 
-      <SidebarGroup class="p-2 py-1" aria-label="Créer un terminal">
+      <SidebarGroup class="px-2 py-1" aria-label="Créer un terminal">
         <SidebarMenuItem>
           <SidebarMenuButton class="text-sidebar-foreground/70" @click="store.createTerminal()">
             <Plus :stroke-width="1.5" />
@@ -162,7 +163,7 @@ function treeHint() {
         </SidebarMenuItem>
       </SidebarGroup>
 
-      <SidebarGroup class="p-2 py-1" aria-label="Sessions ouvertes">
+      <SidebarGroup class="px-2 py-1" aria-label="Sessions ouvertes">
         <SessionRows />
       </SidebarGroup>
     </SidebarContent>

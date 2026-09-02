@@ -116,7 +116,6 @@ function choose(action: Action) {
     v-model:open="store.paletteOpen"
     title="Via"
     description="Rechercher une action, une ressource, un espace…"
-    class="bg-neutral-950 text-neutral-100 border-neutral-800"
   >
     <CommandInput placeholder="Rechercher une action, une ressource, un espace…" />
     <CommandList class="max-h-[min(28rem,70vh)]">
@@ -131,7 +130,9 @@ function choose(action: Action) {
         >
           <component :is="action.icon" :size="15" :stroke-width="1.5" />
           <span class="truncate">{{ action.label }}</span>
-          <span class="ms-auto truncate text-xs text-muted-foreground">{{ action.detail }}</span>
+          <span class="ms-auto truncate text-xs text-muted-foreground" :title="action.detail">
+            {{ action.detail }}
+          </span>
         </CommandItem>
       </CommandGroup>
 
@@ -144,7 +145,9 @@ function choose(action: Action) {
         >
           <component :is="action.icon" :size="15" :stroke-width="1.5" />
           <span class="truncate">{{ action.label }}</span>
-          <span class="ms-auto truncate text-xs text-muted-foreground">{{ action.detail }}</span>
+          <span class="ms-auto truncate text-xs text-muted-foreground" :title="action.detail">
+            {{ action.detail }}
+          </span>
         </CommandItem>
       </CommandGroup>
 
@@ -157,7 +160,9 @@ function choose(action: Action) {
         >
           <component :is="action.icon" :size="15" :stroke-width="1.5" />
           <span class="truncate">{{ action.label }}</span>
-          <span class="ms-auto truncate text-xs text-muted-foreground">{{ action.detail }}</span>
+          <span class="ms-auto truncate text-xs text-muted-foreground" :title="action.detail">
+            {{ action.detail }}
+          </span>
         </CommandItem>
       </CommandGroup>
     </CommandList>

@@ -149,7 +149,7 @@ onBeforeUnmount(() => cleanupStrip?.())
         <Tooltip>
           <TooltipTrigger as-child>
             <button
-              class="grid size-7 place-items-center rounded-md transition-[background-color,color,transform,opacity] duration-150"
+              class="grid size-8 place-items-center rounded-md transition-[background-color,color,transform,opacity] duration-150"
               :class="
                 workspace.id === store.activeWorkspaceId
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground'
