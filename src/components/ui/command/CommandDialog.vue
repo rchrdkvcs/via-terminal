@@ -32,6 +32,7 @@ const forwarded = useForwardPropsEmits(props, emits)
   <Dialog v-slot="slotProps" v-bind="forwarded">
     <DialogContent
       :show-close-button="false"
+      overlay-class="bg-black/55"
       :class="['overflow-hidden p-0 sm:max-w-2xl', props.class]"
     >
       <DialogHeader class="sr-only">
