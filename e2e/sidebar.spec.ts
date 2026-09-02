@@ -16,7 +16,7 @@ test('hidden sidebar has a generous edge target and a detached overlay', async (
     }
     store.sidebarPinned = false
     store.sidebarPeek = false
-    store.preferences.sidebarRevealDelay = 300
+    store.preferences.sidebarRevealDelay = 100
   })
 
   const zone = page.locator('[data-sidebar-peek-zone]')
@@ -26,7 +26,6 @@ test('hidden sidebar has a generous edge target and a detached overlay', async (
   const zoneBox = await zone.boundingBox()
   if (!zoneBox) throw new Error('sidebar peek zone is not visible')
   await page.mouse.move(12, zoneBox.y + zoneBox.height / 2)
-  await expect(page.locator('[data-sidebar-peek-indicator]')).toHaveCSS('opacity', '1')
 
   const panel = page.locator('[data-sidebar-peek-panel]')
   await expect(panel).toBeVisible()

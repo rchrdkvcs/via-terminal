@@ -58,9 +58,8 @@ const fallback: LocalPreferences = {
   4 px le début du contenu.
 - Porter la zone d’activation cachée à **32 px**, sans changer la largeur
   visible de la sidebar.
-- Donner une réponse immédiate au survol grâce à un indicateur de bord de 2 px
-  (opacité + léger déplacement uniquement), puis révéler le panneau après
-  **100 ms**.
+- Révéler le panneau après **100 ms**, sans indicateur intermédiaire susceptible
+  de produire un clignotement visuel.
 - Faire entrer le panneau depuis `translateX(-12px)` et `opacity: 0` pendant
   **200 ms** avec la courbe drawer
   `cubic-bezier(0.32, 0.72, 0, 1)`. Il doit repartir en **160 ms** avec la même
@@ -74,17 +73,12 @@ valeurs ne doivent pas changer) :
 
 ```vue
 <div
-  class="group/peek absolute inset-y-0 start-0 z-40"
+  class="absolute inset-y-0 start-0 z-40"
   :style="{ width: store.sidebarPeek ? `${sidebarWidth + 4}px` : '32px' }"
   :aria-hidden="store.sidebarPeek ? undefined : 'true'"
   @pointerenter="scheduleReveal"
   @pointerleave="scheduleHide"
 >
-  <span
-    v-if="!store.sidebarPeek"
-    class="pointer-events-none absolute inset-y-3 start-1 w-0.5 -translate-x-1 rounded-full bg-foreground/20 opacity-0 transition-[transform,opacity] duration-150 ease-out group-hover/peek:translate-x-0 group-hover/peek:opacity-100 motion-reduce:transform-none"
-    aria-hidden="true"
-  />
   <Transition
     enter-active-class="transition-[transform,opacity] duration-200 [transition-timing-function:cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
     enter-from-class="-translate-x-3 opacity-0 motion-reduce:translate-x-0"
@@ -97,10 +91,6 @@ valeurs ne doivent pas changer) :
       :style="{ width: `${sidebarWidth}px` }"
     >
 ```
-
-Ajouter `group/peek` au conteneur d’activation pour piloter l’indicateur. Si
-Tailwind refuse la variante de groupe nommée sous cette forme, utiliser un
-simple état local `edgeHovered` et les événements existants, sans dépendance.
 
 ## Repo conventions to follow
 
@@ -120,14 +110,13 @@ simple état local `edgeHovered` et les événements existants, sans dépendance
 ## Steps
 
 1. Dans `src/App.vue:243`, conserver la zone d’activation sur
-   `inset-y-0 start-0`, la nommer `group/peek`, puis positionner le panneau
-   interne avec `absolute inset-y-1 start-1`.
+   `inset-y-0 start-0`, puis positionner le panneau interne avec
+   `absolute inset-y-1 start-1`.
 2. Dans `src/App.vue:245`, remplacer la largeur cachée `20px` par `32px`.
    Garder exactement `sidebarWidth` lorsque `sidebarPeek` est vrai afin que la
    préférence utilisateur reste la source de vérité.
-3. Juste avant `<Transition>`, ajouter l’indicateur non interactif décrit dans
-   la cible. Il ne doit exister que lorsque `sidebarPeek` est faux, ne doit pas
-   intercepter les événements et doit être `aria-hidden`.
+3. Ne pas ajouter d’indicateur intermédiaire dans la zone d’activation : le
+   panneau est le seul retour visuel.
 4. Dans `src/App.vue:250-255`, remplacer la translation en pourcentage et le
    timing de 100 ms par les quatre classes d’entrée/sortie exactes de la cible.
    Utiliser `transform` plutôt que la propriété CSS indépendante `translate`.
@@ -164,7 +153,7 @@ simple état local `edgeHovered` et les événements existants, sans dépendance
   `get_run_environments`; ne jamais lancer un serveur de développement),
   masquer la sidebar puis confirmer :
   - le pointeur est capté jusqu’à 32 px depuis le bord gauche ;
-  - l’indicateur apparaît immédiatement et le panneau suit après 100 ms ;
+  - le panneau apparaît après 100 ms sans indicateur ni clignotement préalable ;
   - le panneau est séparé de 4 px en haut, en bas et à gauche et recouvre
     visuellement de 4 px la marge intérieure de 8 px du layout ;
   - l’entrée part seulement de 12 px vers la gauche, sans balayage brutal sur
