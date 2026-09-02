@@ -7,8 +7,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import InlineRenameInput from './InlineRenameInput.vue'
 import { useAppStore } from '@/stores/app'
 import { registerSidebarDragAndDrop } from '@/lib/sidebar-dnd'
 
@@ -30,7 +30,7 @@ const emit = defineEmits<{
 const store = useAppStore()
 const editing = ref(false)
 const draft = ref('')
-const input = ref<InstanceType<typeof Input> | null>(null)
+const input = ref<InstanceType<typeof InlineRenameInput> | null>(null)
 const menuOpen = ref(false)
 const isGrouped = () => store.splitGroups.some((group) => group.tabIds.includes(props.id))
 const dragHint = ref<'before' | 'after' | 'left' | 'right' | 'top' | 'bottom' | null>(null)
@@ -155,12 +155,11 @@ function runTrailingAction() {
           aria-hidden="true"
         />
       </span>
-      <Input
+      <InlineRenameInput
         v-if="editing"
         ref="input"
         v-model="draft"
-        class="h-6 min-w-0 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-        aria-label="Nom de l’onglet"
+        label="Nom de l’onglet"
         @click.stop
         @keydown.enter.prevent="commitRename"
         @keydown.esc.prevent="editing = false"

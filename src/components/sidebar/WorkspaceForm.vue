@@ -1,8 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Check, ChevronLeft } from '@lucide/vue'
+import { Check } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { workspaceIconNames, workspaceIcons } from '@/lib/icons'
 import { useAppStore } from '@/stores/app'
 
@@ -27,7 +35,6 @@ const shellOptions = computed(() =>
     Boolean,
   ),
 )
-const choosingIcon = ref(false)
 const submitting = ref(false)
 
 async function submit() {
@@ -49,7 +56,6 @@ async function submit() {
 
 function selectIcon(value: string) {
   icon.value = value
-  choosingIcon.value = false
 }
 </script>
 
@@ -64,55 +70,54 @@ function selectIcon(value: string) {
       </p>
     </div>
 
-    <div v-if="choosingIcon" class="space-y-3">
-      <Button variant="ghost" size="sm" class="gap-2" @click="choosingIcon = false">
-        <ChevronLeft :size="15" />Retour
-      </Button>
-      <div class="grid grid-cols-7 gap-1" role="radiogroup" aria-label="Icône">
-        <button
-          v-for="value in workspaceIconNames"
-          :key="value"
-          role="radio"
-          :aria-checked="icon === value"
-          :aria-label="value"
-          class="grid aspect-square place-items-center rounded-md hover:bg-sidebar-accent"
-          :class="icon === value ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''"
-          @click="selectIcon(value)"
-        >
-          <component :is="workspaceIcons[value]" :size="16" :stroke-width="1.5" />
-        </button>
-      </div>
-    </div>
-
-    <div v-else class="space-y-2">
+    <div class="space-y-2">
       <div class="flex items-center gap-2 rounded-lg bg-sidebar-accent/50 p-2">
-        <button
-          class="grid size-6 shrink-0 place-items-center rounded border border-dashed border-sidebar-foreground/40"
-          aria-label="Choisir une icône"
-          @click="choosingIcon = true"
-        >
-          <component :is="workspaceIcons[icon]" :size="14" :stroke-width="1.5" />
-        </button>
+        <Popover>
+          <PopoverTrigger as-child>
+            <Button variant="outline" size="icon-sm" aria-label="Choisir une icône">
+              <component :is="workspaceIcons[icon]" :size="14" :stroke-width="1.5" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" class="w-64 p-2">
+            <div class="grid grid-cols-7 gap-1" role="radiogroup" aria-label="Icône">
+              <Button
+                v-for="value in workspaceIconNames"
+                :key="value"
+                variant="ghost"
+                size="icon-sm"
+                role="radio"
+                :aria-checked="icon === value"
+                :aria-label="value"
+                :class="icon === value ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'"
+                @click="selectIcon(value)"
+              >
+                <component :is="workspaceIcons[value]" :size="16" :stroke-width="1.5" />
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
         <Input
           v-model="name"
           autofocus
-          class="h-7 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+          class="h-8 border-sidebar-border bg-sidebar px-2 shadow-xs focus-visible:ring-2"
           placeholder="Nom de l’espace"
           aria-label="Nom de l’espace"
           @keydown.enter="submit"
         />
       </div>
-      <label class="flex items-center gap-2 rounded-lg bg-sidebar-accent/50 p-2 text-sm">
-        <span>Profil</span>
-        <select
-          v-model="defaultShell"
-          class="ms-auto max-w-36 rounded-md bg-sidebar-accent px-2 py-1 text-xs"
-        >
-          <option v-for="shell in shellOptions" :key="shell" :value="shell">
-            {{ shell.split(/[\\/]/).pop() }}
-          </option>
-        </select>
-      </label>
+      <div class="flex items-center gap-2 rounded-lg bg-sidebar-accent/50 p-2 text-sm">
+        <span id="workspace-profile-label">Profil</span>
+        <Select v-model="defaultShell">
+          <SelectTrigger size="sm" class="ms-auto w-40" aria-labelledby="workspace-profile-label">
+            <SelectValue placeholder="Choisir un profil" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="shell in shellOptions" :key="shell" :value="shell">
+              {{ shell.split(/[\\/]/).pop() }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
 
     <div class="mt-auto space-y-2">
