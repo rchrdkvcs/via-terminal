@@ -11,6 +11,18 @@ export type DropZone = 'before' | 'after' | 'into'
 
 export const activeDrag = shallowRef<SidebarDrag | null>(null)
 export const dropHint = shallowRef<string | null>(null)
+let dropHintOwner: string | null = null
+
+export function setDropHint(owner: string, hint: string) {
+  dropHintOwner = owner
+  dropHint.value = hint
+}
+
+export function clearDropHint(owner?: string) {
+  if (owner && owner !== dropHintOwner) return
+  dropHintOwner = null
+  dropHint.value = null
+}
 
 function isSidebarDrag(value: Record<string, unknown>): value is SidebarDrag {
   return (
@@ -76,7 +88,7 @@ export function registerSidebarDragAndDrop(
 
 export function endSidebarDrag() {
   activeDrag.value = null
-  dropHint.value = null
+  clearDropHint()
 }
 
 export function rowZone(
@@ -93,5 +105,5 @@ export function rowZone(
 export const dropZoneClass: Record<DropZone, string> = {
   before: 'shadow-[inset_0_2px_0_0_var(--color-sidebar-ring)]',
   after: 'shadow-[inset_0_-2px_0_0_var(--color-sidebar-ring)]',
-  into: 'ring-2 ring-sidebar-ring ring-inset',
+  into: 'bg-sidebar-ring/30',
 }
