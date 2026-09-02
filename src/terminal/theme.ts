@@ -2,7 +2,7 @@ import type { ITheme } from '@xterm/xterm'
 
 /**
  * xterm paints on a canvas, so it cannot read CSS custom properties. The
- * surfaces below mirror the neutral surface tokens in `styles.css`
+ * surfaces below mirror the stock shadcn neutral tokens in `styles.css`
  * (`--background` and `--foreground`) expressed in sRGB.
  *
  * The ANSI ramp stays in colour on purpose: it belongs to the shell's output,
@@ -46,13 +46,13 @@ const ansiLight = {
   brightWhite: '#171717',
 }
 
-/** neutral-950 elevated terminal surface, neutral-100 text. */
+/** neutral-900 elevated terminal surface, neutral-50 text. */
 const darkTheme: ITheme = {
   ...ansiDark,
-  background: '#0a0a0a',
-  foreground: '#f5f5f5',
+  background: '#171717',
+  foreground: '#fafafa',
   cursor: '#a3a3a3',
-  cursorAccent: '#0a0a0a',
+  cursorAccent: '#171717',
   selectionBackground: '#ffffff2e',
   selectionForeground: '#ffffff',
 }

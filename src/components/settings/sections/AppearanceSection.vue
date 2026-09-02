@@ -37,7 +37,7 @@ const store = useAppStore()
         class="overflow-hidden rounded-lg border bg-[var(--terminal-preview-bg)] p-3"
         :style="{
           '--terminal-preview-bg': store.appearance === 'dark' ? '#0a0a0a' : '#ffffff',
-          color: store.appearance === 'dark' ? '#f5f5f5' : '#171717',
+          color: store.appearance === 'dark' ? '#fafafa' : '#171717',
           fontFamily: `${store.settings.fontFamily}, ${MONO_FONT_STACK}`,
           fontSize: `${store.settings.fontSize}px`,
           lineHeight: 1.2,

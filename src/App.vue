@@ -194,7 +194,7 @@ let closingWindow = false
     @update:open="store.sidebarPinned = $event"
   >
     <DotPattern
-      class="absolute inset-0 text-foreground/[0.14] [mask-image:radial-gradient(ellipse_80%_70%_at_60%_48%,black,transparent)] dark:text-foreground/[0.12]"
+      class="absolute inset-0 text-foreground/[0.09] [mask-image:radial-gradient(ellipse_80%_70%_at_60%_48%,black,transparent)] dark:text-foreground/[0.075]"
     />
 
     <TopBar />
