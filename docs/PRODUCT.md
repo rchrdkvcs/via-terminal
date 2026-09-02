@@ -7,8 +7,9 @@ via terminal is a fast, pleasant native terminal workspace for IT technicians: a
 ## Audience and platform
 
 - Primary audience: IT technicians, support engineers, and system administrators.
-- Official V1 platform: Windows.
-- Architecture must not deliberately prevent later macOS or Linux support.
+- Official V1 platforms: Windows, macOS, and Linux.
+- Architectures: Windows x64, macOS Apple Silicon (arm64), Linux x64.
+- Installers are published on GitHub Releases for each version tag.
 - Distribution is open source under Apache-2.0; no account is required.
 
 ## Core experience
@@ -29,7 +30,7 @@ The exhaustive sidebar contract is in [SIDEBAR.md](./SIDEBAR.md).
 
 ## Terminal and connection behavior
 
-- Each workspace has a default local profile: PowerShell, CMD, WSL, or Zsh-in-WSL.
+- Each workspace has a default local profile: PowerShell, CMD, WSL, or Git Bash on Windows; zsh or bash on macOS; bash, sh, or another detected shell on Linux.
 - New Terminal appends and starts a temporary tab with that profile.
 - Alternative profiles and SSH resources are available from a secondary selector.
 - Activating a stopped favorite starts it immediately unless manual connection is enabled.
@@ -66,4 +67,4 @@ SFTP, port forwarding, tunnels, ProxyJump/bastions, command snippets, multi-mach
 - A usable window appears within 1.5 seconds on the documented reference machine, excluding first-time WebView installation.
 - Workspace data never crosses isolation boundaries implicitly.
 - No terminal content, command history, or SSH password is persisted.
-- The core experience works offline except for intentional remote connections and update checks.
+- The core experience works offline except for intentional remote SSH connections and user-initiated browser downloads of a new GitHub Release. The running app does not check for updates.

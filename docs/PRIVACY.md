@@ -10,7 +10,7 @@ via terminal is local-first and requires no account.
 - Favorites, tab/pane layouts, window state, and preferences
 - Redacted rotating diagnostics
 
-This metadata is not encrypted in V1. Anyone with access to the user's Windows account and application data may be able to read it.
+This metadata is not encrypted in V1. Anyone with access to the user's OS account and the application data directory on that platform may be able to read it.
 
 ## Never stored by via terminal
 
@@ -24,7 +24,7 @@ Private keys and agents remain managed by OpenSSH and the operating system. The 
 
 ## Network activity
 
-via terminal makes network connections when the user starts SSH, explicitly opens a terminal link, or checks for application updates. V1 has no product analytics. Crash or diagnostics submission is voluntary and never automatic.
+via terminal makes network connections when the user starts SSH or explicitly opens a terminal link. The app does not check for updates by itself in this release; users download new versions from GitHub Releases. V1 has no product analytics. Crash or diagnostics submission is voluntary and never automatic.
 
 ## Export and deletion
 

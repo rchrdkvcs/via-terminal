@@ -12,13 +12,15 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import SettingRow from '../SettingRow.vue'
 import SettingsSection from '../SettingsSection.vue'
-import { shellLabel } from '@/lib/shells'
+import { platformDefaultShell, shellLabel } from '@/lib/shells'
 import { useAppStore } from '@/stores/app'
 
 const store = useAppStore()
 
+const currentShell = computed(() => store.settings.defaultShell || platformDefaultShell())
+
 const shellChoices = computed(() => {
-  const current = store.settings.defaultShell || 'powershell.exe'
+  const current = currentShell.value
   const detected = store.detectedShells
   const list = detected.includes(current) ? detected : [current, ...detected]
   return list.length ? list : [current]
@@ -36,7 +38,7 @@ const shellChoices = computed(() => {
       for-id="default-shell"
     >
       <Select
-        :model-value="store.settings.defaultShell"
+        :model-value="currentShell"
         @update:model-value="store.updateSettings({ defaultShell: String($event) })"
       >
         <SelectTrigger id="default-shell" class="w-56"><SelectValue /></SelectTrigger>

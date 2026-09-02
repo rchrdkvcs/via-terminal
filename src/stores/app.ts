@@ -21,13 +21,14 @@ import type {
   Workspace,
 } from '@/ipc/types'
 import { defaultSettings } from '@/ipc/types'
-import { terminals } from '@/terminal/registry'
 import { loadPreferences, savePreferences, type LocalPreferences } from '@/lib/preferences'
+import { MONO_FONT_STACK } from '@/lib/shells'
 import {
   loadSidebarNavigation,
   saveSidebarNavigation,
   type SidebarNavigationState,
 } from '@/lib/sidebar-state'
+import { terminals } from '@/terminal/registry'
 
 export type SessionKind = 'local' | 'ssh'
 const MAIN_WINDOW_ID = '00000000-0000-0000-0000-000000000001'
@@ -610,7 +611,7 @@ export const useAppStore = defineStore('app', () => {
 
   function applyPresentation() {
     terminals.setPresentation({
-      fontFamily: `${settings.value.fontFamily}, ui-monospace, Consolas, monospace`,
+      fontFamily: `${settings.value.fontFamily}, ${MONO_FONT_STACK}`,
       fontSize: settings.value.fontSize,
       cursorStyle: preferences.value.cursorStyle,
       cursorBlink: preferences.value.cursorBlink,

@@ -566,6 +566,8 @@ pub(crate) fn shell_label(executable: &str) -> String {
         "cmd.exe" => "CMD".into(),
         "wsl.exe" => "WSL".into(),
         "zsh" => "Zsh".into(),
+        "fish" => "Fish".into(),
+        "pwsh" => "PowerShell 7".into(),
         "bash.exe" | "bash" => {
             if cfg!(windows) {
                 "Git Bash".into()
