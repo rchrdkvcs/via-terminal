@@ -78,6 +78,7 @@ export function useShortcuts() {
     }
   }
 
-  onMounted(() => window.addEventListener('keydown', handle))
-  onBeforeUnmount(() => window.removeEventListener('keydown', handle))
+  // Capture the chord before xterm consumes it and stops DOM propagation.
+  onMounted(() => window.addEventListener('keydown', handle, true))
+  onBeforeUnmount(() => window.removeEventListener('keydown', handle, true))
 }
