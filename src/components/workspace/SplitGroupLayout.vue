@@ -59,14 +59,18 @@ function resizeWithKeyboard(event: KeyboardEvent) {
       :aria-valuenow="Math.round(node.ratio * 100)"
       aria-valuemin="15"
       aria-valuemax="85"
-      class="relative shrink-0 bg-border transition-colors duration-150 hover:bg-ring focus-visible:bg-ring focus-visible:outline-2 focus-visible:outline-ring"
-      :class="isVertical ? 'w-px cursor-col-resize' : 'h-px cursor-row-resize'"
+      class="group relative z-10 shrink-0 focus-visible:outline-none"
+      :class="isVertical ? 'w-2 cursor-col-resize' : 'h-2 cursor-row-resize'"
       @pointerdown.prevent="startDrag"
       @keydown="resizeWithKeyboard"
     >
       <span
-        class="absolute"
-        :class="isVertical ? '-inset-x-1.5 inset-y-0' : 'inset-x-0 -inset-y-1.5'"
+        class="absolute rounded-full bg-transparent transition-colors duration-150 group-hover:bg-ring group-focus-visible:bg-ring"
+        :class="
+          isVertical
+            ? 'inset-y-0 left-1/2 w-px -translate-x-1/2'
+            : 'inset-x-0 top-1/2 h-px -translate-y-1/2'
+        "
         aria-hidden="true"
       />
     </div>

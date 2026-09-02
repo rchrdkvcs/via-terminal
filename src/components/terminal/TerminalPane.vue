@@ -80,7 +80,7 @@ watch(isActive, (active) => {
 <template>
   <section
     ref="surface"
-    class="relative flex min-h-0 min-w-0 flex-1 flex-col bg-card transition-shadow duration-150"
+    class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/50 bg-card transition-shadow duration-150"
     :aria-label="session?.name ?? 'Terminal'"
     @mousedown="store.selectPane(paneId)"
   >

@@ -268,13 +268,7 @@ let closingWindow = false
 
       <main
         class="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl"
-        :class="
-          store.route === 'settings' ||
-          (store.activeSession &&
-            !['closed', 'failed', 'restorable'].includes(store.activeSession.status))
-            ? 'border border-border/50 bg-card'
-            : ''
-        "
+        :class="store.route === 'settings' ? 'border border-border/50 bg-card' : ''"
       >
         <SettingsPage v-if="store.route === 'settings'" @add-resource="targetDialog = 'resource'" />
 
@@ -288,7 +282,7 @@ let closingWindow = false
                 store.activeSession &&
                 ['closed', 'failed', 'restorable'].includes(store.activeSession.status)
               "
-              class="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-6 text-center"
+              class="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-border/50 bg-card p-6 text-center"
             >
               <p class="max-w-md text-sm leading-relaxed text-muted-foreground">
                 {{ store.activeSession.message || 'Terminal arrêté.' }}
