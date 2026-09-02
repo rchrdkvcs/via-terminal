@@ -73,8 +73,10 @@ These are release-level outcomes. The detailed behavior is defined in [SIDEBAR.m
 
 ## Local terminal
 
-- Start PowerShell, CMD, and WSL; enter Unicode, resize repeatedly, interrupt a process, and exit without orphaned children.
+- On Windows, start PowerShell, CMD, and WSL; enter Unicode, resize repeatedly, interrupt a process, and exit without orphaned children.
 - Start Zsh through an installed WSL distribution and show a useful unavailable state otherwise.
+- On macOS, start zsh and bash; enter Unicode, resize repeatedly, interrupt a process, and exit without orphaned children.
+- On Linux, start bash and sh; enter Unicode, resize repeatedly, interrupt a process, and exit without orphaned children.
 - Run sustained high-volume output while switching workspaces and reorganizing the sidebar; the UI remains responsive.
 - Copy explicitly, paste multiline input unchanged, search output, and open detected URLs only with Ctrl+click.
 
@@ -88,4 +90,4 @@ These are release-level outcomes. The detailed behavior is defined in [SIDEBAR.m
 
 ## Performance reference
 
-Before beta, record Windows version, CPU, RAM, storage, WebView2, and build hash. Measure usable startup under 1.5 seconds excluding first setup, keystroke responsiveness, sustained-output responsiveness, drag responsiveness, and stable memory and process counts after 100 session open/close cycles.
+Before beta, record OS, CPU, RAM, storage, WebView (WebView2, WKWebView, or WebKitGTK), and build hash. Measure usable startup under 1.5 seconds excluding first setup, keystroke responsiveness, sustained-output responsiveness, drag responsiveness, and stable memory and process counts after 100 session open/close cycles.

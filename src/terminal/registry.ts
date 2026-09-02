@@ -10,6 +10,7 @@ import { api, describeError, isNative } from '@/ipc/client'
 import { on } from '@/ipc/events'
 import type { Id } from '@/ipc/types'
 import { concatBytes, decodeBase64 } from '@/lib/base64'
+import { MONO_FONT_STACK } from '@/lib/shells'
 import { terminalTheme } from './theme'
 
 export interface TerminalPresentation {
@@ -66,7 +67,7 @@ class TerminalRegistry {
   private frame: number | null = null
   private subscribed = false
   private presentation: TerminalPresentation = {
-    fontFamily: 'Cascadia Mono, ui-monospace, Consolas, monospace',
+    fontFamily: MONO_FONT_STACK,
     fontSize: 14,
     cursorStyle: 'bar',
     cursorBlink: true,

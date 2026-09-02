@@ -9,6 +9,7 @@ import {
 import SettingRow from '../SettingRow.vue'
 import SettingsSection from '../SettingsSection.vue'
 import { themeLabels } from '@/lib/preferences'
+import { MONO_FONT_STACK } from '@/lib/shells'
 import type { ThemePreference } from '@/ipc/types'
 import { useAppStore } from '@/stores/app'
 
@@ -17,7 +18,7 @@ const store = useAppStore()
 
 <template>
   <SettingsSection title="Apparence" description="Ces choix s’appliquent à toutes les fenêtres.">
-    <SettingRow label="Thème" description="« Système » suit le réglage de Windows." for-id="theme">
+    <SettingRow label="Thème" description="« Système » suit le réglage du système." for-id="theme">
       <Select
         :model-value="store.settings.theme"
         @update:model-value="store.setTheme($event as ThemePreference)"
@@ -37,7 +38,7 @@ const store = useAppStore()
         :style="{
           '--terminal-preview-bg': store.appearance === 'dark' ? '#0a0a0a' : '#ffffff',
           color: store.appearance === 'dark' ? '#fafafa' : '#171717',
-          fontFamily: `${store.settings.fontFamily}, ui-monospace, Consolas, monospace`,
+          fontFamily: `${store.settings.fontFamily}, ${MONO_FONT_STACK}`,
           fontSize: `${store.settings.fontSize}px`,
           lineHeight: 1.2,
         }"

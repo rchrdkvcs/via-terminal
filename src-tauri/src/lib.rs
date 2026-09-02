@@ -226,6 +226,21 @@ fn profile_detect() -> Vec<String> {
         } else if command_exists("bash.exe") {
             shells.push("bash.exe".into());
         }
+    } else {
+        for name in ["zsh", "bash", "fish", "pwsh"] {
+            if !command_exists(name) {
+                continue;
+            }
+            let already_present = shells.iter().any(|existing| {
+                std::path::Path::new(existing)
+                    .file_name()
+                    .and_then(|value| value.to_str())
+                    == Some(name)
+            });
+            if !already_present {
+                shells.push(name.to_string());
+            }
+        }
     }
     shells
 }
@@ -643,7 +658,7 @@ fn window_create(app: tauri::AppHandle) -> Result<(), String> {
         // The native drop target of the webview swallows every HTML5 drag
         // event, which stops the sidebar drag and drop. Windows created here do
         // not inherit `dragDropEnabled` from tauri.conf.json, so set it again.
-        .drag_and_drop(false)
+        .disable_drag_drop_handler()
         .build()
         .map(|_| ())
         .map_err(|error| error.to_string())

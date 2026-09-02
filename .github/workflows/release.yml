@@ -1,0 +1,127 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  quality:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --all-features
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
+
+  publish:
+    needs: quality
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin --bundles dmg
+            rust_targets: aarch64-apple-darwin
+          - platform: ubuntu-22.04
+            args: --bundles appimage,deb
+            rust_targets: ''
+          - platform: windows-latest
+            args: --bundles nsis,msi
+            rust_targets: ''
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils file
+      - name: Install WiX Toolset
+        if: matrix.platform == 'windows-latest'
+        run: |
+          choco install wixtoolset --yes
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files (x86)\WiX Toolset v3.14\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files (x86)\WiX Toolset v3.11\bin"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: pnpm install --frozen-lockfile
+      - name: Version guard
+        shell: node {0}
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
+          const tauri = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8')).version;
+          const cargoToml = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
+          const cargoMatch = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
+          if (!cargoMatch) {
+            console.error('Could not parse version from src-tauri/Cargo.toml');
+            process.exit(1);
+          }
+          const cargo = cargoMatch[1];
+          if (pkg !== tauri || pkg !== cargo) {
+            console.error(`Version mismatch: package.json=${pkg} tauri.conf.json=${tauri} Cargo.toml=${cargo}`);
+            process.exit(1);
+          }
+          if (process.env.REF_TYPE === 'tag') {
+            const tagVersion = process.env.REF_NAME.replace(/^v/, '');
+            if (tagVersion !== pkg) {
+              console.error(`Tag version ${tagVersion} does not match package version ${pkg}`);
+              process.exit(1);
+            }
+          }
+          console.log(`Version ${pkg} is consistent`);
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'via terminal v__VERSION__'
+          releaseBody: |
+            Draft GitHub Release with Windows NSIS/MSI, macOS Apple Silicon DMG, and Linux AppImage/deb.
+
+            Builds are unsigned. On macOS, right-click Open or allow the app in Privacy & Security (ad-hoc signed). Windows SmartScreen may warn.
+
+            There is no in-app updater yet.
+          releaseDraft: true
+          prerelease: true
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: false
+          args: ${{ matrix.args }}

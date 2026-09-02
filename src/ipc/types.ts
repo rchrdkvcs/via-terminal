@@ -4,6 +4,8 @@
  * `#[serde(rename_all = "camelCase")]`, so the names below must stay camelCase.
  */
 
+import { platformDefaultShell } from '@/lib/shells'
+
 export type Id = string
 
 export interface Workspace {
@@ -204,5 +206,5 @@ export const defaultSettings: Settings = {
   theme: 'system',
   fontFamily: 'Cascadia Mono',
   fontSize: 14,
-  defaultShell: 'powershell.exe',
+  defaultShell: platformDefaultShell(),
 }
