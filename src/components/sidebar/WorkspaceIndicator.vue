@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
+import InlineRenameInput from './InlineRenameInput.vue'
 import { workspaceIcon, workspaceIconNames, workspaceIcons } from '@/lib/icons'
 import { useAppStore } from '@/stores/app'
 
@@ -16,7 +16,7 @@ const emit = defineEmits<{ addResource: [] }>()
 const store = useAppStore()
 const editing = ref(false)
 const draft = ref('')
-const input = ref<InstanceType<typeof Input> | null>(null)
+const input = ref<InstanceType<typeof InlineRenameInput> | null>(null)
 const contextTrigger = ref<HTMLButtonElement | null>(null)
 const menuOpen = ref(false)
 
@@ -62,12 +62,12 @@ function openContextMenu() {
 
 <template>
   <div class="relative flex w-full min-w-0 items-center">
-    <Input
+    <InlineRenameInput
       v-if="editing"
       ref="input"
       v-model="draft"
-      class="h-9 min-w-0 flex-1 border-0 bg-sidebar-accent/50 px-2 shadow-none"
-      aria-label="Nom de l’espace de travail"
+      class="h-9 flex-1"
+      label="Nom de l’espace de travail"
       @keydown.enter.prevent="commitRename"
       @keydown.esc.prevent="cancelRename"
       @blur="commitRename"

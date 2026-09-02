@@ -8,8 +8,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import InlineRenameInput from './InlineRenameInput.vue'
 import { nodeIcon } from '@/lib/icons'
 import type { TreeNode } from '@/stores/app'
 import { useAppStore } from '@/stores/app'
@@ -40,7 +40,7 @@ const store = useAppStore()
 const collapsed = computed(() => ({ has: (id: string) => store.isFolderCollapsed(id) }))
 const editing = ref<string | null>(null)
 const draft = ref('')
-const input = ref<InstanceType<typeof Input> | null>(null)
+const input = ref<InstanceType<typeof InlineRenameInput> | null>(null)
 const menuFor = ref<string | null>(null)
 
 function toggle(id: string) {
@@ -324,12 +324,11 @@ const vDropTarget: ObjectDirective<HTMLElement, TreeNode> = {
             />
           </span>
 
-          <Input
+          <InlineRenameInput
             v-if="editing === node.id"
             ref="input"
             v-model="draft"
-            class="h-6 border-0 bg-transparent px-0 py-0 text-sm shadow-none focus-visible:ring-0"
-            aria-label="Nom"
+            label="Nom"
             @click.stop
             @keydown.enter.prevent="commitRename(node)"
             @keydown.esc.prevent="editing = null"
