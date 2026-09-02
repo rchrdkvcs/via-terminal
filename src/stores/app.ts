@@ -1644,7 +1644,7 @@ export const useAppStore = defineStore('app', () => {
   function restoreDefaults(section: string) {
     if (section === 'general') {
       updateSettings({ ...defaultSettings })
-      updatePreferences({ sidebarRevealDelay: 50, sidebarHideDelay: 300, confirmOnClose: true })
+      updatePreferences({ sidebarRevealDelay: 100, sidebarHideDelay: 300, confirmOnClose: true })
     } else if (section === 'appearance') {
       updateSettings({ theme: defaultSettings.theme })
     } else if (section === 'terminal') {
