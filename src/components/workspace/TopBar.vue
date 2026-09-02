@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { usePointerDrag } from '@/composables/usePointerDrag'
 import { Columns2, Maximize2, Minus, PanelLeft, Rows2, Search, Settings, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAppStore } from '@/stores/app'
 
 const store = useAppStore()
+const pointerDrag = usePointerDrag()
 
 async function windowAction(action: 'minimize' | 'maximize' | 'close') {
   const { getCurrentWindow } = await import('@tauri-apps/api/window')
@@ -26,18 +28,11 @@ function prepareDragging(event: PointerEvent) {
   const startX = event.clientX
   const startY = event.clientY
 
-  const cleanup = () => {
-    window.removeEventListener('pointermove', move)
-    window.removeEventListener('pointerup', cleanup)
-  }
-  const move = (moveEvent: PointerEvent) => {
+  pointerDrag.start(event, (moveEvent) => {
     if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) < 4) return
-    cleanup()
+    pointerDrag.stop()
     void startDragging()
-  }
-
-  window.addEventListener('pointermove', move)
-  window.addEventListener('pointerup', cleanup, { once: true })
+  })
 }
 
 function toggleMaximize(event: MouseEvent) {
