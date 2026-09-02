@@ -1,5 +1,84 @@
 import { expect, test } from '@playwright/test'
 
+test('hidden sidebar has a generous edge target and a detached overlay', async ({ page }) => {
+  await page.goto('/')
+
+  await page.evaluate(() => {
+    const app = document.querySelector('#app') as HTMLElement & {
+      __vue_app__: {
+        config: { globalProperties: { $pinia: { _s: Map<string, unknown> } } }
+      }
+    }
+    const store = app.__vue_app__.config.globalProperties.$pinia._s.get('app') as {
+      sidebarPinned: boolean
+      sidebarPeek: boolean
+      preferences: { sidebarRevealDelay: number }
+    }
+    store.sidebarPinned = false
+    store.sidebarPeek = false
+    store.preferences.sidebarRevealDelay = 100
+  })
+
+  const zone = page.locator('[data-sidebar-peek-zone]')
+  await expect(zone).toBeVisible()
+  await expect(zone).toHaveCSS('width', '32px')
+
+  const zoneBox = await zone.boundingBox()
+  if (!zoneBox) throw new Error('sidebar peek zone is not visible')
+  await page.mouse.move(12, zoneBox.y + zoneBox.height / 2)
+
+  const panel = page.locator('[data-sidebar-peek-panel]')
+  await expect(panel).toBeVisible()
+  await expect(panel).toHaveCSS('transform', 'none')
+
+  await page.mouse.move(500, zoneBox.y + zoneBox.height / 2)
+  await page.evaluate(() => {
+    const app = document.querySelector('#app') as HTMLElement & {
+      __vue_app__: {
+        config: { globalProperties: { $pinia: { _s: Map<string, unknown> } } }
+      }
+    }
+    const store = app.__vue_app__.config.globalProperties.$pinia._s.get('app') as {
+      sidebarPeek: boolean
+    }
+    store.sidebarPeek = false
+  })
+  await expect(panel).toBeHidden()
+  await page.mouse.move(28, zoneBox.y + zoneBox.height / 2)
+  await expect(panel).toBeVisible()
+  await expect(panel).toHaveCSS('transform', 'none')
+
+  const panelBox = await panel.boundingBox()
+  if (!panelBox) throw new Error('sidebar peek panel is not visible')
+
+  expect(panelBox.x).toBeCloseTo(4, 0)
+  expect(panelBox.y - zoneBox.y).toBeCloseTo(4, 0)
+  expect(zoneBox.y + zoneBox.height - (panelBox.y + panelBox.height)).toBeCloseTo(4, 0)
+})
+
+test('sidebar peek removes movement when reduced motion is requested', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  await page.evaluate(() => {
+    const app = document.querySelector('#app') as HTMLElement & {
+      __vue_app__: {
+        config: { globalProperties: { $pinia: { _s: Map<string, unknown> } } }
+      }
+    }
+    const store = app.__vue_app__.config.globalProperties.$pinia._s.get('app') as {
+      sidebarPinned: boolean
+      preferences: { sidebarRevealDelay: number }
+    }
+    store.sidebarPinned = false
+    store.preferences.sidebarRevealDelay = 0
+  })
+
+  await page.mouse.move(12, 200)
+  const panel = page.locator('[data-sidebar-peek-panel]')
+  await expect(panel).toBeVisible()
+  await expect(panel).toHaveCSS('transform', 'none')
+})
+
 test('tab drag keeps stable identities when reordering and splitting', async ({ page }) => {
   await page.goto('/')
   await page.getByText('Nouveau terminal').click()

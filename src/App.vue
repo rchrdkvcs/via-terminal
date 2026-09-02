@@ -241,21 +241,23 @@ let closingWindow = false
       -->
       <template v-if="!store.sidebarPinned && store.route === 'workspace'">
         <div
+          data-sidebar-peek-zone
           class="absolute inset-y-0 start-0 z-40"
-          :style="{ width: store.sidebarPeek ? `${sidebarWidth}px` : '20px' }"
+          :style="{ width: store.sidebarPeek ? `${sidebarWidth + 4}px` : '32px' }"
           :aria-hidden="store.sidebarPeek ? undefined : 'true'"
           @pointerenter="scheduleReveal"
           @pointerleave="scheduleHide"
         >
           <Transition
-            enter-active-class="transition-[translate,opacity] duration-100 ease-out"
-            enter-from-class="-translate-x-full opacity-0"
-            leave-active-class="transition-[translate,opacity] duration-100 ease-out"
-            leave-to-class="-translate-x-full opacity-0"
+            enter-active-class="transition-transform duration-250 [transition-timing-function:var(--ease-zen-compact)] motion-reduce:transition-none"
+            enter-from-class="-translate-x-[calc(100%+4px)] motion-reduce:translate-x-0"
+            leave-active-class="transition-transform duration-150 ease-in-out motion-reduce:transition-none"
+            leave-to-class="-translate-x-[calc(100%+4px)] motion-reduce:translate-x-0"
           >
             <div
-              v-if="store.sidebarPeek"
-              class="h-full overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl"
+              v-show="store.sidebarPeek"
+              data-sidebar-peek-panel
+              class="absolute inset-y-1 start-1 overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl"
               :style="{ width: `${sidebarWidth}px` }"
             >
               <AppSidebar @add-resource="targetDialog = 'resource'" />
