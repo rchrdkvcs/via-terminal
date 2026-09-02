@@ -30,14 +30,18 @@ function saveLayout(layout: number[]) {
     class="min-h-0 min-w-0 flex-1"
     @layout="saveLayout"
   >
-    <ResizablePanel :default-size="node.ratio * 100" :min-size="15">
+    <ResizablePanel class="flex min-h-0 min-w-0" :default-size="node.ratio * 100" :min-size="15">
       <PaneLayout :node="node.first" :closable="true" />
     </ResizablePanel>
     <ResizableHandle
       class="mx-1 data-[orientation=vertical]:my-1"
       :aria-label="node.direction === 'vertical' ? 'Largeur des panneaux' : 'Hauteur des panneaux'"
     />
-    <ResizablePanel :default-size="(1 - node.ratio) * 100" :min-size="15">
+    <ResizablePanel
+      class="flex min-h-0 min-w-0"
+      :default-size="(1 - node.ratio) * 100"
+      :min-size="15"
+    >
       <PaneLayout :node="node.second" :closable="true" />
     </ResizablePanel>
   </ResizablePanelGroup>
