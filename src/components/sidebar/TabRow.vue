@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { FolderInput, Minus, Pencil, Pin, PinOff, Terminal, Unlink, X } from '@lucide/vue'
 import {
   DropdownMenu,
@@ -11,7 +11,7 @@ import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/compone
 import InlineRenameInput from './InlineRenameInput.vue'
 import DropRowIndicator from './DropRowIndicator.vue'
 import { useAppStore } from '@/stores/app'
-import { registerSidebarDragAndDrop } from '@/lib/sidebar-dnd'
+import { clearDropHint, dropHint, registerSidebarDragAndDrop, setDropHint } from '@/lib/sidebar-dnd'
 
 const props = defineProps<{
   id: string
@@ -34,7 +34,12 @@ const draft = ref('')
 const input = ref<InstanceType<typeof InlineRenameInput> | null>(null)
 const menuOpen = ref(false)
 const isGrouped = () => store.splitGroups.some((group) => group.tabIds.includes(props.id))
-const dragHint = ref<'before' | 'after' | 'left' | 'right' | 'top' | 'bottom' | null>(null)
+type TabDropHint = 'before' | 'after' | 'left' | 'right' | 'top' | 'bottom'
+const hintPrefix = computed(() => `tab:${props.id}:`)
+const dragHint = computed<TabDropHint | null>(() => {
+  if (!dropHint.value?.startsWith(hintPrefix.value)) return null
+  return dropHint.value.slice(hintPrefix.value.length) as TabDropHint
+})
 const row = ref<HTMLElement | { $el: HTMLElement }>()
 let cleanupDragAndDrop: (() => void) | undefined
 
@@ -78,7 +83,7 @@ function zone(input: { clientX: number; clientY: number }) {
             : y < 0.5
               ? 'before'
               : 'after'
-  ) as typeof dragHint.value
+  ) as TabDropHint
 }
 
 onMounted(() => {
@@ -89,15 +94,18 @@ onMounted(() => {
     { type: 'tab', id: props.id },
     {
       canDrop: (drag) => drag.type === 'tab' && drag.id !== props.id,
-      onMove: (_drag, input) => (dragHint.value = zone(input)),
-      onLeave: () => (dragHint.value = null),
+      onMove: (_drag, input) => {
+        const target = zone(input)
+        if (target) setDropHint(`tab:${props.id}`, `${hintPrefix.value}${target}`)
+      },
+      onLeave: () => clearDropHint(`tab:${props.id}`),
       onDrop: (drag, input) => {
         if (drag.type !== 'tab') return
         const target = zone(input)
         if (target === 'left' || target === 'right' || target === 'top' || target === 'bottom')
           emit('dropTab', { id: drag.id, edge: target })
         else if (target) emit('dropTab', { id: drag.id, zone: target })
-        dragHint.value = null
+        clearDropHint(`tab:${props.id}`)
       },
     },
   )

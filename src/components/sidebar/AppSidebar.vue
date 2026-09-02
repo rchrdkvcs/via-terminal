@@ -18,7 +18,13 @@ import { ArrowDownToLine, Plus } from '@lucide/vue'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { useAppStore } from '@/stores/app'
-import { activeDrag, dropHint, registerSidebarDrop } from '@/lib/sidebar-dnd'
+import {
+  activeDrag,
+  clearDropHint,
+  dropHint,
+  registerSidebarDrop,
+  setDropHint,
+} from '@/lib/sidebar-dnd'
 import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
 
 const emit = defineEmits<{ addResource: [] }>()
@@ -55,8 +61,8 @@ watch(pinnedDrop, (element) => {
   cleanupPinnedDrop?.()
   cleanupPinnedDrop = element
     ? registerSidebarDrop(element, {
-        onMove: () => (dropHint.value = 'tree:into'),
-        onLeave: () => (dropHint.value = null),
+        onMove: () => setDropHint('pinned-root', 'tree:into'),
+        onLeave: () => clearDropHint('pinned-root'),
         onDrop: (drag) => dropAtRoot(drag),
       })
     : undefined

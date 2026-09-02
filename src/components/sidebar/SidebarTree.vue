@@ -16,11 +16,13 @@ import { useAppStore } from '@/stores/app'
 import type { DropZone, SidebarDrag } from '@/lib/sidebar-dnd'
 import {
   activeDrag,
+  clearDropHint,
   dropHint,
   dropZoneClass,
   registerSidebarDrag,
   registerSidebarDrop,
   rowZone,
+  setDropHint,
 } from '@/lib/sidebar-dnd'
 import TabRow from './TabRow.vue'
 import DropRowIndicator from './DropRowIndicator.vue'
@@ -241,9 +243,9 @@ const vDropTarget: ObjectDirective<HTMLElement, TreeNode> = {
           ),
         onMove: (drag, input) => {
           const zone = rowZone(input, element, !props.pinned && node.kind === 'folder')
-          if (allows(drag, node, zone)) dropHint.value = `${node.id}:${zone}`
+          if (allows(drag, node, zone)) setDropHint(`node:${node.id}`, `${node.id}:${zone}`)
         },
-        onLeave: () => (dropHint.value = null),
+        onLeave: () => clearDropHint(`node:${node.id}`),
         onDrop: (drag, input) => {
           const zone = rowZone(input, element, !props.pinned && node.kind === 'folder')
           if (allows(drag, node, zone)) dropOnNode(drag, node, zone)
