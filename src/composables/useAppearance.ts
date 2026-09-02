@@ -1,4 +1,5 @@
 import { watch } from 'vue'
+import { usePreferredDark } from '@vueuse/core'
 import { useAppStore } from '@/stores/app'
 
 /**
@@ -10,6 +11,7 @@ import { useAppStore } from '@/stores/app'
  */
 export function useAppearance() {
   const store = useAppStore()
+  const systemPrefersDark = usePreferredDark()
 
   function suppressTransitions() {
     const style = document.createElement('style')
@@ -31,10 +33,5 @@ export function useAppearance() {
     { immediate: true },
   )
 
-  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
-    const query = window.matchMedia('(prefers-color-scheme: dark)')
-    query.addEventListener('change', (event) => {
-      store.updatePreferences({ systemPrefersDark: event.matches })
-    })
-  }
+  watch(systemPrefersDark, (value) => store.updatePreferences({ systemPrefersDark: value }))
 }

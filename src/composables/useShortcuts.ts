@@ -1,4 +1,4 @@
-import { onBeforeUnmount, onMounted } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import { useAppStore } from '@/stores/app'
 
 /**
@@ -79,6 +79,5 @@ export function useShortcuts() {
   }
 
   // Capture the chord before xterm consumes it and stops DOM propagation.
-  onMounted(() => window.addEventListener('keydown', handle, true))
-  onBeforeUnmount(() => window.removeEventListener('keydown', handle, true))
+  useEventListener(window, 'keydown', handle, { capture: true })
 }

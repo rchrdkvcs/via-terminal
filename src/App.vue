@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useWindowSize } from '@vueuse/core'
 import { Terminal } from '@lucide/vue'
 import AppSidebar from '@/components/sidebar/AppSidebar.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
@@ -22,6 +23,7 @@ import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { useAppearance } from '@/composables/useAppearance'
 import { useShortcuts } from '@/composables/useShortcuts'
+import { usePointerDrag } from '@/composables/usePointerDrag'
 import { isNative } from '@/ipc/client'
 import { terminals } from '@/terminal/registry'
 import { useAppStore } from '@/stores/app'
@@ -33,6 +35,8 @@ useAppearance()
 useShortcuts()
 
 const targetDialog = ref<'resource' | null>(null)
+const { width: windowWidth } = useWindowSize()
+const sidebarDrag = usePointerDrag()
 let unbind: (() => void) | undefined
 
 const closingTab = computed(
@@ -44,25 +48,22 @@ const deletingWorkspace = computed(
 
 const sidebarWidth = computed(() =>
   Math.min(
-    Math.max(240, window.innerWidth * 0.4),
+    Math.max(240, windowWidth.value * 0.4),
     Math.max(180, store.preferences.sidebarWidth || 256),
   ),
 )
-const resizingSidebar = ref(false)
+const resizingSidebar = sidebarDrag.active
 
 function startSidebarResize(event: PointerEvent) {
   if (event.button !== 0) return
   event.preventDefault()
   event.stopPropagation()
   clearPeekTimers()
-  const handle = event.currentTarget as HTMLElement
-  handle.setPointerCapture(event.pointerId)
-  resizingSidebar.value = true
   const origin = event.clientX
   const opened = store.sidebarPinned || store.sidebarPeek
   const originWidth = opened ? sidebarWidth.value : 0
 
-  const move = (moveEvent: PointerEvent) => {
+  sidebarDrag.start(event, (moveEvent) => {
     const next = originWidth + (moveEvent.clientX - origin)
     if (next < 120) {
       store.sidebarPinned = false
@@ -74,15 +75,7 @@ function startSidebarResize(event: PointerEvent) {
       store.sidebarPinned = true
       store.sidebarPeek = false
     }
-  }
-  const stop = () => {
-    resizingSidebar.value = false
-    handle.releasePointerCapture(event.pointerId)
-    handle.removeEventListener('pointermove', move)
-    handle.removeEventListener('pointerup', stop)
-  }
-  handle.addEventListener('pointermove', move)
-  handle.addEventListener('pointerup', stop)
+  })
 }
 
 /**

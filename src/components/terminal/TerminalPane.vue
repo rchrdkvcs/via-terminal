@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useResizeObserver } from '@vueuse/core'
 import { Plug, Terminal as TerminalIcon } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { terminals } from '@/terminal/registry'
@@ -10,7 +11,6 @@ const props = defineProps<{ sessionId: string; paneId: string; closable: boolean
 
 const store = useAppStore()
 const host = ref<HTMLElement>()
-let observer: ResizeObserver | undefined
 let cleanupDrop: (() => void) | undefined
 const surface = ref<HTMLElement>()
 const splitHint = ref<'left' | 'right' | 'top' | 'bottom' | null>(null)
@@ -58,15 +58,12 @@ onMounted(() => {
         splitHint.value = null
       },
     })
-  if (host.value) {
-    observer = new ResizeObserver(() => terminals.requestFit(props.sessionId))
-    observer.observe(host.value)
-  }
 })
+
+useResizeObserver(host, () => terminals.requestFit(props.sessionId))
 
 // The registry keeps the renderer alive; only this view of it goes away.
 onBeforeUnmount(() => {
-  observer?.disconnect()
   cleanupDrop?.()
   terminals.detach(props.sessionId)
 })

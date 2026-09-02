@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { usePointerDrag } from '@/composables/usePointerDrag'
 import PaneLayout from './PaneLayout.vue'
 import type { RuntimeSplitTree } from '@/stores/app'
 import { useAppStore } from '@/stores/app'
@@ -8,7 +9,7 @@ defineOptions({ name: 'SplitGroupLayout' })
 const props = defineProps<{ node: RuntimeSplitTree }>()
 const store = useAppStore()
 const container = ref<HTMLElement>()
-const dragging = ref(false)
+const pointerDrag = usePointerDrag()
 const isVertical = computed(
   () => props.node.kind === 'split' && props.node.direction === 'vertical',
 )
@@ -21,23 +22,12 @@ function startDrag(event: PointerEvent) {
   if (props.node.kind !== 'split' || !container.value) return
   const split = props.node
   const bounds = container.value.getBoundingClientRect()
-  const target = event.currentTarget as HTMLElement
-  target.setPointerCapture(event.pointerId)
-  dragging.value = true
-  const move = (moveEvent: PointerEvent) => {
+  pointerDrag.start(event, (moveEvent) => {
     const ratio = isVertical.value
       ? (moveEvent.clientX - bounds.left) / bounds.width
       : (moveEvent.clientY - bounds.top) / bounds.height
     store.setGroupSplitRatio(split.id, ratio)
-  }
-  const stop = () => {
-    dragging.value = false
-    target.releasePointerCapture(event.pointerId)
-    target.removeEventListener('pointermove', move)
-    target.removeEventListener('pointerup', stop)
-  }
-  target.addEventListener('pointermove', move)
-  target.addEventListener('pointerup', stop)
+  })
 }
 
 function resizeWithKeyboard(event: KeyboardEvent) {
