@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
 import { ChevronDown, ChevronUp, X } from '@lucide/vue'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { InputGroup, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { terminals } from '@/terminal/registry'
 import { useAppStore } from '@/stores/app'
 
 const store = useAppStore()
 const query = ref('')
-const field = ref<InstanceType<typeof Input>>()
+const field = ref<InstanceType<typeof InputGroupInput>>()
 
 function find(direction: 'next' | 'previous') {
   const sessionId = store.activePaneSessionId
@@ -45,46 +44,48 @@ watch(
   >
     <div
       v-if="store.searchOpen"
-      class="absolute end-4 top-3 z-20 flex items-center gap-1 rounded-xl border bg-popover p-1.5 shadow-lg"
+      class="absolute end-4 top-3 z-20 rounded-xl bg-popover p-1.5 shadow-lg"
       role="search"
     >
-      <Input
-        ref="field"
-        v-model="query"
-        class="h-8 w-56"
-        placeholder="Rechercher dans la sortie"
-        aria-label="Rechercher dans la sortie du terminal"
-        @keydown.enter.exact="find('next')"
-        @keydown.shift.enter="find('previous')"
-        @keydown.esc="close"
-      />
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        class="active:scale-[0.96]"
-        aria-label="Occurrence précédente"
-        @click="find('previous')"
-      >
-        <ChevronUp :size="15" :stroke-width="1.5" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        class="active:scale-[0.96]"
-        aria-label="Occurrence suivante"
-        @click="find('next')"
-      >
-        <ChevronDown :size="15" :stroke-width="1.5" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        class="active:scale-[0.96]"
-        aria-label="Fermer la recherche"
-        @click="close"
-      >
-        <X :size="15" :stroke-width="1.5" />
-      </Button>
+      <InputGroup class="w-auto">
+        <InputGroupInput
+          ref="field"
+          v-model="query"
+          class="h-8 w-56"
+          placeholder="Rechercher dans la sortie"
+          aria-label="Rechercher dans la sortie du terminal"
+          @keydown.enter.exact="find('next')"
+          @keydown.shift.enter="find('previous')"
+          @keydown.esc="close"
+        />
+        <InputGroupButton
+          variant="ghost"
+          size="icon-sm"
+          class="active:scale-[0.96]"
+          aria-label="Occurrence précédente"
+          @click="find('previous')"
+        >
+          <ChevronUp :size="15" :stroke-width="1.5" />
+        </InputGroupButton>
+        <InputGroupButton
+          variant="ghost"
+          size="icon-sm"
+          class="active:scale-[0.96]"
+          aria-label="Occurrence suivante"
+          @click="find('next')"
+        >
+          <ChevronDown :size="15" :stroke-width="1.5" />
+        </InputGroupButton>
+        <InputGroupButton
+          variant="ghost"
+          size="icon-sm"
+          class="active:scale-[0.96]"
+          aria-label="Fermer la recherche"
+          @click="close"
+        >
+          <X :size="15" :stroke-width="1.5" />
+        </InputGroupButton>
+      </InputGroup>
     </div>
   </Transition>
 </template>

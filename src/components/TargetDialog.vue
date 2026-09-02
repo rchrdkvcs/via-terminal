@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import {
   Select,
   SelectContent,
@@ -102,13 +102,13 @@ async function submit() {
       </DialogHeader>
 
       <form class="space-y-4" @submit.prevent="submit">
-        <div class="space-y-2">
-          <Label for="target-name">Nom</Label>
+        <Field>
+          <FieldLabel for="target-name">Nom</FieldLabel>
           <Input id="target-name" v-model="name" autofocus placeholder="Production" />
-        </div>
+        </Field>
 
-        <div v-if="sshTargets.length" class="space-y-2">
-          <Label for="target-alias">Alias de votre configuration SSH</Label>
+        <Field v-if="sshTargets.length">
+          <FieldLabel for="target-alias">Alias de votre configuration SSH</FieldLabel>
           <Select @update:model-value="useAlias(String($event))">
             <SelectTrigger id="target-alias">
               <SelectValue placeholder="Choisir un alias existant" />
@@ -119,36 +119,36 @@ async function submit() {
               </SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </Field>
 
         <div class="grid grid-cols-[1fr_5rem] gap-3">
-          <div class="space-y-2">
-            <Label for="target-host">Hôte</Label>
+          <Field>
+            <FieldLabel for="target-host">Hôte</FieldLabel>
             <Input
               id="target-host"
               v-model="host"
               placeholder="srv-01.exemple.net"
               :disabled="Boolean(sshAlias)"
             />
-          </div>
-          <div class="space-y-2">
-            <Label for="target-port">Port</Label>
+          </Field>
+          <Field>
+            <FieldLabel for="target-port">Port</FieldLabel>
             <Input id="target-port" v-model="port" inputmode="numeric" placeholder="22" />
-          </div>
+          </Field>
         </div>
 
-        <div class="space-y-2">
-          <Label for="target-user">Utilisateur</Label>
+        <Field>
+          <FieldLabel for="target-user">Utilisateur</FieldLabel>
           <Input id="target-user" v-model="username" placeholder="admin" />
-        </div>
+        </Field>
 
-        <div class="space-y-2">
-          <Label for="target-key">Fichier de clé</Label>
+        <Field>
+          <FieldLabel for="target-key">Fichier de clé</FieldLabel>
           <Input id="target-key" v-model="identityFile" placeholder="Facultatif" />
-          <p class="text-xs text-muted-foreground">
+          <FieldDescription>
             Les phrases de passe et l’agent restent gérés par OpenSSH.
-          </p>
-        </div>
+          </FieldDescription>
+        </Field>
 
         <DialogFooter>
           <Button type="button" variant="ghost" @click="emit('close')">Annuler</Button>

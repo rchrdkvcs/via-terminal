@@ -14,6 +14,7 @@ import WorkspaceIndicator from './WorkspaceIndicator.vue'
 import WorkspaceForm from './WorkspaceForm.vue'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Plus } from '@lucide/vue'
+import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { useAppStore } from '@/stores/app'
 import { activeDrag, dropHint, registerSidebarDrop } from '@/lib/sidebar-dnd'
@@ -154,11 +155,10 @@ function treeHint() {
           <SidebarMenuButton class="text-sidebar-foreground/70" @click="store.createTerminal()">
             <Plus :stroke-width="1.5" />
             <span>Nouveau terminal</span>
-            <kbd
-              class="ms-auto shrink-0 rounded border px-1 py-px font-mono text-[10px] text-sidebar-foreground/50"
-            >
-              Ctrl T
-            </kbd>
+            <KbdGroup class="ms-auto shrink-0">
+              <Kbd>Ctrl</Kbd>
+              <Kbd>T</Kbd>
+            </KbdGroup>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarGroup>

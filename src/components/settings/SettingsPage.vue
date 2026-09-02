@@ -13,8 +13,26 @@ import {
   SquareTerminal,
 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Separator } from '@/components/ui/separator'
+import { Empty, EmptyDescription } from '@/components/ui/empty'
 import AboutSection from './sections/AboutSection.vue'
 import AppearanceSection from './sections/AppearanceSection.vue'
 import DataSection from './sections/DataSection.vue'
@@ -28,6 +46,7 @@ const emit = defineEmits<{ addResource: [] }>()
 
 const store = useAppStore()
 const filter = ref('')
+const confirmRestore = ref(false)
 
 const sections = [
   {
@@ -67,8 +86,8 @@ const active = computed(
 )
 
 function restoreDefaults() {
-  if (!window.confirm('Rétablir les réglages par défaut de cette section ?')) return
   store.restoreDefaults(active.value.id)
+  confirmRestore.value = false
 }
 </script>
 
@@ -85,19 +104,16 @@ function restoreDefaults() {
       </div>
 
       <div class="px-2 py-2 sm:pt-0">
-        <div class="relative">
-          <Search
-            :size="14"
-            :stroke-width="1.5"
-            class="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
+        <InputGroup>
+          <InputGroupAddon>
+            <Search :size="14" :stroke-width="1.5" />
+          </InputGroupAddon>
+          <InputGroupInput
             v-model="filter"
-            class="h-9 ps-8 text-sm"
             placeholder="Rechercher"
             aria-label="Rechercher un réglage"
           />
-        </div>
+        </InputGroup>
       </div>
 
       <div
@@ -118,9 +134,9 @@ function restoreDefaults() {
           <component :is="section.icon" :size="15" :stroke-width="1.5" class="shrink-0" />
           <span class="truncate">{{ section.label }}</span>
         </button>
-        <p v-if="!matches.length" class="px-2 py-4 text-xs text-muted-foreground">
-          Aucune section ne correspond.
-        </p>
+        <Empty v-if="!matches.length" class="min-w-48 border-0 p-4 sm:min-w-0">
+          <EmptyDescription>Aucune section ne correspond.</EmptyDescription>
+        </Empty>
       </div>
 
       <div class="border-t p-2">
@@ -137,16 +153,20 @@ function restoreDefaults() {
     <!-- Content -->
     <div class="flex min-h-0 min-w-0 flex-1 flex-col bg-card">
       <header class="flex h-12 shrink-0 items-center justify-between gap-3 px-4 sm:px-6">
-        <nav class="flex min-w-0 items-center gap-2 text-sm" aria-label="Fil d’Ariane">
-          <span class="text-muted-foreground">Réglages</span>
-          <span class="text-muted-foreground/60">/</span>
-          <span class="truncate font-medium">{{ active.label }}</span>
-        </nav>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>Réglages</BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem
+              ><BreadcrumbPage>{{ active.label }}</BreadcrumbPage></BreadcrumbItem
+            >
+          </BreadcrumbList>
+        </Breadcrumb>
         <Button
           variant="ghost"
           size="sm"
           class="shrink-0 gap-2 text-muted-foreground active:scale-[0.96]"
-          @click="restoreDefaults"
+          @click="confirmRestore = true"
         >
           <RotateCcw :size="14" :stroke-width="1.5" />
           <span class="hidden md:inline">Rétablir les valeurs par défaut</span>
@@ -167,5 +187,19 @@ function restoreDefaults() {
         </div>
       </div>
     </div>
+    <AlertDialog v-model:open="confirmRestore">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Rétablir les valeurs par défaut ?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Tous les réglages de la section « {{ active.label }} » seront réinitialisés.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annuler</AlertDialogCancel>
+          <AlertDialogAction @click="restoreDefaults">Rétablir</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

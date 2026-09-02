@@ -2,6 +2,17 @@
 import { ref } from 'vue'
 import { Download, Upload } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Textarea } from '@/components/ui/textarea'
 import SettingRow from '../SettingRow.vue'
 import SettingsSection from '../SettingsSection.vue'
@@ -10,16 +21,21 @@ import { useAppStore } from '@/stores/app'
 
 const store = useAppStore()
 const exportMessage = ref('')
+const exportError = ref(false)
 const importPayload = ref('')
 const importMessage = ref('')
+const importError = ref(false)
+const importSummary = ref('')
 
 async function exportData() {
   try {
     const json = await api.exportData()
     await navigator.clipboard.writeText(json)
     exportMessage.value = `Export copié (${(json.length / 1024).toFixed(1)} Ko).`
+    exportError.value = false
   } catch (error) {
     exportMessage.value = describeError(error)
+    exportError.value = true
   }
 }
 
@@ -32,12 +48,23 @@ async function validateAndApply() {
       `${preview.workspaces.length} espace(s)`,
       `${preview.resources.length} ressource(s)`,
     ].join(', ')
-    if (!window.confirm(`Importer ${counts} ? De nouveaux identifiants seront attribués.`)) return
+    importSummary.value = counts
+  } catch (error) {
+    importError.value = true
+    importMessage.value = describeError(error)
+  }
+}
+
+async function applyImport() {
+  try {
     await api.applyImport(importPayload.value)
     await store.refresh()
     importPayload.value = ''
-    importMessage.value = `Import appliqué : ${counts}.`
+    importMessage.value = `Import appliqué : ${importSummary.value}.`
+    importError.value = false
+    importSummary.value = ''
   } catch (error) {
+    importError.value = true
     importMessage.value = describeError(error)
   }
 }
@@ -62,9 +89,9 @@ async function validateAndApply() {
         Copier l’export
       </Button>
     </SettingRow>
-    <p v-if="exportMessage" class="pb-2 text-xs text-muted-foreground" aria-live="polite">
-      {{ exportMessage }}
-    </p>
+    <Alert v-if="exportMessage" :variant="exportError ? 'destructive' : 'default'" class="mb-2"
+      ><AlertDescription>{{ exportMessage }}</AlertDescription></Alert
+    >
 
     <SettingRow
       label="Importer"
@@ -89,10 +116,27 @@ async function validateAndApply() {
           <Upload :stroke-width="1.5" />
           Valider et importer
         </Button>
-        <p v-if="importMessage" class="text-xs text-muted-foreground" aria-live="polite">
-          {{ importMessage }}
-        </p>
       </div>
+      <Alert v-if="importMessage" :variant="importError ? 'destructive' : 'default'" class="mt-3">
+        <AlertDescription>{{ importMessage }}</AlertDescription>
+      </Alert>
     </SettingRow>
+    <AlertDialog
+      :open="Boolean(importSummary)"
+      @update:open="importSummary = $event ? importSummary : ''"
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Importer ces données ?</AlertDialogTitle>
+          <AlertDialogDescription>
+            L’import ajoutera {{ importSummary }}. De nouveaux identifiants seront attribués.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="importSummary = ''">Annuler</AlertDialogCancel>
+          <AlertDialogAction @click="applyImport">Importer</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </SettingsSection>
 </template>

@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { KeyRound, Plus, Server, Trash2 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from '@/components/ui/item'
 import SettingsSection from '../SettingsSection.vue'
 import { useAppStore } from '@/stores/app'
 
@@ -14,43 +24,47 @@ const store = useAppStore()
     title="Ressources SSH"
     description="Via lit votre configuration OpenSSH et ne la modifie jamais. Les clés, les phrases de passe et l’agent restent gérés par OpenSSH."
   >
-    <div v-if="!store.workspaceResources.length" class="py-6 text-sm text-muted-foreground">
-      Aucune ressource SSH dans cet espace de travail.
-    </div>
+    <Empty v-if="!store.workspaceResources.length" class="border-0 py-6">
+      <EmptyHeader>
+        <EmptyMedia variant="icon"><Server /></EmptyMedia>
+        <EmptyTitle>Aucune ressource SSH</EmptyTitle>
+        <EmptyDescription
+          >Ajoutez une ressource pour vous connecter depuis cet espace.</EmptyDescription
+        >
+      </EmptyHeader>
+    </Empty>
 
-    <div
-      v-for="resource in store.workspaceResources"
-      :key="resource.id"
-      class="flex flex-wrap items-center gap-3 py-3"
-    >
-      <Server :size="16" :stroke-width="1.5" class="shrink-0 text-muted-foreground" />
-      <div class="min-w-0 flex-1">
-        <p class="truncate text-sm font-medium">{{ resource.name }}</p>
-        <p class="truncate font-mono text-xs text-muted-foreground">
+    <Item v-for="resource in store.workspaceResources" :key="resource.id" size="sm">
+      <ItemMedia><Server :size="16" :stroke-width="1.5" /></ItemMedia>
+      <ItemContent>
+        <ItemTitle>{{ resource.name }}</ItemTitle>
+        <ItemDescription class="truncate font-mono">
           {{ store.describeTarget('resource', resource.id) }}
-          <span v-if="resource.sshAlias"> · alias {{ resource.sshAlias }}</span>
-        </p>
-      </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        class="ms-7 shrink-0 active:scale-[0.96] sm:ms-0"
-        :disabled="!resource.identityId"
-        @click="store.openTarget('resource', resource.id, { reuse: false })"
-      >
-        Connecter
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        class="shrink-0 text-muted-foreground active:scale-[0.96]"
-        :aria-label="`Supprimer ${resource.name}`"
-        :disabled="!store.nodeIdForTarget(resource.id)"
-        @click="store.deleteNode(store.nodeIdForTarget(resource.id)!)"
-      >
-        <Trash2 :stroke-width="1.5" />
-      </Button>
-    </div>
+          <Badge v-if="resource.sshAlias" variant="secondary">{{ resource.sshAlias }}</Badge>
+        </ItemDescription>
+      </ItemContent>
+      <ItemActions>
+        <Button
+          variant="ghost"
+          size="sm"
+          class="ms-7 shrink-0 active:scale-[0.96] sm:ms-0"
+          :disabled="!resource.identityId"
+          @click="store.openTarget('resource', resource.id, { reuse: false })"
+        >
+          Connecter
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          class="shrink-0 text-muted-foreground active:scale-[0.96]"
+          :aria-label="`Supprimer ${resource.name}`"
+          :disabled="!store.nodeIdForTarget(resource.id)"
+          @click="store.deleteNode(store.nodeIdForTarget(resource.id)!)"
+        >
+          <Trash2 :stroke-width="1.5" />
+        </Button>
+      </ItemActions>
+    </Item>
 
     <div class="pt-4">
       <Button variant="outline" class="active:scale-[0.96]" @click="emit('add')">
@@ -63,26 +77,24 @@ const store = useAppStore()
       <h3 class="pb-2 text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
         Identités
       </h3>
-      <p v-if="!store.workspaceIdentities.length" class="text-sm text-muted-foreground">
-        Aucune identité. Une identité est créée avec chaque ressource.
-      </p>
-      <div
-        v-for="identity in store.workspaceIdentities"
-        :key="identity.id"
-        class="flex items-center gap-3 py-2"
-      >
-        <KeyRound :size="16" :stroke-width="1.5" class="shrink-0 text-muted-foreground" />
-        <div class="min-w-0 flex-1">
-          <p class="truncate text-sm">{{ identity.username }}</p>
-          <p class="truncate font-mono text-xs text-muted-foreground">
+      <Empty v-if="!store.workspaceIdentities.length" class="border-0 py-4">
+        <EmptyDescription
+          >Aucune identité. Une identité est créée avec chaque ressource.</EmptyDescription
+        >
+      </Empty>
+      <Item v-for="identity in store.workspaceIdentities" :key="identity.id" size="sm">
+        <ItemMedia><KeyRound :size="16" :stroke-width="1.5" /></ItemMedia>
+        <ItemContent>
+          <ItemTitle>{{ identity.username }}</ItemTitle>
+          <ItemDescription class="truncate font-mono">
             {{ identity.identityFile ?? 'Clé résolue par OpenSSH' }}
-          </p>
-        </div>
-        <span class="shrink-0 text-xs text-muted-foreground">
+          </ItemDescription>
+        </ItemContent>
+        <Badge variant="secondary" class="shrink-0">
           {{ store.workspaceResources.filter((item) => item.identityId === identity.id).length }}
           ressource(s)
-        </span>
-      </div>
+        </Badge>
+      </Item>
       <p class="pt-2 text-xs text-muted-foreground">
         Aucun mot de passe n’est stocké, journalisé ni exporté.
       </p>
