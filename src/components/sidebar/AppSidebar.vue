@@ -13,6 +13,7 @@ import DropRowIndicator from './DropRowIndicator.vue'
 import WorkspaceBar from './WorkspaceBar.vue'
 import WorkspaceIndicator from './WorkspaceIndicator.vue'
 import WorkspaceForm from './WorkspaceForm.vue'
+import DropZone from '@/components/DropZone.vue'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ArrowDownToLine, Plus } from '@lucide/vue'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
@@ -129,25 +130,25 @@ function hasPinnedItems() {
             <div>
               <PinnedArea />
               <div
+                v-if="hasPinnedItems()"
                 ref="pinnedDrop"
                 data-drop-zone="pinned-root"
-                class="relative flex items-center justify-center text-sidebar-foreground/50 transition-[background-color,border-color,color] duration-100"
-                :class="
-                  hasPinnedItems()
-                    ? 'h-4'
-                    : [
-                        'my-1 min-h-24 flex-col gap-2 rounded-xl border border-dashed border-sidebar-border bg-sidebar-accent/25 px-4 text-center',
-                        dropHint === 'tree:into'
-                          ? 'border-sidebar-ring bg-sidebar-accent/60 text-sidebar-foreground/70'
-                          : '',
-                      ]
-                "
+                class="relative flex h-4 items-center justify-center"
               >
-                <template v-if="!hasPinnedItems()">
-                  <ArrowDownToLine :size="20" :stroke-width="1.5" aria-hidden="true" />
-                  <span class="text-sm">Déposez un onglet ici pour l’épingler</span>
-                </template>
-                <DropRowIndicator v-else-if="dropHint === 'tree:into'" position="after" />
+                <DropRowIndicator v-if="dropHint === 'tree:into'" position="after" />
+              </div>
+              <div v-else ref="pinnedDrop" data-drop-zone="pinned-root" class="my-1 min-h-24">
+                <DropZone
+                  class="h-full min-h-24 border-sidebar-border bg-sidebar-accent/25 text-sidebar-foreground/50"
+                  :class="
+                    dropHint === 'tree:into'
+                      ? 'border-sidebar-ring bg-sidebar-accent/60 text-sidebar-foreground/70'
+                      : ''
+                  "
+                  :icon="ArrowDownToLine"
+                  label="Déposez un onglet ici pour l’épingler"
+                  :active="dropHint === 'tree:into'"
+                />
               </div>
             </div>
           </SidebarGroup>

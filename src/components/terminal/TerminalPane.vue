@@ -1,8 +1,16 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useResizeObserver } from '@vueuse/core'
-import { Plug, Terminal as TerminalIcon } from '@lucide/vue'
+import {
+  PanelBottom,
+  PanelLeft,
+  PanelRight,
+  PanelTop,
+  Plug,
+  Terminal as TerminalIcon,
+} from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import DropZone from '@/components/DropZone.vue'
 import { terminals } from '@/terminal/registry'
 import { useAppStore } from '@/stores/app'
 import { registerSidebarDrop } from '@/lib/sidebar-dnd'
@@ -14,6 +22,16 @@ const host = ref<HTMLElement>()
 let cleanupDrop: (() => void) | undefined
 const surface = ref<HTMLElement>()
 const splitHint = ref<'left' | 'right' | 'top' | 'bottom' | null>(null)
+const splitDrop = computed(() => {
+  const edge = splitHint.value
+  if (!edge) return null
+  return {
+    left: { icon: PanelLeft, label: 'Déposez l’onglet ici pour l’ajouter à gauche' },
+    right: { icon: PanelRight, label: 'Déposez l’onglet ici pour l’ajouter à droite' },
+    top: { icon: PanelTop, label: 'Déposez l’onglet ici pour l’ajouter en haut' },
+    bottom: { icon: PanelBottom, label: 'Déposez l’onglet ici pour l’ajouter en bas' },
+  }[edge]
+})
 
 const session = computed(() => store.sessionById.get(props.sessionId) ?? null)
 const isActive = computed(() => store.activeTab?.activePaneId === props.paneId)
@@ -84,15 +102,18 @@ watch(isActive, (active) => {
     :aria-label="session?.name ?? 'Terminal'"
     @mousedown="store.selectPane(paneId)"
   >
-    <div
-      v-if="splitHint"
-      class="pointer-events-none absolute z-20 rounded-md bg-ring/15 ring-1 ring-ring/50"
+    <DropZone
+      v-if="splitHint && splitDrop"
+      class="absolute z-20 m-2 border-ring bg-card/90 text-foreground shadow-sm"
       :class="{
-        'inset-y-2 left-2 w-[30%]': splitHint === 'left',
-        'inset-y-2 right-2 w-[30%]': splitHint === 'right',
-        'inset-x-2 top-2 h-[30%]': splitHint === 'top',
-        'inset-x-2 bottom-2 h-[30%]': splitHint === 'bottom',
+        'inset-y-0 left-0 w-[30%]': splitHint === 'left',
+        'inset-y-0 right-0 w-[30%]': splitHint === 'right',
+        'inset-x-0 top-0 h-[30%]': splitHint === 'top',
+        'inset-x-0 bottom-0 h-[30%]': splitHint === 'bottom',
       }"
+      :icon="splitDrop.icon"
+      :label="splitDrop.label"
+      active
     />
     <!-- The registry appends its own element here; Vue never owns the xterm DOM. -->
     <div v-show="!isPlaceholder" ref="host" class="terminal-surface min-h-0 flex-1" />

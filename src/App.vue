@@ -227,7 +227,7 @@ let closingWindow = false
             @dblclick="store.updatePreferences({ sidebarWidth: 256 })"
           >
             <span
-              class="absolute top-1/2 end-0.5 h-10 w-0.5 -translate-y-1/2 rounded-full bg-border opacity-0 transition-opacity group-hover:opacity-100"
+              class="sidebar-resize-line absolute inset-y-[15%] end-0.5 w-px rounded-full opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus-visible:opacity-100"
               aria-hidden="true"
             />
           </div>
@@ -277,7 +277,7 @@ let closingWindow = false
             @pointerenter="scheduleReveal"
           >
             <span
-              class="absolute top-1/2 end-0.5 h-10 w-0.5 -translate-y-1/2 rounded-full bg-border opacity-0 transition-opacity group-hover:opacity-100"
+              class="sidebar-resize-line absolute inset-y-[15%] end-0.5 w-px rounded-full opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus-visible:opacity-100"
               aria-hidden="true"
             />
           </div>
@@ -404,3 +404,9 @@ let closingWindow = false
     </AlertDialog>
   </SidebarProvider>
 </template>
+
+<style scoped>
+.sidebar-resize-line {
+  background: linear-gradient(to bottom, transparent, var(--color-border), transparent);
+}
+</style>

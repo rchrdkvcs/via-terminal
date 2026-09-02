@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { usePointerDrag } from '@/composables/usePointerDrag'
-import { Columns2, Maximize2, Minus, PanelLeft, Rows2, Search, Settings, X } from '@lucide/vue'
+import { Maximize2, Minus, PanelLeft, Search, Settings, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -107,38 +107,6 @@ const title = computed(() => {
     </div>
 
     <div class="flex shrink-0 items-center justify-end gap-1">
-      <Tooltip>
-        <TooltipTrigger as-child>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            class="text-muted-foreground active:scale-[0.96]"
-            aria-label="Diviser verticalement"
-            :disabled="!store.activeTab"
-            @click="store.splitActivePane('vertical')"
-          >
-            <Columns2 :stroke-width="1.5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Diviser verticalement</TooltipContent>
-      </Tooltip>
-
-      <Tooltip>
-        <TooltipTrigger as-child>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            class="text-muted-foreground active:scale-[0.96]"
-            aria-label="Diviser horizontalement"
-            :disabled="!store.activeTab"
-            @click="store.splitActivePane('horizontal')"
-          >
-            <Rows2 :stroke-width="1.5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Diviser horizontalement</TooltipContent>
-      </Tooltip>
-
       <Tooltip>
         <TooltipTrigger as-child>
           <Button
