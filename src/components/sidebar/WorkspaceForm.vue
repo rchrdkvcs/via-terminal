@@ -4,6 +4,7 @@ import { Check } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   Select,
   SelectContent,
@@ -53,10 +54,6 @@ async function submit() {
     submitting.value = false
   }
 }
-
-function selectIcon(value: string) {
-  icon.value = value
-}
 </script>
 
 <template>
@@ -79,21 +76,24 @@ function selectIcon(value: string) {
             </Button>
           </PopoverTrigger>
           <PopoverContent align="start" class="w-64 p-2">
-            <div class="grid grid-cols-7 gap-1" role="radiogroup" aria-label="Icône">
-              <Button
+            <ToggleGroup
+              :model-value="icon"
+              type="single"
+              class="grid w-full grid-cols-7 gap-1"
+              aria-label="Icône"
+              @update:model-value="$event && (icon = String($event))"
+            >
+              <ToggleGroupItem
                 v-for="value in workspaceIconNames"
                 :key="value"
-                variant="ghost"
-                size="icon-sm"
-                role="radio"
-                :aria-checked="icon === value"
+                :value="value"
+                size="sm"
                 :aria-label="value"
-                :class="icon === value ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'"
-                @click="selectIcon(value)"
+                class="size-8 rounded-md p-0"
               >
                 <component :is="workspaceIcons[value]" :size="16" :stroke-width="1.5" />
-              </Button>
-            </div>
+              </ToggleGroupItem>
+            </ToggleGroup>
           </PopoverContent>
         </Popover>
         <Input

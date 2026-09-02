@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { usePointerDrag } from '@/composables/usePointerDrag'
 import { Columns2, Maximize2, Minus, PanelLeft, Rows2, Search, Settings, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAppStore } from '@/stores/app'
 
@@ -98,11 +99,10 @@ const title = computed(() => {
         />
         <Search v-else :size="14" :stroke-width="1.5" class="shrink-0" />
         <span class="truncate">{{ title }}</span>
-        <kbd
-          class="ms-auto hidden shrink-0 rounded border px-1 py-px font-mono text-[10px] sm:block"
-        >
-          Ctrl K
-        </kbd>
+        <KbdGroup class="ms-auto hidden shrink-0 sm:inline-flex">
+          <Kbd>Ctrl</Kbd>
+          <Kbd>K</Kbd>
+        </KbdGroup>
       </button>
     </div>
 

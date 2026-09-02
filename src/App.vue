@@ -13,13 +13,24 @@ import TopBar from '@/components/workspace/TopBar.vue'
 import { Button } from '@/components/ui/button'
 import { DotPattern } from '@/components/ui/dot-pattern'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty'
+import { Kbd, KbdGroup } from '@/components/ui/kbd'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { useAppearance } from '@/composables/useAppearance'
@@ -282,20 +293,25 @@ let closingWindow = false
 
           <div v-if="store.activeTab" class="flex min-h-0 flex-1 overflow-hidden">
             <SplitGroupLayout v-if="store.activeSplitGroup" :node="store.activeSplitGroup.root" />
-            <div
+            <Empty
               v-else-if="
                 store.activeSession &&
                 ['closed', 'failed', 'restorable'].includes(store.activeSession.status)
               "
-              class="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-border/50 bg-card p-6 text-center"
+              class="border-border/50 bg-card"
             >
-              <p class="max-w-md text-sm leading-relaxed text-muted-foreground">
-                {{ store.activeSession.message || 'Terminal arrêté.' }}
-              </p>
-              <Button @click="store.startStoppedTab(store.activeTab.id)">
-                {{ store.activeSession.kind === 'ssh' ? 'Reconnecter' : 'Démarrer' }}
-              </Button>
-            </div>
+              <EmptyHeader>
+                <EmptyTitle>Terminal arrêté</EmptyTitle>
+                <EmptyDescription>
+                  {{ store.activeSession.message || 'Cette session n’est plus active.' }}
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button @click="store.startStoppedTab(store.activeTab.id)">
+                  {{ store.activeSession.kind === 'ssh' ? 'Reconnecter' : 'Démarrer' }}
+                </Button>
+              </EmptyContent>
+            </Empty>
             <PaneLayout
               v-else
               :key="store.activeTab.id"
@@ -304,30 +320,33 @@ let closingWindow = false
             />
           </div>
 
-          <div v-else class="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 p-8">
-            <span class="grid size-12 place-items-center text-muted-foreground">
-              <Terminal :size="24" :stroke-width="1.5" />
-            </span>
-            <div class="max-w-sm space-y-2 text-center">
-              <h1 class="text-xl font-semibold tracking-tight">Prêt quand vous l’êtes.</h1>
-              <p class="text-sm leading-relaxed text-muted-foreground">
+          <Empty v-else class="border-0">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Terminal :size="24" :stroke-width="1.5" />
+              </EmptyMedia>
+              <EmptyTitle>Prêt quand vous l’êtes.</EmptyTitle>
+              <EmptyDescription>
                 Ouvrez un terminal local ou reprenez une ressource depuis la barre latérale.
-              </p>
-            </div>
-            <div class="flex items-center gap-3">
-              <Button class="gap-2 active:scale-[0.96]" @click="store.createTerminal()">
-                <Terminal :size="15" :stroke-width="1.5" />
-                Nouveau terminal
-              </Button>
-              <kbd class="rounded border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
-                Ctrl T
-              </kbd>
-            </div>
-            <p v-if="!isNative()" class="text-xs text-muted-foreground">
-              Aperçu navigateur : lancez <code class="font-mono">pnpm tauri dev</code> pour des
-              terminaux réels.
-            </p>
-          </div>
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <div class="flex items-center gap-3">
+                <Button class="gap-2 active:scale-[0.96]" @click="store.createTerminal()">
+                  <Terminal :size="15" :stroke-width="1.5" />
+                  Nouveau terminal
+                </Button>
+                <KbdGroup>
+                  <Kbd>Ctrl</Kbd>
+                  <Kbd>T</Kbd>
+                </KbdGroup>
+              </div>
+              <EmptyDescription v-if="!isNative()">
+                Aperçu navigateur : lancez <code class="font-mono">pnpm tauri dev</code> pour des
+                terminaux réels.
+              </EmptyDescription>
+            </EmptyContent>
+          </Empty>
         </template>
       </main>
     </div>
@@ -336,50 +355,50 @@ let closingWindow = false
     <TargetDialog :mode="targetDialog" @close="targetDialog = null" />
     <Toaster position="bottom-right" :duration="6000" close-button />
 
-    <Dialog
+    <AlertDialog
       :open="Boolean(deletingWorkspace)"
       @update:open="store.pendingWorkspaceDelete = $event ? store.pendingWorkspaceDelete : null"
     >
-      <DialogContent class="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Supprimer « {{ deletingWorkspace?.name }} » ?</DialogTitle>
-          <DialogDescription>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Supprimer « {{ deletingWorkspace?.name }} » ?</AlertDialogTitle>
+          <AlertDialogDescription>
             L’espace, ses dossiers et ses ressources seront retirés. Les sessions ouvertes de cet
             espace seront arrêtées.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="ghost" @click="store.pendingWorkspaceDelete = null">Annuler</Button>
-          <Button
-            variant="destructive"
-            class="active:scale-[0.96]"
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="store.pendingWorkspaceDelete = null"
+            >Annuler</AlertDialogCancel
+          >
+          <AlertDialogAction
+            class="bg-destructive text-white hover:bg-destructive/90"
             @click="deletingWorkspace && store.deleteWorkspace(deletingWorkspace.id)"
           >
             Supprimer
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
 
-    <Dialog :open="Boolean(closingTab)" @update:open="store.pendingTabClose = null">
-      <DialogContent class="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Fermer « {{ closingTab?.name }} » ?</DialogTitle>
-          <DialogDescription>
+    <AlertDialog :open="Boolean(closingTab)" @update:open="store.pendingTabClose = null">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Fermer « {{ closingTab?.name }} » ?</AlertDialogTitle>
+          <AlertDialogDescription>
             Cet onglet contient des sessions actives. Les processus correspondants seront arrêtés.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="ghost" @click="store.pendingTabClose = null">Annuler</Button>
-          <Button
-            variant="destructive"
-            class="active:scale-[0.96]"
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="store.pendingTabClose = null">Annuler</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-white hover:bg-destructive/90"
             @click="closingTab && store.closeTab(closingTab.id, { force: true })"
           >
             Fermer l’onglet
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </SidebarProvider>
 </template>

@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { Input } from '@/components/ui/input'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from '@/components/ui/input-group'
 import { Switch } from '@/components/ui/switch'
 import SettingRow from '../SettingRow.vue'
 import SettingsSection from '../SettingsSection.vue'
@@ -15,17 +20,20 @@ const store = useAppStore()
       description="Temps que le pointeur doit rester sur le bord gauche avant l’ouverture. En millisecondes."
       for-id="reveal-delay"
     >
-      <Input
-        id="reveal-delay"
-        class="w-24 text-end tabular-nums"
-        inputmode="numeric"
-        :model-value="store.preferences.sidebarRevealDelay"
-        @update:model-value="
-          store.updatePreferences({
-            sidebarRevealDelay: Math.min(Math.max(Number($event) || 0, 0), 2000),
-          })
-        "
-      />
+      <InputGroup class="w-28">
+        <InputGroupInput
+          id="reveal-delay"
+          class="w-24 text-end tabular-nums"
+          inputmode="numeric"
+          :model-value="store.preferences.sidebarRevealDelay"
+          @update:model-value="
+            store.updatePreferences({
+              sidebarRevealDelay: Math.min(Math.max(Number($event) || 0, 0), 2000),
+            })
+          "
+        />
+        <InputGroupAddon align="inline-end"><InputGroupText>ms</InputGroupText></InputGroupAddon>
+      </InputGroup>
     </SettingRow>
 
     <SettingRow
@@ -33,17 +41,20 @@ const store = useAppStore()
       description="Temps avant que la barre latérale se referme une fois le pointeur parti. En millisecondes."
       for-id="hide-delay"
     >
-      <Input
-        id="hide-delay"
-        class="w-24 text-end tabular-nums"
-        inputmode="numeric"
-        :model-value="store.preferences.sidebarHideDelay"
-        @update:model-value="
-          store.updatePreferences({
-            sidebarHideDelay: Math.min(Math.max(Number($event) || 0, 0), 3000),
-          })
-        "
-      />
+      <InputGroup class="w-28">
+        <InputGroupInput
+          id="hide-delay"
+          class="w-24 text-end tabular-nums"
+          inputmode="numeric"
+          :model-value="store.preferences.sidebarHideDelay"
+          @update:model-value="
+            store.updatePreferences({
+              sidebarHideDelay: Math.min(Math.max(Number($event) || 0, 0), 3000),
+            })
+          "
+        />
+        <InputGroupAddon align="inline-end"><InputGroupText>ms</InputGroupText></InputGroupAddon>
+      </InputGroup>
     </SettingRow>
 
     <SettingRow

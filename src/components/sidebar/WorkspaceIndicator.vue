@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import InlineRenameInput from './InlineRenameInput.vue'
 import { workspaceIcon, workspaceIconNames, workspaceIcons } from '@/lib/icons'
 import { useAppStore } from '@/stores/app'
@@ -117,23 +118,28 @@ function openContextMenu() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <p class="px-2 py-1.5 text-xs font-medium text-muted-foreground">Changer l’icône</p>
-        <div class="grid grid-cols-7 gap-1 px-2 pb-2" role="radiogroup" aria-label="Icône">
-          <button
+        <ToggleGroup
+          :model-value="store.activeWorkspace?.icon"
+          type="single"
+          class="grid w-full grid-cols-7 gap-1 px-2 pb-2"
+          aria-label="Icône"
+          @update:model-value="
+            store.activeWorkspace &&
+            $event &&
+            store.updateWorkspace(store.activeWorkspace.id, { icon: String($event) })
+          "
+        >
+          <ToggleGroupItem
             v-for="name in workspaceIconNames"
             :key="name"
-            role="radio"
-            :aria-checked="store.activeWorkspace?.icon === name"
+            :value="name"
             :aria-label="name"
-            class="grid min-h-8 aspect-square place-items-center rounded-md hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            :class="store.activeWorkspace?.icon === name ? 'bg-accent' : 'text-muted-foreground'"
-            @click="
-              store.activeWorkspace &&
-              store.updateWorkspace(store.activeWorkspace.id, { icon: name })
-            "
+            size="sm"
+            class="size-8 rounded-md p-0"
           >
             <component :is="workspaceIcons[name]" :size="14" :stroke-width="1.5" />
-          </button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem @select="emit('addResource')">Nouvelle ressource SSH</DropdownMenuItem>
         <DropdownMenuSeparator />
