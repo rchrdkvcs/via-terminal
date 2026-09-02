@@ -241,21 +241,29 @@ let closingWindow = false
       -->
       <template v-if="!store.sidebarPinned && store.route === 'workspace'">
         <div
-          class="absolute inset-y-0 start-0 z-40"
-          :style="{ width: store.sidebarPeek ? `${sidebarWidth}px` : '20px' }"
+          data-sidebar-peek-zone
+          class="group/peek absolute inset-y-0 start-0 z-40"
+          :style="{ width: store.sidebarPeek ? `${sidebarWidth + 4}px` : '32px' }"
           :aria-hidden="store.sidebarPeek ? undefined : 'true'"
           @pointerenter="scheduleReveal"
           @pointerleave="scheduleHide"
         >
+          <span
+            v-if="!store.sidebarPeek"
+            data-sidebar-peek-indicator
+            class="pointer-events-none absolute inset-y-3 start-1 w-0.5 -translate-x-1 rounded-full bg-foreground/20 opacity-0 transition-[transform,opacity] duration-150 ease-out group-hover/peek:translate-x-0 group-hover/peek:opacity-100 motion-reduce:transform-none"
+            aria-hidden="true"
+          />
           <Transition
-            enter-active-class="transition-[translate,opacity] duration-100 ease-out"
-            enter-from-class="-translate-x-full opacity-0"
-            leave-active-class="transition-[translate,opacity] duration-100 ease-out"
-            leave-to-class="-translate-x-full opacity-0"
+            enter-active-class="transition-[transform,opacity] duration-200 [transition-timing-function:cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
+            enter-from-class="-translate-x-3 opacity-0 motion-reduce:translate-x-0"
+            leave-active-class="transition-[transform,opacity] duration-160 [transition-timing-function:cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
+            leave-to-class="-translate-x-3 opacity-0 motion-reduce:translate-x-0"
           >
             <div
               v-if="store.sidebarPeek"
-              class="h-full overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl"
+              data-sidebar-peek-panel
+              class="absolute inset-y-1 start-1 overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl"
               :style="{ width: `${sidebarWidth}px` }"
             >
               <AppSidebar @add-resource="targetDialog = 'resource'" />

@@ -30,7 +30,7 @@ const fallback: LocalPreferences = {
   cursorStyle: 'bar',
   cursorBlink: true,
   screenReaderMode: false,
-  sidebarRevealDelay: 50,
+  sidebarRevealDelay: 100,
   sidebarHideDelay: 300,
   scrollback: 10000,
   confirmOnClose: false,
