@@ -11,6 +11,7 @@ import TargetDialog from '@/components/TargetDialog.vue'
 import TerminalSearch from '@/components/TerminalSearch.vue'
 import TopBar from '@/components/workspace/TopBar.vue'
 import { Button } from '@/components/ui/button'
+import { DotPattern } from '@/components/ui/dot-pattern'
 import {
   Dialog,
   DialogContent,
@@ -178,9 +179,13 @@ let closingWindow = false
 <template>
   <SidebarProvider
     :open="store.sidebarPinned"
-    class="flex h-full !min-h-0 flex-col overflow-hidden bg-background"
+    class="relative flex h-full !min-h-0 flex-col overflow-hidden bg-background"
     @update:open="store.sidebarPinned = $event"
   >
+    <DotPattern
+      class="absolute inset-0 text-foreground/[0.09] [mask-image:radial-gradient(ellipse_80%_70%_at_60%_48%,black,transparent)] dark:text-foreground/[0.075]"
+    />
+
     <TopBar />
 
     <div class="relative flex min-h-0 flex-1 gap-2 px-2 pb-2">
