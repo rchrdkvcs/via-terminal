@@ -9,11 +9,12 @@ import {
 } from '@/components/ui/sidebar'
 import SessionRows from './SessionRows.vue'
 import PinnedArea from './PinnedArea.vue'
+import DropRowIndicator from './DropRowIndicator.vue'
 import WorkspaceBar from './WorkspaceBar.vue'
 import WorkspaceIndicator from './WorkspaceIndicator.vue'
 import WorkspaceForm from './WorkspaceForm.vue'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Plus } from '@lucide/vue'
+import { ArrowDownToLine, Plus } from '@lucide/vue'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { useAppStore } from '@/stores/app'
@@ -39,10 +40,6 @@ function onWheel(event: WheelEvent) {
   if (!event.ctrlKey) return
   event.preventDefault()
   store.cycleWorkspace(event.deltaY > 0 ? 1 : -1)
-}
-
-function draggingTab() {
-  return activeDrag.value?.type === 'tab'
 }
 
 function dropAtRoot(drag: NonNullable<typeof activeDrag.value>) {
@@ -76,8 +73,8 @@ onMounted(() => {
 onBeforeUnmount(() => cleanupPinnedDrop?.())
 onBeforeUnmount(() => cleanupAutoScroll?.())
 
-function treeHint() {
-  return dropHint.value === 'tree:into' ? 'rounded-md ring-2 ring-sidebar-ring ring-inset' : ''
+function hasPinnedItems() {
+  return store.pinnedTabs.length > 0 || store.tree.length > 0
 }
 </script>
 
@@ -122,31 +119,33 @@ function treeHint() {
         leave-to-class="opacity-0"
       >
         <div v-if="!store.workspaceContentCollapsed" id="workspace-sidebar-content">
-          <SidebarGroup
-            class="transition-colors"
-            :class="[
-              store.pinnedTabs.length || store.tree.length || draggingTab()
-                ? 'min-h-12 p-2 py-1'
-                : 'h-0 overflow-hidden p-0',
-              treeHint(),
-            ]"
-            aria-label="Épinglés et dossiers"
-          >
+          <SidebarGroup class="min-h-12 p-2 py-1" aria-label="Épinglés et dossiers">
             <div>
               <PinnedArea />
               <div
-                v-if="store.pinnedTabs.length || store.tree.length || draggingTab()"
                 ref="pinnedDrop"
                 data-drop-zone="pinned-root"
-                class="flex h-8 items-center justify-center rounded-md text-xs text-sidebar-foreground/50 transition-colors duration-100"
-                :class="draggingTab() ? 'bg-sidebar-accent/50' : ''"
-              ></div>
+                class="relative flex items-center justify-center text-sidebar-foreground/50 transition-[background-color,border-color,color] duration-100"
+                :class="
+                  hasPinnedItems()
+                    ? 'h-4'
+                    : [
+                        'my-1 min-h-24 flex-col gap-2 rounded-xl border border-dashed border-sidebar-border bg-sidebar-accent/25 px-4 text-center',
+                        dropHint === 'tree:into'
+                          ? 'border-sidebar-ring bg-sidebar-accent/60 text-sidebar-foreground/70'
+                          : '',
+                      ]
+                "
+              >
+                <template v-if="!hasPinnedItems()">
+                  <ArrowDownToLine :size="20" :stroke-width="1.5" aria-hidden="true" />
+                  <span class="text-sm">Déposez un onglet ici pour l’épingler</span>
+                </template>
+                <DropRowIndicator v-else-if="dropHint === 'tree:into'" position="after" />
+              </div>
             </div>
           </SidebarGroup>
-          <SidebarSeparator
-            v-if="store.pinnedTabs.length || store.tree.length || draggingTab()"
-            class="mx-2 my-1"
-          />
+          <SidebarSeparator class="mx-2 my-1" />
         </div>
       </Transition>
 

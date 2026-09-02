@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import InlineRenameInput from './InlineRenameInput.vue'
+import DropRowIndicator from './DropRowIndicator.vue'
 import { useAppStore } from '@/stores/app'
 import { registerSidebarDragAndDrop } from '@/lib/sidebar-dnd'
 
@@ -117,12 +118,11 @@ function runTrailingAction() {
     :data-tab-id="id"
     @contextmenu.stop.prevent="menuOpen = true"
   >
+    <DropRowIndicator v-if="dragHint === 'before' || dragHint === 'after'" :position="dragHint" />
     <span
-      v-if="dragHint"
+      v-if="dragHint && dragHint !== 'before' && dragHint !== 'after'"
       class="pointer-events-none absolute z-10 rounded-sm bg-sidebar-ring/20"
       :class="{
-        'inset-x-0 top-0 h-0.5 bg-sidebar-ring': dragHint === 'before',
-        'inset-x-0 bottom-0 h-0.5 bg-sidebar-ring': dragHint === 'after',
         'inset-y-1 left-0 w-1/4': dragHint === 'left',
         'inset-y-1 right-0 w-1/4': dragHint === 'right',
         'inset-x-1 top-0 h-1/3': dragHint === 'top',
