@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Terminal } from '@lucide/vue'
 import AppSidebar from '@/components/sidebar/AppSidebar.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
-import LockScreen from '@/components/LockScreen.vue'
 import PaneLayout from '@/components/workspace/PaneLayout.vue'
 import SplitGroupLayout from '@/components/workspace/SplitGroupLayout.vue'
 import SettingsPage from '@/components/settings/SettingsPage.vue'
@@ -343,7 +342,6 @@ let closingWindow = false
 
     <CommandPalette />
     <TargetDialog :mode="targetDialog" @close="targetDialog = null" />
-    <LockScreen />
     <Toaster position="bottom-right" :duration="6000" close-button />
 
     <Dialog

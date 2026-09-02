@@ -35,15 +35,6 @@ impl DomainService {
             .find(|profile| profile.id == profile_id && profile.workspace_id == workspace_id)
             .ok_or_else(|| "profile not found in workspace".into())
     }
-    pub fn pin_hash(&self) -> Result<Option<String>, String> {
-        self.repo.lock().unwrap().private_setting("pin_hash")
-    }
-    pub fn set_pin_hash(&self, value: &str) -> Result<(), String> {
-        self.repo
-            .lock()
-            .unwrap()
-            .set_private_setting("pin_hash", value)
-    }
     fn mutate<T>(&self, f: impl FnOnce(&mut AppData) -> Result<T, String>) -> Result<T, String> {
         let repo = self.repo.lock().unwrap();
         let mut data = repo.load()?.ok_or("app data unavailable")?;
@@ -1064,16 +1055,6 @@ mod tests {
         let data = s.snapshot().unwrap();
         let profile = &data.profiles[0];
         assert!(s.local_profile(Uuid::new_v4(), profile.id).is_err());
-    }
-    #[test]
-    fn pin_hash_is_private_and_persistent() {
-        let s = DomainService::new(Repository::memory().unwrap());
-        s.set_pin_hash("encoded-secret-verifier").unwrap();
-        assert_eq!(
-            s.pin_hash().unwrap().as_deref(),
-            Some("encoded-secret-verifier")
-        );
-        assert!(!s.export_json().unwrap().contains("encoded-secret-verifier"));
     }
 
     #[test]

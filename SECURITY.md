@@ -15,7 +15,6 @@ Maintainers aim to acknowledge a report within 7 days, validate severity, coordi
 - via terminal uses the operating system's OpenSSH client and does not silently accept host fingerprints.
 - SSH passwords are entered interactively and are not saved.
 - Workspace isolation prevents implicit sharing but is not an operating-system security boundary.
-- The application lock is a privacy screen; it does not encrypt SQLite metadata.
 - Export excludes secrets and terminal contents, but users must inspect exports before sharing.
 
 See [docs/PRIVACY.md](docs/PRIVACY.md).

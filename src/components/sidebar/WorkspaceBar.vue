@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, type ObjectDirective } from 'vue'
-import { FolderPlus, Lock, Pencil, Plus, Terminal, Trash2 } from '@lucide/vue'
+import { FolderPlus, Pencil, Plus, Terminal, Trash2 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -112,21 +112,6 @@ onBeforeUnmount(() => cleanupStrip?.())
 
 <template>
   <div class="flex w-full min-w-0 items-center gap-1">
-    <Tooltip>
-      <TooltipTrigger as-child>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          class="shrink-0 text-sidebar-foreground/60"
-          aria-label="Verrouiller Via"
-          @click="store.lock()"
-        >
-          <Lock :stroke-width="1.5" />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="top">Verrouiller · Ctrl Maj L</TooltipContent>
-    </Tooltip>
-
     <div
       ref="workspaceStrip"
       class="no-scrollbar flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto scroll-smooth"

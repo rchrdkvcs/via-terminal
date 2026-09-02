@@ -10,7 +10,6 @@ import {
   RotateCcw,
   Search,
   Server,
-  Shield,
   SquareTerminal,
 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
@@ -22,7 +21,6 @@ import DataSection from './sections/DataSection.vue'
 import GeneralSection from './sections/GeneralSection.vue'
 import KeybindingsSection from './sections/KeybindingsSection.vue'
 import ResourcesSection from './sections/ResourcesSection.vue'
-import SecuritySection from './sections/SecuritySection.vue'
 import TerminalSection from './sections/TerminalSection.vue'
 import { useAppStore } from '@/stores/app'
 
@@ -52,7 +50,6 @@ const sections = [
     icon: Server,
     keywords: 'ssh hôte identité clé alias',
   },
-  { id: 'security', label: 'Sécurité', icon: Shield, keywords: 'pin verrouillage confidentialité' },
   { id: 'data', label: 'Données', icon: Database, keywords: 'export import sauvegarde json' },
   { id: 'about', label: 'À propos', icon: Info, keywords: 'version licence diagnostic' },
 ]
@@ -165,7 +162,6 @@ function restoreDefaults() {
           <TerminalSection v-else-if="active.id === 'terminal'" />
           <KeybindingsSection v-else-if="active.id === 'keybindings'" />
           <ResourcesSection v-else-if="active.id === 'resources'" @add="emit('addResource')" />
-          <SecuritySection v-else-if="active.id === 'security'" />
           <DataSection v-else-if="active.id === 'data'" />
           <AboutSection v-else-if="active.id === 'about'" />
         </div>

@@ -6,7 +6,6 @@ interface EventMap {
   'terminal-output': TerminalOutputEvent
   'ssh-state-changed': SshStateChangedEvent
   'session-exited': SessionExitedEvent
-  'app-lock-changed': boolean
 }
 
 type AnyHandler = (payload: never) => void

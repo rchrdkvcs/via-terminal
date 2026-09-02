@@ -73,7 +73,3 @@ The tab whose pane currently receives keyboard input. In a visible split group, 
 ## New Terminal
 
 The primary action that creates a temporary tab at the end of the current workspace's temporary area and starts the workspace's default local profile.
-
-## Application lock
-
-A privacy screen that blocks interaction across all windows. It does not mean that metadata stored on disk is encrypted.

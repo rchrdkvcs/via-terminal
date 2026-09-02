@@ -20,7 +20,7 @@ This metadata is not encrypted in V1. Anyone with access to the user's OS accoun
 - Shell command history
 - Clipboard contents
 
-Private keys and agents remain managed by OpenSSH and the operating system. The optional app lock only hides the interface; it does not encrypt data at rest.
+Private keys and agents remain managed by OpenSSH and the operating system.
 
 ## Network activity
 

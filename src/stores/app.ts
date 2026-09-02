@@ -192,8 +192,6 @@ export const useAppStore = defineStore('app', () => {
   const settingsSection = ref('general')
   const paletteOpen = ref(false)
   const searchOpen = ref(false)
-  const locked = ref(false)
-  const pinConfigured = ref(false)
   const recoveryAvailable = ref(false)
   const windowId = ref<Id>(MAIN_WINDOW_ID)
 
@@ -631,14 +629,11 @@ export const useAppStore = defineStore('app', () => {
       const { getCurrentWindow } = await import('@tauri-apps/api/window')
       const label = getCurrentWindow().label
       if (label.startsWith('window-')) windowId.value = label.slice('window-'.length)
-      const [data, isLocked, shells] = await Promise.all([
+      const [data, shells] = await Promise.all([
         api.snapshot(),
-        api.isLocked(),
         api.detectProfiles().catch(() => [] as string[]),
       ])
       applySnapshot(data)
-      locked.value = isLocked
-      pinConfigured.value = isLocked
       recoveryAvailable.value = false
       detectedShells.value = shells
       restoreLayout()
@@ -1529,26 +1524,6 @@ export const useAppStore = defineStore('app', () => {
     updateSettings({ theme })
   }
 
-  /* ------------------------------------------------------------------ lock */
-  async function lock() {
-    if (isNative()) await api.lock().catch((error) => report('Verrouillage impossible', error))
-    else locked.value = true
-  }
-
-  async function unlock(pin: string) {
-    if (!isNative()) {
-      locked.value = false
-      return
-    }
-    await api.unlock(pin || null)
-  }
-
-  async function configurePin(pin: string) {
-    if (!/^\d{4,}$/.test(pin)) throw new Error('Le PIN doit contenir au moins 4 chiffres.')
-    await api.configurePin(pin)
-    pinConfigured.value = true
-  }
-
   /* ----------------------------------------------------------- organization */
   async function refresh() {
     if (!isNative()) return
@@ -2094,9 +2069,6 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function bindNativeEvents() {
-    const unsubscribeLock = on('app-lock-changed', (value) => {
-      locked.value = value
-    })
     const unsubscribeSsh = on('ssh-state-changed', (payload) => {
       applySshState({
         sessionId: payload.sessionId,
@@ -2117,7 +2089,6 @@ export const useAppStore = defineStore('app', () => {
       session.message = 'Processus terminé.'
     })
     return () => {
-      unsubscribeLock()
       unsubscribeSsh()
       unsubscribeExit()
     }
@@ -2145,8 +2116,6 @@ export const useAppStore = defineStore('app', () => {
     settingsSection,
     paletteOpen,
     searchOpen,
-    locked,
-    pinConfigured,
     recoveryAvailable,
     renamingNodeId,
     pendingWorkspaceDelete,
@@ -2218,9 +2187,6 @@ export const useAppStore = defineStore('app', () => {
     updateSettings,
     updatePreferences,
     setTheme,
-    lock,
-    unlock,
-    configurePin,
     createFolder,
     createFolderAfter,
     createLocalProfile,
