@@ -8,9 +8,7 @@ use domain::*;
 use pty::SessionManager;
 use repository::Repository;
 use service::DomainService;
-use std::sync::{
-    Arc, Mutex,
-};
+use std::sync::{Arc, Mutex};
 use std::{collections::HashMap, time::Duration};
 use tauri::{Emitter, Manager, State};
 use uuid::Uuid;
@@ -627,7 +625,6 @@ fn window_create(app: tauri::AppHandle) -> Result<(), String> {
         .map(|_| ())
         .map_err(|error| error.to_string())
 }
-
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
