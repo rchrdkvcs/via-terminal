@@ -1,6 +1,6 @@
 # via terminal
 
-via terminal is an open-source native terminal workspace for IT technicians. It combines fast local terminals, organized SSH resources, tabs, split panes, and Arc/Zen-style workspaces in one native application for Windows, macOS, and Linux.
+via terminal is an open-source native terminal workspace for IT technicians. It combines fast local terminals, organized SSH resources, tabs, split panes, and Arc/Zen-style workspaces in one native application for Windows, macOS, and Linux. The shipped app, installers, and install directory are named **Via**.
 
 > [!WARNING]
 > via terminal is pre-release software. Do not rely on it as the only way to access production systems.
@@ -70,7 +70,7 @@ The authoritative commands are in [.github/workflows/ci.yml](.github/workflows/c
 
 ## Releases
 
-Pushing a `vX.Y.Z` tag attaches installers to a draft GitHub Release. A human publishes the draft. See [docs/RELEASING.md](docs/RELEASING.md).
+Creating a GitHub Release for tag `vX.Y.Z` builds the installers and attaches them to that release. Commits on `main` do not produce installers. See [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Documentation
 

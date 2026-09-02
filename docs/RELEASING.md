@@ -1,23 +1,25 @@
 # Release checklist
 
-A git tag `vX.Y.Z` triggers GitHub Actions. Quality and compile run on Windows, macOS, and Linux. The release workflow builds installers and attaches them to a **draft** GitHub Release. A human reviews the draft, then publishes it. There is no in-app updater in this slice: do not produce or require an updater manifest or updater signing keys.
+Creating a GitHub Release (draft or published) for tag `vX.Y.Z` triggers GitHub Actions. Quality runs first, then Windows, macOS, and Linux installer jobs upload their artifacts onto **that same release**. Pushing a commit to `main` or pushing a tag by itself does not build installers. There is no in-app updater in this slice: do not produce or require an updater manifest or updater signing keys.
 
 The workflow already requests `contents: write`. If asset upload fails with “Resource not accessible by integration”, set the repository Actions permission to allow GitHub Actions to create and update releases.
 
-## Version and tag
+## Version and GitHub Release
 
 - [ ] Bump the same version in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`.
-- [ ] Push tag `vX.Y.Z` matching that version.
+- [ ] Merge that bump to `main`.
+- [ ] Create a GitHub Release whose tag is `vX.Y.Z` matching that version. A **draft** is enough: write the notes, save, and wait for the three installer jobs to attach files. Then publish.
+- [ ] Do not create a second release for the same tag. Re-run the **Release** workflow (`workflow_dispatch` with the tag) if an asset is missing.
 
 ## Build readiness
 
-- [ ] Version and release notes are updated; the provisional product-name warning is reviewed.
+- [ ] Version and release notes are updated. Installers, binary, and install directories use the application name **Via**; GitHub release titles keep the product name **via terminal**.
 - [ ] CI quality and compile jobs pass on Windows, macOS, and Linux with a locked dependency graph.
 - [ ] Frontend build/tests/lint and Rust fmt/tests/clippy pass without warnings.
-- [ ] The draft GitHub Release includes:
-  - Windows x64: NSIS `.exe` and MSI
-  - macOS arm64 (Apple Silicon): DMG
-  - Linux x64: AppImage and `.deb`
+- [ ] The GitHub Release you created includes artifacts named **Via** (Linux `.deb` is lowercase `via`):
+  - Windows x64: `Via_*_x64-setup.exe` and `Via_*_x64_en-US.msi` (installs to a `Via` directory, Start Menu folder `Via`)
+  - macOS arm64 (Apple Silicon): `Via_*_aarch64.dmg` containing `Via.app`
+  - Linux x64: `Via_*_amd64.AppImage` and `via_*_amd64.deb`
 - [ ] Binaries are unsigned. macOS uses Tauri's ad-hoc identity `-`. Windows SmartScreen and macOS Gatekeeper warnings are expected; see Operator notes.
 - [ ] No updater manifest, updater endpoint, or updater signing key is required or published.
 
@@ -42,7 +44,7 @@ The workflow already requests `contents: write`. If asset upload fails with “R
 - [ ] Tag `vX.Y.Z` matches the three version files above.
 - [ ] Release notes link to upgrade notes, privacy behavior, and known issues, including unsigned-binary install steps.
 - [ ] Downloaded artifacts are installed and launched on a clean machine for each target OS.
-- [ ] A human reviews the draft GitHub Release, then publishes it. Collaborators download installers from that Release; the repository may remain private.
+- [ ] After the three installer jobs finish, a human reviews the GitHub Release (publish it if it was still a draft). Collaborators download installers from that Release; the repository may remain private.
 - [ ] Previous installers remain on older GitHub Releases for rollback; incompatible schema changes have a documented recovery path.
 
 ## Operator notes
@@ -51,12 +53,12 @@ Installers are not code-signed. The running app does not check for updates; inst
 
 ### Windows (unsigned NSIS `.exe` / MSI)
 
-SmartScreen may warn that the publisher is unknown. Choose **More info**, then **Run anyway**. If the file is blocked after download, open **Properties**, check **Unblock**, and apply.
+SmartScreen may warn that the publisher is unknown. Choose **More info**, then **Run anyway**. If the file is blocked after download, open **Properties**, check **Unblock**, and apply. The app is **Via** in the Start Menu and install directory.
 
 ### macOS (ad-hoc signed arm64 DMG)
 
-The DMG is ad-hoc signed with identity `-` and is not notarized. Gatekeeper blocks unidentified developers. After mounting the DMG, Control-click (or right-click) the app, choose **Open**, and confirm. If macOS still refuses, open **System Settings → Privacy & Security** and allow the app.
+The DMG is ad-hoc signed with identity `-` and is not notarized. Gatekeeper blocks unidentified developers. After mounting the DMG, Control-click **Via**, choose **Open**, and confirm. If macOS still refuses, open **System Settings → Privacy & Security** and allow the app.
 
 ### Linux (AppImage / `.deb`)
 
-Make the AppImage executable (`chmod +x`) before running it. Install the `.deb` with the distribution package manager.
+Make the AppImage executable (`chmod +x`) before running it. Install the `.deb` with the distribution package manager. The desktop entry and binary are **Via**.

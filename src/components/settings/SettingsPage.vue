@@ -84,7 +84,7 @@ function restoreDefaults() {
     >
       <div class="flex h-12 items-center gap-2 px-3">
         <img src="/logo.svg" alt="" class="size-5 shrink-0 rounded" />
-        <span class="truncate text-sm font-semibold">via terminal</span>
+        <span class="truncate text-sm font-semibold">Via</span>
       </div>
 
       <div class="px-2 pb-2">

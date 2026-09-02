@@ -32,7 +32,7 @@ const facts = computed(() => [
 </script>
 
 <template>
-  <SettingsSection title="À propos" description="via terminal, terminal natif pour techniciens.">
+  <SettingsSection title="À propos" description="Via, terminal natif pour techniciens.">
     <SettingRow v-for="fact in facts" :key="fact.label" :label="fact.label">
       <span class="font-mono text-xs text-muted-foreground">{{ fact.value }}</span>
     </SettingRow>

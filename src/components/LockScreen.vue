@@ -58,7 +58,7 @@ watch(
       </span>
 
       <div class="space-y-1.5 text-center">
-        <h1 id="lock-title" class="text-xl font-semibold">via terminal est verrouillé</h1>
+        <h1 id="lock-title" class="text-xl font-semibold">Via est verrouillé</h1>
         <p class="max-w-sm text-sm text-muted-foreground">
           Vos sessions restent actives en arrière-plan.
         </p>

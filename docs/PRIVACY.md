@@ -28,4 +28,12 @@ via terminal makes network connections when the user starts SSH or explicitly op
 
 ## Export and deletion
 
-Versioned export contains workspace organization and settings but excludes secrets and terminal contents. Users should inspect it before sharing because resource names and addresses may still be sensitive. Uninstall behavior and the application-data location must be shown in the release documentation so users can remove local metadata deliberately.
+Versioned export contains workspace organization and settings but excludes secrets and terminal contents. Users should inspect it before sharing because resource names and addresses may still be sensitive. Uninstall does not always delete local metadata.
+
+The **Via** application is installed as `Via.app` / `Via` / the `via` Debian package. Durable data lives under the bundle identifier `dev.viaterminal.desktop`, not the install directory:
+
+- Windows: `%APPDATA%\dev.viaterminal.desktop\via-terminal.sqlite`
+- macOS: `~/Library/Application Support/dev.viaterminal.desktop/via-terminal.sqlite`
+- Linux: `$XDG_DATA_HOME/dev.viaterminal.desktop/via-terminal.sqlite` (typically `~/.local/share/…`)
+
+Remove that directory deliberately for a clean slate.

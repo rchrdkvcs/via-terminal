@@ -51,7 +51,7 @@ function toggleMaximize(event: MouseEvent) {
  */
 const title = computed(() => {
   const session = store.activeSession
-  if (!session) return 'Rechercher une action, une ressource, un espace…'
+  if (!session) return 'Via'
   return session.contextTitle || session.detail || session.name
 })
 </script>
@@ -62,7 +62,7 @@ const title = computed(() => {
     @pointerdown="prepareDragging"
     @dblclick="toggleMaximize"
   >
-    <div class="flex justify-start">
+    <div class="flex items-center justify-start gap-1">
       <Tooltip>
         <TooltipTrigger as-child>
           <Button
@@ -79,6 +79,7 @@ const title = computed(() => {
         </TooltipTrigger>
         <TooltipContent side="bottom">Barre latérale · Ctrl B</TooltipContent>
       </Tooltip>
+      <span class="truncate px-1 text-sm font-semibold tracking-tight">Via</span>
     </div>
 
     <!--

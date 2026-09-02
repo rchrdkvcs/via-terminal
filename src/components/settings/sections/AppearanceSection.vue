@@ -45,9 +45,9 @@ const store = useAppStore()
       >
         <p>
           <span class="text-[#5fd58a]">rchrdkvcs@hom01</span>:<span class="text-[#7aa5ef]">~</span>$
-          via-terminal --version
+          via --version
         </p>
-        <p>via terminal 0.1.0</p>
+        <p>Via 0.1.0</p>
       </div>
     </SettingRow>
   </SettingsSection>

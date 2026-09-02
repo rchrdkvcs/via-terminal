@@ -1,12 +1,28 @@
 name: Release
 
+# Installers are built only when a GitHub Release is created (draft or
+# published), then uploaded onto that same release. A tag push by itself does
+# not start this workflow. Recreate or re-run via workflow_dispatch with the
+# existing tag if assets need to be rebuilt.
 on:
-  push:
-    tags: ['v*.*.*']
+  release:
+    types: [created]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing GitHub Release tag to attach installers to (e.g. v0.1.1)
+        required: true
+        type: string
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: true
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
 
 jobs:
   quality:
@@ -14,6 +30,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -55,6 +73,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -83,8 +103,7 @@ jobs:
       - name: Version guard
         shell: node {0}
         env:
-          REF_TYPE: ${{ github.ref_type }}
-          REF_NAME: ${{ github.ref_name }}
+          TAG_NAME: ${{ env.RELEASE_TAG }}
         run: |
           const fs = require('fs');
           const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
@@ -100,28 +119,29 @@ jobs:
             console.error(`Version mismatch: package.json=${pkg} tauri.conf.json=${tauri} Cargo.toml=${cargo}`);
             process.exit(1);
           }
-          if (process.env.REF_TYPE === 'tag') {
-            const tagVersion = process.env.REF_NAME.replace(/^v/, '');
-            if (tagVersion !== pkg) {
-              console.error(`Tag version ${tagVersion} does not match package version ${pkg}`);
-              process.exit(1);
-            }
+          const tag = (process.env.TAG_NAME || '').replace(/^v/, '');
+          if (!tag) {
+            console.error('Release tag is missing');
+            process.exit(1);
+          }
+          if (tag !== pkg) {
+            console.error(`Tag version ${tag} does not match package version ${pkg}`);
+            process.exit(1);
           }
           console.log(`Version ${pkg} is consistent`);
+      - name: Resolve GitHub Release
+        id: gh_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          id="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" --jq .id)"
+          echo "id=${id}" >> "$GITHUB_OUTPUT"
+          echo "Uploading installers to ${GITHUB_REPOSITORY} ${RELEASE_TAG} (release ${id})"
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v__VERSION__
-          releaseName: 'via terminal v__VERSION__'
-          releaseBody: |
-            Draft GitHub Release with Windows NSIS/MSI, macOS Apple Silicon DMG, and Linux AppImage/deb.
-
-            Builds are unsigned. On macOS, right-click Open or allow the app in Privacy & Security (ad-hoc signed). Windows SmartScreen may warn.
-
-            There is no in-app updater yet.
-          releaseDraft: true
-          prerelease: true
-          uploadUpdaterJson: false
-          uploadUpdaterSignatures: false
+          releaseId: ${{ steps.gh_release.outputs.id }}
+          includeUpdaterJson: false
           args: ${{ matrix.args }}

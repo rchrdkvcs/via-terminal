@@ -4,6 +4,8 @@
 
 via terminal is a fast, pleasant native terminal workspace for IT technicians: a Zen Browser-like navigator for local shells and SSH sessions, with durable organization and reliable spatial behavior.
 
+The product name is **via terminal**. The native application is **Via**: that is the executable, installer, install directory, and OS application list name.
+
 ## Audience and platform
 
 - Primary audience: IT technicians, support engineers, and system administrators.

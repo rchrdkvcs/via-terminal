@@ -12,7 +12,7 @@ const groups = [
       { keys: 'Ctrl B', label: 'Afficher ou masquer la barre latérale' },
       { keys: 'Ctrl K', label: 'Ouvrir la palette de commandes' },
       { keys: 'Ctrl Maj N', label: 'Nouvelle fenêtre' },
-      { keys: 'Ctrl Maj L', label: 'Verrouiller via terminal' },
+      { keys: 'Ctrl Maj L', label: 'Verrouiller Via' },
     ],
   },
   {

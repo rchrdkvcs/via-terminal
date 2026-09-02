@@ -94,7 +94,7 @@ const commands = computed<Action[]>(() => [
   },
   {
     id: 'lock',
-    label: 'Verrouiller via terminal',
+    label: 'Verrouiller Via',
     detail: 'Ctrl Maj L',
     icon: Lock,
     run: () => store.lock(),
@@ -114,6 +114,8 @@ function choose(action: Action) {
   -->
   <CommandDialog
     v-model:open="store.paletteOpen"
+    title="Via"
+    description="Rechercher une action, une ressource, un espace…"
     class="bg-neutral-950 text-neutral-100 border-neutral-800"
   >
     <CommandInput placeholder="Rechercher une action, une ressource, un espace…" />

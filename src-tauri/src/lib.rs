@@ -653,7 +653,7 @@ fn tab_delete(state: State<BackendState>, id: Uuid) -> Result<(), String> {
 fn window_create(app: tauri::AppHandle) -> Result<(), String> {
     let label = format!("window-{}", Uuid::new_v4());
     tauri::WebviewWindowBuilder::new(&app, label, tauri::WebviewUrl::App("index.html".into()))
-        .title("via terminal")
+        .title("Via")
         .inner_size(1100.0, 720.0)
         // The native drop target of the webview swallows every HTML5 drag
         // event, which stops the sidebar drag and drop. Windows created here do
@@ -788,7 +788,7 @@ pub fn run() {
             app_unlock
         ])
         .build(tauri::generate_context!())
-        .expect("error while building via terminal");
+        .expect("error while building Via");
     app.run(|app_handle, event| {
         if matches!(event, tauri::RunEvent::Exit) {
             let state = app_handle.state::<BackendState>();

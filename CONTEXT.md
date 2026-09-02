@@ -2,6 +2,10 @@
 
 The words below are canonical. This file describes the product domain, not its implementation.
 
+## Product and application
+
+The product and repository are **via terminal**. The shipped native application is **Via**: executable, installers, Start Menu / Applications entry, window title, and install directory. Bundle identifier `dev.viaterminal.desktop` and source package names stay on via terminal so the OS identity stays unique.
+
 ## Workspace
 
 A named and ordered work context. A workspace owns its tabs, folders, resources, identities, default terminal profile, icon, and sidebar organization. Workspaces are isolated and never share ownership implicitly. Names do not need to be unique.
