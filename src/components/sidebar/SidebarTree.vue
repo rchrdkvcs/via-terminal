@@ -23,6 +23,7 @@ import {
   rowZone,
 } from '@/lib/sidebar-dnd'
 import TabRow from './TabRow.vue'
+import DropRowIndicator from './DropRowIndicator.vue'
 
 defineOptions({ name: 'SidebarTree' })
 
@@ -175,6 +176,11 @@ function hintClass(node: TreeNode) {
   return id === node.id ? dropZoneClass[zone as DropZone] : ''
 }
 
+function rowHint(node: TreeNode) {
+  const [id, zone] = (dropHint.value ?? '').split(':')
+  return id === node.id && (zone === 'before' || zone === 'after') ? zone : null
+}
+
 function dropOnNode(drag: SidebarDrag, node: TreeNode, zone: DropZone) {
   if (props.pinned) {
     pin(drag, zone === 'after' ? nextId(node) : node.id)
@@ -291,12 +297,13 @@ const vDropTarget: ObjectDirective<HTMLElement, TreeNode> = {
         ]"
         @contextmenu.stop.prevent="openRowMenu(node.id)"
       >
+        <DropRowIndicator v-if="rowHint(node)" :position="rowHint(node)!" />
         <SidebarMenuButton
           :is-active="isActive(node)"
           :role="node.kind === 'folder' ? undefined : 'tab'"
           :aria-selected="node.kind === 'folder' ? undefined : isActive(node)"
           :aria-expanded="node.kind === 'folder' ? !collapsed.has(node.id) : undefined"
-          :class="hintClass(node)"
+          :class="rowHint(node) ? '' : hintClass(node)"
           :data-sidebar-drop="node.kind === 'folder' ? 'folder' : undefined"
           :data-drop-id="node.kind === 'folder' ? node.id : undefined"
           @click="activate(node, $event)"
