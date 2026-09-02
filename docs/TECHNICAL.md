@@ -123,7 +123,7 @@ Unexpected disconnects retain output and may retry after 1, 2, and 5 seconds bef
 
 All IPC inputs are validated in Rust. Logs use structured events and redact hostnames, usernames, personal paths, commands, terminal content, and credentials. Diagnostics contain versions, capabilities, stable error codes, and redacted failures only.
 
-The global PIN lock is a privacy screen, not encryption. Tauri capabilities remain least-privilege; the frontend receives no arbitrary shell or filesystem access.
+Tauri capabilities remain least-privilege; the frontend receives no arbitrary shell or filesystem access.
 
 ## Testing strategy
 

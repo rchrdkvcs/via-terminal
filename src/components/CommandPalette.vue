@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Columns2, Copy, Layers, Lock, Rows2, Server, Settings, Terminal } from '@lucide/vue'
+import { Columns2, Copy, Layers, Rows2, Server, Settings, Terminal } from '@lucide/vue'
 import {
   CommandDialog,
   CommandEmpty,
@@ -86,18 +86,11 @@ const commands = computed<Action[]>(() => [
   {
     id: 'settings',
     label: 'Ouvrir les réglages',
-    detail: 'Apparence, terminal, sécurité',
+    detail: 'Apparence, terminal, ressources',
     icon: Settings,
     run: () => {
       store.route = 'settings'
     },
-  },
-  {
-    id: 'lock',
-    label: 'Verrouiller Via',
-    detail: 'Ctrl Maj L',
-    icon: Lock,
-    run: () => store.lock(),
   },
 ])
 

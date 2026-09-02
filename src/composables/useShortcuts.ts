@@ -5,9 +5,8 @@ import { useAppStore } from '@/stores/app'
  * Window-level shortcuts.
  *
  * The terminal swallows most keystrokes on purpose, so only chords the shell
- * genuinely owns are intercepted here. Nothing fires while the application is
- * locked or while a dialog holds focus, otherwise the lock screen would drive
- * the workspace behind it.
+ * genuinely owns are intercepted here. Nothing fires while a dialog holds
+ * focus, otherwise the shortcut would drive the workspace behind it.
  */
 export function useShortcuts() {
   const store = useAppStore()
@@ -17,15 +16,7 @@ export function useShortcuts() {
   }
 
   function handle(event: KeyboardEvent) {
-    if (store.locked) return
-
     const control = event.ctrlKey || event.metaKey
-
-    if (control && event.shiftKey && event.key.toLowerCase() === 'l') {
-      event.preventDefault()
-      void store.lock()
-      return
-    }
 
     if (control && event.key.toLowerCase() === 'k') {
       event.preventDefault()

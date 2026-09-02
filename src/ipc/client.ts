@@ -152,10 +152,6 @@ export const api = {
 
   /* ----------------------------------------------------------------- shell */
   createWindow: () => call<void>('window_create'),
-  lock: () => call<void>('app_lock'),
-  isLocked: () => call<boolean>('app_is_locked'),
-  unlock: (pin: string | null) => call<void>('app_unlock', { pin }),
-  configurePin: (pin: string) => call<void>('pin_configure', { pin }),
 }
 
 /**
