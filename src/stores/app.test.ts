@@ -223,4 +223,40 @@ describe('application sidebar lifecycle', () => {
     })
     expect(store.tabs.find((tab) => tab.id === pinned)?.position).toBe(0)
   })
+
+  it('computes deletion impact and asks before removing descendants', async () => {
+    const store = useAppStore()
+    store.applySnapshot(snapshot())
+    store.sidebarNodes.push(
+      {
+        id: 'folder',
+        workspaceId: WORKSPACE,
+        parentId: null,
+        kind: 'folder',
+        label: 'Production',
+        targetId: null,
+        position: 0,
+      },
+      {
+        id: 'resource-node',
+        workspaceId: WORKSPACE,
+        parentId: 'folder',
+        kind: 'resource',
+        label: 'Serveur',
+        targetId: 'resource',
+        position: 0,
+      },
+    )
+
+    expect(store.getNodeDeletionImpact('folder')).toMatchObject({
+      label: 'Production',
+      descendantCount: 1,
+      resourceCount: 1,
+      activeTabCount: 0,
+    })
+
+    await store.requestNodeDelete('folder')
+    expect(store.pendingNodeDelete?.id).toBe('folder')
+    expect(store.sidebarNodes).toHaveLength(2)
+  })
 })

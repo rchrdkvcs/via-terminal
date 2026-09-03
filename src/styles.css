@@ -65,6 +65,7 @@
   --radius: 0.625rem;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
   /* Source: https://github.com/zen-browser/desktop/blob/3655afb/src/zen/compact-mode/sidebar.inc.css */
   --ease-zen-compact: linear(
@@ -300,6 +301,7 @@
     overflow: hidden;
     /* The shell owns every scroll region; the window itself never scrolls. */
     overscroll-behavior: none;
+    font-optical-sizing: auto;
   }
 
   .tab-sortable-ghost {
@@ -316,6 +318,81 @@
   [role='tab'],
   [role='option'] {
     user-select: none;
+  }
+}
+
+.sidebar-drag-preview,
+.workspace-drag-preview {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 20%);
+  opacity: 0.94;
+  transform: scale(0.98);
+}
+
+.drop-indicator-enter-active,
+.drop-indicator-leave-active {
+  transition:
+    transform 100ms var(--ease-out),
+    opacity 100ms var(--ease-out);
+}
+
+.drop-indicator-enter-from,
+.drop-indicator-leave-to {
+  opacity: 0;
+  transform: scaleX(0.96);
+}
+
+@keyframes ui-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ui-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.workspace-drag-preview {
+  width: 2rem;
+  height: 2rem;
+}
+
+.floating-material {
+  background-color: color-mix(in oklch, var(--popover) 90%, transparent) !important;
+  border-color: color-mix(in oklch, var(--border) 82%, white 18%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+.floating-material--large {
+  background-color: color-mix(in oklch, var(--background) 94%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+.sidebar-peek-zone::before {
+  position: absolute;
+  inset-block: 15%;
+  inset-inline-start: 2px;
+  width: 1px;
+  border-radius: 999px;
+  background: var(--border);
+  content: '';
+  opacity: 0.2;
+  transform: scaleY(0.7);
+  transition:
+    transform 100ms var(--ease-out),
+    opacity 100ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sidebar-peek-zone:hover::before {
+    opacity: 1;
+    transform: scaleY(1);
   }
 }
 
@@ -468,6 +545,22 @@
   }
 }
 
+@media (prefers-reduced-transparency: reduce) {
+  .floating-material,
+  .floating-material--large {
+    background-color: var(--popover) !important;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .floating-material,
+  .floating-material--large {
+    background-color: var(--popover) !important;
+    border-color: var(--foreground);
+  }
+}
+
 .terminal-surface .xterm {
   height: 100%;
 }
@@ -513,12 +606,40 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  .scroll-smooth {
     scroll-behavior: auto !important;
+  }
+
+  [data-slot='sheet-content'],
+  [data-slot='dialog-content'],
+  [data-slot='alert-dialog-content'],
+  [data-slot='popover-content'],
+  [data-slot='dropdown-menu-content'],
+  [data-slot='select-content'],
+  [data-slot='tooltip-content'] {
+    animation-duration: 150ms !important;
+  }
+
+  [data-state='open'][data-slot='sheet-content'],
+  [data-state='open'][data-slot='dialog-content'],
+  [data-state='open'][data-slot='alert-dialog-content'],
+  [data-state='open'][data-slot='popover-content'],
+  [data-state='open'][data-slot='dropdown-menu-content'],
+  [data-state='open'][data-slot='select-content'] {
+    animation-name: ui-fade-in !important;
+  }
+
+  [data-state='closed'][data-slot='sheet-content'],
+  [data-state='closed'][data-slot='dialog-content'],
+  [data-state='closed'][data-slot='alert-dialog-content'],
+  [data-state='closed'][data-slot='popover-content'],
+  [data-state='closed'][data-slot='dropdown-menu-content'],
+  [data-state='closed'][data-slot='select-content'] {
+    animation-name: ui-fade-out !important;
+  }
+
+  .drop-indicator-enter-from,
+  .drop-indicator-leave-to {
+    transform: none;
   }
 }

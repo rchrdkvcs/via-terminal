@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAppStore } from '@/stores/app'
+import { hostPlatform } from '@/lib/platform'
 
 const store = useAppStore()
 const pointerDrag = usePointerDrag()
+const isMacOS = hostPlatform() === 'macos'
 
 async function windowAction(action: 'minimize' | 'maximize' | 'close') {
   const { getCurrentWindow } = await import('@tauri-apps/api/window')
@@ -55,6 +57,7 @@ const title = computed(() => {
 <template>
   <header
     class="grid h-[54px] shrink-0 grid-cols-3 items-center gap-2 px-2"
+    :class="isMacOS ? 'ps-20' : ''"
     @pointerdown="prepareDragging"
     @dblclick="toggleMaximize"
   >
@@ -122,27 +125,34 @@ const title = computed(() => {
         <TooltipContent side="bottom">Réglages</TooltipContent>
       </Tooltip>
 
-      <span class="mx-1 h-4 w-px bg-border" />
-      <Button variant="ghost" size="icon-sm" aria-label="Réduire" @click="windowAction('minimize')">
-        <Minus :stroke-width="1.5" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Agrandir ou restaurer"
-        @click="windowAction('maximize')"
-      >
-        <Maximize2 :stroke-width="1.5" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        class="hover:bg-destructive hover:text-white"
-        aria-label="Fermer"
-        @click="windowAction('close')"
-      >
-        <X :stroke-width="1.5" />
-      </Button>
+      <template v-if="!isMacOS">
+        <span class="mx-1 h-4 w-px bg-border" />
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Réduire"
+          @click="windowAction('minimize')"
+        >
+          <Minus :stroke-width="1.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Agrandir ou restaurer"
+          @click="windowAction('maximize')"
+        >
+          <Maximize2 :stroke-width="1.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          class="hover:bg-destructive hover:text-white"
+          aria-label="Fermer"
+          @click="windowAction('close')"
+        >
+          <X :stroke-width="1.5" />
+        </Button>
+      </template>
     </div>
   </header>
 </template>

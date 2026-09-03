@@ -57,6 +57,24 @@ const closingTab = computed(
 const deletingWorkspace = computed(
   () => store.workspaces.find((workspace) => workspace.id === store.pendingWorkspaceDelete) ?? null,
 )
+const nodeDeleteDescription = computed(() => {
+  const impact = store.pendingNodeDelete
+  if (!impact) return ''
+  const details: string[] = []
+  if (impact.descendantCount)
+    details.push(
+      `${impact.descendantCount} ${impact.descendantCount === 1 ? 'élément contenu sera également supprimé' : 'éléments contenus seront également supprimés'}`,
+    )
+  if (impact.resourceCount)
+    details.push(
+      `${impact.resourceCount} ${impact.resourceCount === 1 ? 'ressource SSH sera retirée' : 'ressources SSH seront retirées'}`,
+    )
+  if (impact.activeTabCount)
+    details.push(
+      `${impact.activeTabCount} ${impact.activeTabCount === 1 ? 'onglet actif sera fermé' : 'onglets actifs seront fermés'}`,
+    )
+  return `${details.join(' ; ')}.`
+})
 
 const sidebarWidth = computed(() =>
   Math.min(
@@ -242,7 +260,7 @@ let closingWindow = false
       <template v-if="!store.sidebarPinned && store.route === 'workspace'">
         <div
           data-sidebar-peek-zone
-          class="absolute inset-y-0 start-0 z-40"
+          class="sidebar-peek-zone absolute inset-y-0 start-0 z-40"
           :style="{ width: store.sidebarPeek ? `${sidebarWidth + 4}px` : '32px' }"
           :aria-hidden="store.sidebarPeek ? undefined : 'true'"
           @pointerenter="scheduleReveal"
@@ -257,7 +275,7 @@ let closingWindow = false
             <div
               v-show="store.sidebarPeek"
               data-sidebar-peek-panel
-              class="absolute -top-1 -bottom-1 start-1 overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl"
+              class="floating-material floating-material--large absolute -top-1 -bottom-1 start-1 overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl"
               :style="{ width: `${sidebarWidth}px` }"
             >
               <AppSidebar @add-resource="targetDialog = 'resource'" />
@@ -376,6 +394,27 @@ let closingWindow = false
           <AlertDialogAction
             class="bg-destructive text-white hover:bg-destructive/90"
             @click="deletingWorkspace && store.deleteWorkspace(deletingWorkspace.id)"
+          >
+            Supprimer
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog
+      :open="Boolean(store.pendingNodeDelete)"
+      @update:open="store.pendingNodeDelete = $event ? store.pendingNodeDelete : null"
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Supprimer « {{ store.pendingNodeDelete?.label }} » ?</AlertDialogTitle>
+          <AlertDialogDescription>{{ nodeDeleteDescription }}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="store.pendingNodeDelete = null">Annuler</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-white hover:bg-destructive/90"
+            @click="store.confirmNodeDelete"
           >
             Supprimer
           </AlertDialogAction>

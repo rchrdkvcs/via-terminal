@@ -136,7 +136,9 @@ function hasPinnedItems() {
                     data-drop-zone="pinned-root"
                     class="relative flex h-4 items-center justify-center"
                   >
-                    <DropRowIndicator v-if="dropHint === 'tree:into'" position="after" />
+                    <Transition name="drop-indicator">
+                      <DropRowIndicator v-if="dropHint === 'tree:into'" position="after" />
+                    </Transition>
                   </div>
                   <div v-else ref="pinnedDrop" data-drop-zone="pinned-root" class="my-1 min-h-24">
                     <DropZone

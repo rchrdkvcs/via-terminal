@@ -140,7 +140,7 @@ function commitRename(node: TreeNode) {
 
 function removeNode(node: TreeNode) {
   if (node.tabId) void store.closeTab(node.tabId)
-  else void store.deleteNode(node.id)
+  else void store.requestNodeDelete(node.id)
 }
 
 function isActive(node: TreeNode) {
@@ -292,16 +292,18 @@ const vDropTarget: ObjectDirective<HTMLElement, TreeNode> = {
         v-else
         v-drag-source="node"
         v-drop-target="node"
-        class="relative transition-[background-color,opacity] duration-150"
+        class="relative transition-[background-color,opacity,transform] duration-150 [transition-timing-function:var(--ease-out)]"
         :class="[
-          activeDrag?.id === node.id ? 'opacity-40' : '',
+          activeDrag?.id === node.id ? 'scale-[0.96] opacity-55' : '',
           node.kind === 'folder' && !collapsed.has(node.id)
             ? 'rounded-lg hover:bg-sidebar-accent/70'
             : '',
         ]"
         @contextmenu.stop.prevent="openRowMenu(node.id)"
       >
-        <DropRowIndicator v-if="rowHint(node)" :position="rowHint(node)!" />
+        <Transition name="drop-indicator">
+          <DropRowIndicator v-if="rowHint(node)" :position="rowHint(node)!" />
+        </Transition>
         <SidebarMenuButton
           :is-active="isActive(node)"
           :role="node.kind === 'folder' ? undefined : 'tab'"

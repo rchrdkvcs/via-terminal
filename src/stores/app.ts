@@ -124,6 +124,15 @@ export interface Notice {
   action?: { label: string; run: () => void }
 }
 
+export interface NodeDeletionImpact {
+  id: Id
+  label: string
+  kind: SidebarNodeRecord['kind']
+  descendantCount: number
+  resourceCount: number
+  activeTabCount: number
+}
+
 const identifier = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
@@ -169,6 +178,7 @@ export const useAppStore = defineStore('app', () => {
   const notices = ref<Notice[]>([])
   const renamingNodeId = ref<Id | null>(null)
   const pendingWorkspaceDelete = ref<Id | null>(null)
+  const pendingNodeDelete = ref<NodeDeletionImpact | null>(null)
   const isSwitchingWorkspace = ref(false)
   const workspaceSwitchDirection = ref<-1 | 0 | 1>(0)
   let workspaceTransitionTimer: ReturnType<typeof setTimeout> | undefined
@@ -1614,6 +1624,60 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  function getNodeDeletionImpact(id: Id): NodeDeletionImpact | null {
+    const root = sidebarNodes.value.find((node) => node.id === id)
+    if (!root) return null
+    const removed = new Set<Id>([id])
+    let changed = true
+    while (changed) {
+      changed = false
+      for (const node of sidebarNodes.value) {
+        if (node.parentId && removed.has(node.parentId) && !removed.has(node.id)) {
+          removed.add(node.id)
+          changed = true
+        }
+      }
+    }
+    const targetIds = new Set(
+      sidebarNodes.value
+        .filter((node) => removed.has(node.id) && node.targetId)
+        .map((node) => node.targetId!),
+    )
+    const activeTabCount = tabs.value.filter(
+      (tab) =>
+        hasLiveSessions(tab) &&
+        paneSessionIds(tab.root).some((sessionId) => {
+          const session = sessionById.value.get(sessionId)
+          return Boolean(session && targetIds.has(session.targetId))
+        }),
+    ).length
+    return {
+      id,
+      label: root.label,
+      kind: root.kind,
+      descendantCount: removed.size - 1,
+      resourceCount: targetIds.size,
+      activeTabCount,
+    }
+  }
+
+  async function requestNodeDelete(id: Id) {
+    const impact = getNodeDeletionImpact(id)
+    if (!impact) return
+    if (!impact.descendantCount && !impact.resourceCount && !impact.activeTabCount) {
+      await deleteNode(id)
+      return
+    }
+    pendingNodeDelete.value = impact
+  }
+
+  async function confirmNodeDelete() {
+    const impact = pendingNodeDelete.value
+    if (!impact) return
+    pendingNodeDelete.value = null
+    await deleteNode(impact.id)
+  }
+
   /** Keyboard reordering: Alt+Up / Alt+Down inside the tree. */
   async function moveNode(id: Id, direction: -1 | 1) {
     const record = sidebarNodes.value.find((item) => item.id === id)
@@ -2010,6 +2074,7 @@ export const useAppStore = defineStore('app', () => {
     recoveryAvailable,
     renamingNodeId,
     pendingWorkspaceDelete,
+    pendingNodeDelete,
     isSwitchingWorkspace,
     workspaceSwitchDirection,
     pendingTabClose,
@@ -2086,6 +2151,9 @@ export const useAppStore = defineStore('app', () => {
     restoreDefaults,
     renameNode,
     deleteNode,
+    getNodeDeletionImpact,
+    requestNodeDelete,
+    confirmNodeDelete,
     moveNode,
     reparentNode,
     placeTarget,

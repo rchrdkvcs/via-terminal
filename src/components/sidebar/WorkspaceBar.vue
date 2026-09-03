@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, type ObjectDirective } from 'vue'
-import { FolderPlus, Pencil, Plus, Terminal, Trash2 } from '@lucide/vue'
+import { FolderPlus, PanelsTopLeft, Pencil, Plus, Terminal, Trash2 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -15,6 +15,8 @@ import { useAppStore } from '@/stores/app'
 import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
 import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
+import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview'
+import { preserveOffsetOnSource } from '@atlaskit/pragmatic-drag-and-drop/element/preserve-offset-on-source'
 
 const store = useAppStore()
 const emit = defineEmits<{
@@ -52,6 +54,18 @@ const vWorkspaceDrag: ObjectDirective<HTMLElement, string> = {
         draggable({
           element,
           getInitialData: () => ({ type: 'workspace', id }),
+          onGenerateDragPreview: ({ nativeSetDragImage, location }) => {
+            setCustomNativeDragPreview({
+              nativeSetDragImage,
+              getOffset: preserveOffsetOnSource({ element, input: location.current.input }),
+              render: ({ container }) => {
+                const preview = element.cloneNode(true) as HTMLElement
+                preview.classList.add('workspace-drag-preview')
+                container.append(preview)
+                return () => preview.remove()
+              },
+            })
+          },
           onDragStart: () => (draggingId.value = id),
           onDrop: () => (draggingId.value = null),
         }),
@@ -120,10 +134,11 @@ onBeforeUnmount(() => cleanupStrip?.())
         v-for="(workspace, index) in store.workspaces"
         v-workspace-drag="workspace.id"
         :key="workspace.id"
-        class="workspace-switcher group relative shrink-0"
+        class="workspace-switcher group relative shrink-0 transition-[transform,opacity] duration-150 [transition-timing-function:var(--ease-out)]"
         :class="{
           'workspace-switcher--overflowing': store.workspaces.length > 7,
           'workspace-switcher--active': workspace.id === store.activeWorkspaceId,
+          'scale-[0.96] opacity-55': draggingId === workspace.id,
         }"
       >
         <span
@@ -200,7 +215,7 @@ onBeforeUnmount(() => cleanupStrip?.())
           <FolderPlus :stroke-width="1.5" />Nouveau dossier
         </DropdownMenuItem>
         <DropdownMenuItem @select="emit('createWorkspace')">
-          <Plus :stroke-width="1.5" />Nouvel espace de travail
+          <PanelsTopLeft :stroke-width="1.5" />Nouvel espace de travail
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
