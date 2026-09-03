@@ -371,6 +371,7 @@
 
 .floating-material--large {
   background-color: color-mix(in oklch, var(--background) 94%, transparent) !important;
+  border-color: color-mix(in oklch, var(--border) 45%, transparent);
   backdrop-filter: blur(20px) saturate(140%);
 }
 
