@@ -17,17 +17,16 @@ const active = computed(
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-1 bg-card">
-    <nav
-      class="flex w-60 shrink-0 flex-col bg-background/80 px-3 pb-3"
-      aria-label="Sections des réglages"
-    >
-      <div class="flex h-16 items-center gap-2 px-2">
-        <img src="/logo.svg" alt="" class="size-6 rounded-md" />
-        <div>
-          <p class="text-sm font-semibold">Réglages</p>
-          <p class="text-xs text-muted-foreground">Via</p>
-        </div>
+  <div class="flex min-h-0 flex-1 gap-2">
+    <nav class="flex w-60 shrink-0 flex-col px-3 pb-3" aria-label="Sections des réglages">
+      <div class="flex h-16 items-center">
+        <button
+          class="flex h-10 w-full items-center gap-2 rounded-lg px-3 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+          @click="store.route = 'workspace'"
+        >
+          <ArrowLeft :size="15" :stroke-width="1.5" />
+          Retour au terminal
+        </button>
       </div>
       <InputGroup class="mb-3">
         <InputGroupAddon><Search :size="14" :stroke-width="1.5" /></InputGroupAddon>
@@ -62,15 +61,11 @@ const active = computed(
           ><EmptyDescription>Aucune section trouvée.</EmptyDescription></Empty
         >
       </div>
-      <button
-        class="mt-3 flex h-10 items-center gap-2 rounded-lg px-3 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-        @click="store.route = 'workspace'"
-      >
-        <ArrowLeft :size="15" :stroke-width="1.5" />Retour au terminal
-      </button>
     </nav>
 
-    <main class="flex min-w-0 flex-1 flex-col border-s bg-card">
+    <main
+      class="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/50 bg-card"
+    >
       <header class="flex min-h-16 shrink-0 items-center justify-between gap-4 px-6">
         <div>
           <p class="text-xs font-medium text-muted-foreground">Réglages</p>
