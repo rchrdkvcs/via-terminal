@@ -302,10 +302,7 @@ let closingWindow = false
         </div>
       </template>
 
-      <main
-        class="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl"
-        :class="store.route === 'settings' ? 'border border-border/50 bg-card' : ''"
-      >
+      <main class="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl">
         <SettingsPage v-if="store.route === 'settings'" @add-resource="targetDialog = 'resource'" />
 
         <template v-else>
