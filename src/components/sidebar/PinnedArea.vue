@@ -45,7 +45,13 @@ function dropTab(
 </script>
 
 <template>
-  <ul class="flex w-full min-w-0 flex-col gap-1" role="tree" aria-label="Épinglés et dossiers">
+  <TransitionGroup
+    tag="ul"
+    name="sidebar-list"
+    class="flex w-full min-w-0 flex-col gap-1"
+    role="tree"
+    aria-label="Épinglés et dossiers"
+  >
     <template v-for="(item, index) in items" :key="item.id">
       <TabRow
         v-if="item.kind === 'tab'"
@@ -65,5 +71,5 @@ function dropTab(
       />
       <SidebarTree v-else :nodes="[item.node]" :next-root-id="items[index + 1]?.id ?? null" />
     </template>
-  </ul>
+  </TransitionGroup>
 </template>

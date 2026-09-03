@@ -73,6 +73,16 @@ const sections = [
   { id: 'about', label: 'À propos', icon: Info, keywords: 'version licence diagnostic' },
 ]
 
+const sectionComponents = {
+  general: GeneralSection,
+  appearance: AppearanceSection,
+  terminal: TerminalSection,
+  keybindings: KeybindingsSection,
+  resources: ResourcesSection,
+  data: DataSection,
+  about: AboutSection,
+}
+
 const matches = computed(() => {
   const query = filter.value.trim().toLowerCase()
   if (!query) return sections
@@ -177,13 +187,13 @@ function restoreDefaults() {
 
       <div class="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
         <div class="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
-          <GeneralSection v-if="active.id === 'general'" />
-          <AppearanceSection v-else-if="active.id === 'appearance'" />
-          <TerminalSection v-else-if="active.id === 'terminal'" />
-          <KeybindingsSection v-else-if="active.id === 'keybindings'" />
-          <ResourcesSection v-else-if="active.id === 'resources'" @add="emit('addResource')" />
-          <DataSection v-else-if="active.id === 'data'" />
-          <AboutSection v-else-if="active.id === 'about'" />
+          <Transition name="settings-section" mode="out-in">
+            <component
+              :is="sectionComponents[active.id as keyof typeof sectionComponents]"
+              :key="active.id"
+              @add="emit('addResource')"
+            />
+          </Transition>
         </div>
       </div>
     </div>

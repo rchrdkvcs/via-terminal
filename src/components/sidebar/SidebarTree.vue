@@ -261,7 +261,9 @@ const vDropTarget: ObjectDirective<HTMLElement, TreeNode> = {
 </script>
 
 <template>
-  <ul
+  <TransitionGroup
+    tag="ul"
+    name="sidebar-list"
     class="flex w-full min-w-0 flex-col gap-1"
     :data-tab-container="props.parentId ? 'folder' : undefined"
     :data-folder-id="props.parentId ?? undefined"
@@ -390,12 +392,15 @@ const vDropTarget: ObjectDirective<HTMLElement, TreeNode> = {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <SidebarTree
-          v-if="node.kind === 'folder' && !collapsed.has(node.id)"
-          :nodes="node.children"
-          :parent-id="node.id"
-        />
+        <Transition name="folder-contents">
+          <div
+            v-if="node.kind === 'folder' && !collapsed.has(node.id)"
+            class="folder-contents-grid"
+          >
+            <SidebarTree :nodes="node.children" :parent-id="node.id" />
+          </div>
+        </Transition>
       </SidebarMenuItem>
     </template>
-  </ul>
+  </TransitionGroup>
 </template>

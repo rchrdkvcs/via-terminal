@@ -71,7 +71,9 @@ onBeforeUnmount(() => cleanupDrop?.())
 </script>
 
 <template>
-  <ul
+  <TransitionGroup
+    tag="ul"
+    name="sidebar-list"
     class="flex w-full min-w-0 flex-col gap-1"
     role="tablist"
     :aria-label="props.pinned ? 'Onglets épinglés' : 'Sessions ouvertes'"
@@ -91,11 +93,12 @@ onBeforeUnmount(() => cleanupDrop?.())
       @drop-tab="dropTab($event, index)"
     />
     <li
+      key="end-drop-zone"
       ref="endDrop"
       class="rounded-md transition-[height,background-color] duration-100"
       :class="rows.length || activeDrag?.type === 'tab' ? 'h-7' : 'h-0'"
       data-drop-zone="temporary-end"
       aria-hidden="true"
     />
-  </ul>
+  </TransitionGroup>
 </template>
