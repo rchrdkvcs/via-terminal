@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { FolderInput, Minus, Pencil, Pin, PinOff, Terminal, Unlink, X } from '@lucide/vue'
+import { FolderInput, Pencil, Pin, PinOff, Square, Terminal, Unlink, X } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,13 @@ import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/compone
 import InlineRenameInput from './InlineRenameInput.vue'
 import DropRowIndicator from './DropRowIndicator.vue'
 import { useAppStore } from '@/stores/app'
-import { clearDropHint, dropHint, registerSidebarDragAndDrop, setDropHint } from '@/lib/sidebar-dnd'
+import {
+  activeDrag,
+  clearDropHint,
+  dropHint,
+  registerSidebarDragAndDrop,
+  setDropHint,
+} from '@/lib/sidebar-dnd'
 
 const props = defineProps<{
   id: string
@@ -121,13 +127,18 @@ function runTrailingAction() {
 <template>
   <SidebarMenuItem
     ref="row"
-    class="terminal-tab relative transition-[background-color,opacity] duration-150"
-    :class="props.grouped ? 'grouped-tab rounded-xl bg-sidebar-accent/55 p-1' : ''"
+    class="terminal-tab relative transition-[background-color,opacity,transform] duration-150 [transition-timing-function:var(--ease-out)]"
+    :class="[
+      props.grouped ? 'grouped-tab rounded-xl bg-sidebar-accent/55 p-1' : '',
+      activeDrag?.type === 'tab' && activeDrag.id === id ? 'scale-[0.96] opacity-55' : '',
+    ]"
     :data-grouped="props.grouped || undefined"
     :data-tab-id="id"
     @contextmenu.stop.prevent="menuOpen = true"
   >
-    <DropRowIndicator v-if="dragHint === 'before' || dragHint === 'after'" :position="dragHint" />
+    <Transition name="drop-indicator">
+      <DropRowIndicator v-if="dragHint === 'before' || dragHint === 'after'" :position="dragHint" />
+    </Transition>
     <span
       v-if="dragHint && dragHint !== 'before' && dragHint !== 'after'"
       class="pointer-events-none absolute z-10 rounded-sm bg-sidebar-ring/20"
@@ -188,7 +199,7 @@ function runTrailingAction() {
       :aria-label="`${running() ? 'Arrêter' : 'Supprimer'} ${label}`"
       @click.stop="runTrailingAction"
     >
-      <Minus v-if="running()" :stroke-width="1.5" />
+      <Square v-if="running()" :stroke-width="1.5" />
       <X v-else :stroke-width="1.5" />
     </SidebarMenuAction>
     <DropdownMenu :open="menuOpen" @update:open="menuOpen = $event">
@@ -236,7 +247,7 @@ function runTrailingAction() {
           Transférer le groupe vers {{ workspace.name }}
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" @select="runTrailingAction">
-          <Minus v-if="running()" :stroke-width="1.5" />
+          <Square v-if="running()" :stroke-width="1.5" />
           <X v-else :stroke-width="1.5" />
           {{ running() ? 'Arrêter' : 'Supprimer' }}
         </DropdownMenuItem>

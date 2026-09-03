@@ -63,6 +63,9 @@
 */
 :root {
   --radius: 0.625rem;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
   /* Source: https://github.com/zen-browser/desktop/blob/3655afb/src/zen/compact-mode/sidebar.inc.css */
   --ease-zen-compact: linear(
@@ -298,6 +301,7 @@
     overflow: hidden;
     /* The shell owns every scroll region; the window itself never scrolls. */
     overscroll-behavior: none;
+    font-optical-sizing: auto;
   }
 
   .tab-sortable-ghost {
@@ -314,6 +318,82 @@
   [role='tab'],
   [role='option'] {
     user-select: none;
+  }
+}
+
+.sidebar-drag-preview,
+.workspace-drag-preview {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 20%);
+  opacity: 0.94;
+  transform: scale(0.98);
+}
+
+.drop-indicator-enter-active,
+.drop-indicator-leave-active {
+  transition:
+    transform 100ms var(--ease-out),
+    opacity 100ms var(--ease-out);
+}
+
+.drop-indicator-enter-from,
+.drop-indicator-leave-to {
+  opacity: 0;
+  transform: scaleX(0.96);
+}
+
+@keyframes ui-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ui-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.workspace-drag-preview {
+  width: 2rem;
+  height: 2rem;
+}
+
+.floating-material {
+  background-color: color-mix(in oklch, var(--popover) 90%, transparent) !important;
+  border-color: color-mix(in oklch, var(--border) 82%, white 18%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+.floating-material--large {
+  background-color: color-mix(in oklch, var(--background) 94%, transparent) !important;
+  border-color: color-mix(in oklch, var(--border) 45%, transparent);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+.sidebar-peek-zone::before {
+  position: absolute;
+  inset-block: 15%;
+  inset-inline-start: 2px;
+  width: 1px;
+  border-radius: 999px;
+  background: var(--border);
+  content: '';
+  opacity: 0.2;
+  transform: scaleY(0.7);
+  transition:
+    transform 100ms var(--ease-out),
+    opacity 100ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sidebar-peek-zone:hover::before {
+    opacity: 1;
+    transform: scaleY(1);
   }
 }
 
@@ -336,6 +416,150 @@
 .terminal-surface {
   contain: strict;
   padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+}
+
+/* Sidebar collections bridge insertions, removals and reordering without
+   slowing down ordinary tab selection. */
+.sidebar-list-move,
+.sidebar-list-enter-active,
+.sidebar-list-leave-active {
+  transition:
+    transform 180ms var(--ease-in-out),
+    opacity 140ms var(--ease-out);
+}
+
+.sidebar-list-enter-from,
+.sidebar-list-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+}
+
+.sidebar-list-leave-active {
+  position: absolute;
+  width: 100%;
+}
+
+/* Grid rows are used only for the folder accordion because its content has a
+   dynamic height; opacity and a small translation keep the motion restrained. */
+.folder-contents-grid {
+  display: grid;
+  grid-template-rows: 1fr;
+  min-height: 0;
+}
+
+.folder-contents-grid > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.folder-contents-enter-active,
+.folder-contents-leave-active {
+  transition:
+    grid-template-rows 200ms var(--ease-out),
+    transform 180ms var(--ease-out),
+    opacity 140ms var(--ease-out);
+  transform-origin: top;
+}
+
+.folder-contents-enter-from,
+.folder-contents-leave-to {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.workspace-mode-enter-active,
+.workspace-mode-leave-active {
+  transition:
+    transform 200ms var(--ease-out),
+    opacity 150ms var(--ease-out);
+}
+
+.workspace-mode-enter-from,
+.workspace-mode-leave-to {
+  opacity: 0;
+  transform: translateX(-8px);
+}
+
+.settings-section-enter-active,
+.settings-section-leave-active {
+  transition:
+    transform 150ms var(--ease-out),
+    opacity 100ms var(--ease-out);
+}
+
+.settings-section-enter-from,
+.settings-section-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.split-drop-zone-enter-active,
+.split-drop-zone-leave-active {
+  transition:
+    transform 120ms var(--ease-out),
+    opacity 100ms var(--ease-out);
+}
+
+.split-drop-zone-enter-from,
+.split-drop-zone-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button-press:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-list-move,
+  .sidebar-list-enter-active,
+  .sidebar-list-leave-active,
+  .folder-contents-enter-active,
+  .folder-contents-leave-active,
+  .workspace-mode-enter-active,
+  .workspace-mode-leave-active,
+  .settings-section-enter-active,
+  .settings-section-leave-active,
+  .split-drop-zone-enter-active,
+  .split-drop-zone-leave-active {
+    transition-duration: 100ms;
+  }
+
+  .sidebar-list-enter-from,
+  .sidebar-list-leave-to,
+  .folder-contents-enter-from,
+  .folder-contents-leave-to,
+  .workspace-mode-enter-from,
+  .workspace-mode-leave-to,
+  .settings-section-enter-from,
+  .settings-section-leave-to,
+  .split-drop-zone-enter-from,
+  .split-drop-zone-leave-to {
+    transform: none;
+  }
+
+  .button-press:active:not(:disabled) {
+    transform: scale(0.99);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .floating-material,
+  .floating-material--large {
+    background-color: var(--popover) !important;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .floating-material,
+  .floating-material--large {
+    background-color: var(--popover) !important;
+    border-color: var(--foreground);
+  }
 }
 
 .terminal-surface .xterm {
@@ -383,12 +607,40 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  .scroll-smooth {
     scroll-behavior: auto !important;
+  }
+
+  [data-slot='sheet-content'],
+  [data-slot='dialog-content'],
+  [data-slot='alert-dialog-content'],
+  [data-slot='popover-content'],
+  [data-slot='dropdown-menu-content'],
+  [data-slot='select-content'],
+  [data-slot='tooltip-content'] {
+    animation-duration: 150ms !important;
+  }
+
+  [data-state='open'][data-slot='sheet-content'],
+  [data-state='open'][data-slot='dialog-content'],
+  [data-state='open'][data-slot='alert-dialog-content'],
+  [data-state='open'][data-slot='popover-content'],
+  [data-state='open'][data-slot='dropdown-menu-content'],
+  [data-state='open'][data-slot='select-content'] {
+    animation-name: ui-fade-in !important;
+  }
+
+  [data-state='closed'][data-slot='sheet-content'],
+  [data-state='closed'][data-slot='dialog-content'],
+  [data-state='closed'][data-slot='alert-dialog-content'],
+  [data-state='closed'][data-slot='popover-content'],
+  [data-state='closed'][data-slot='dropdown-menu-content'],
+  [data-state='closed'][data-slot='select-content'] {
+    animation-name: ui-fade-out !important;
+  }
+
+  .drop-indicator-enter-from,
+  .drop-indicator-leave-to {
+    transform: none;
   }
 }

@@ -59,7 +59,7 @@ const store = useAppStore()
           class="shrink-0 text-muted-foreground active:scale-[0.96]"
           :aria-label="`Supprimer ${resource.name}`"
           :disabled="!store.nodeIdForTarget(resource.id)"
-          @click="store.deleteNode(store.nodeIdForTarget(resource.id)!)"
+          @click="store.requestNodeDelete(store.nodeIdForTarget(resource.id)!)"
         >
           <Trash2 :stroke-width="1.5" />
         </Button>

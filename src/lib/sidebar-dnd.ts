@@ -1,6 +1,8 @@
 import { shallowRef } from 'vue'
 import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
+import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview'
+import { preserveOffsetOnSource } from '@atlaskit/pragmatic-drag-and-drop/element/preserve-offset-on-source'
 
 export type SidebarDrag =
   | { type: 'tab'; id: string }
@@ -39,6 +41,21 @@ export function registerSidebarDrag(
   return draggable({
     element,
     getInitialData: () => value,
+    onGenerateDragPreview: ({ nativeSetDragImage, location }) => {
+      setCustomNativeDragPreview({
+        nativeSetDragImage,
+        getOffset: preserveOffsetOnSource({ element, input: location.current.input }),
+        render: ({ container }) => {
+          const source =
+            element.querySelector<HTMLElement>(':scope > [data-sidebar="menu-button"]') ?? element
+          const preview = source.cloneNode(true) as HTMLElement
+          preview.classList.add('sidebar-drag-preview')
+          preview.style.width = `${Math.min(element.getBoundingClientRect().width, 320)}px`
+          container.append(preview)
+          return () => preview.remove()
+        },
+      })
+    },
     onDragStart: () => {
       activeDrag.value = value
       options.onStart?.()

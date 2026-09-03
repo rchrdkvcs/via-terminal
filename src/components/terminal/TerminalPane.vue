@@ -102,19 +102,21 @@ watch(isActive, (active) => {
     :aria-label="session?.name ?? 'Terminal'"
     @mousedown="store.selectPane(paneId)"
   >
-    <DropZone
-      v-if="splitHint && splitDrop"
-      class="absolute z-20 m-2 border-ring bg-card/90 text-foreground shadow-sm"
-      :class="{
-        'inset-y-0 left-0 w-[30%]': splitHint === 'left',
-        'inset-y-0 right-0 w-[30%]': splitHint === 'right',
-        'inset-x-0 top-0 h-[30%]': splitHint === 'top',
-        'inset-x-0 bottom-0 h-[30%]': splitHint === 'bottom',
-      }"
-      :icon="splitDrop.icon"
-      :label="splitDrop.label"
-      active
-    />
+    <Transition name="split-drop-zone">
+      <DropZone
+        v-if="splitHint && splitDrop"
+        class="absolute z-20 m-2 border-ring bg-card/90 text-foreground shadow-sm"
+        :class="{
+          'inset-y-0 left-0 w-[30%] origin-left': splitHint === 'left',
+          'inset-y-0 right-0 w-[30%] origin-right': splitHint === 'right',
+          'inset-x-0 top-0 h-[30%] origin-top': splitHint === 'top',
+          'inset-x-0 bottom-0 h-[30%] origin-bottom': splitHint === 'bottom',
+        }"
+        :icon="splitDrop.icon"
+        :label="splitDrop.label"
+        active
+      />
+    </Transition>
     <!-- The registry appends its own element here; Vue never owns the xterm DOM. -->
     <div v-show="!isPlaceholder" ref="host" class="terminal-surface min-h-0 flex-1" />
 
