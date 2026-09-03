@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import PaneLayout from './PaneLayout.vue'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
-import type { RuntimeSplitTree } from '@/stores/app'
+import type { RuntimeSplitTree } from '@/domain/layout'
 import { useAppStore } from '@/stores/app'
 
 defineOptions({ name: 'SplitGroupLayout' })

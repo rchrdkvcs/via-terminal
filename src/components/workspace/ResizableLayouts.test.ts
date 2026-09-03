@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import PaneLayout from './PaneLayout.vue'
 import SplitGroupLayout from './SplitGroupLayout.vue'
-import { useAppStore, type PaneNode, type RuntimeSplitTree } from '@/stores/app'
+import { useAppStore } from '@/stores/app'
+import type { PaneNode, RuntimeSplitTree } from '@/domain/layout'
 
 const ResizablePanelGroupStub = defineComponent({
   name: 'ResizablePanelGroup',

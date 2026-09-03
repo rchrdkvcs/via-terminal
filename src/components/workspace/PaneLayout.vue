@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import TerminalPane from '@/components/terminal/TerminalPane.vue'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
-import type { PaneNode } from '@/stores/app'
+import type { PaneNode } from '@/domain/layout'
 import { useAppStore } from '@/stores/app'
 
 defineOptions({ name: 'PaneLayout' })

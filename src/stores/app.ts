@@ -14,7 +14,6 @@ import type {
   Settings,
   SidebarNodeRecord,
   SplitDirection,
-  SplitTabTree,
   Tab,
   TargetKind,
   ThemePreference,
@@ -29,6 +28,26 @@ import {
   type SidebarNavigationState,
 } from '@/lib/sidebar-state'
 import { terminals } from '@/terminal/registry'
+import {
+  findPaneById as findPane,
+  findPaneBySession,
+  firstPane,
+  paneSessionIds,
+  paneTreeToWire,
+  removePane,
+  removeSplitTab,
+  replaceSession,
+  replaceSplitTab,
+  setGroupSplitRatio as updateGroupSplitRatio,
+  setPaneSplitRatio,
+  splitTabIds,
+  splitTreeFromWire,
+  splitTreeToWire,
+  type PaneNode,
+  type RuntimeSplitTree,
+} from '@/domain/layout'
+
+export type { PaneNode, RuntimeSplitTree } from '@/domain/layout'
 
 export type SessionKind = 'local' | 'ssh'
 const MAIN_WINDOW_ID = '00000000-0000-0000-0000-000000000001'
@@ -60,17 +79,6 @@ function clonePlain<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-export type PaneNode =
-  | { kind: 'pane'; id: string; sessionId: Id }
-  | {
-      kind: 'split'
-      id: string
-      direction: SplitDirection
-      ratio: number
-      first: PaneNode
-      second: PaneNode
-    }
-
 export interface RuntimeTab {
   id: Id
   workspaceId: Id
@@ -86,17 +94,6 @@ export interface RuntimeTab {
   /** Local terminals dropped into a folder live here; SSH unique tabs use a sidebar node. */
   folderId: Id | null
 }
-
-export type RuntimeSplitTree =
-  | { kind: 'tab'; tabId: Id }
-  | {
-      kind: 'split'
-      id: string
-      direction: SplitDirection
-      ratio: number
-      first: RuntimeSplitTree
-      second: RuntimeSplitTree
-    }
 
 export interface RuntimeSplitGroup {
   id: Id
@@ -413,70 +410,6 @@ export const useAppStore = defineStore('app', () => {
     return settings.value.theme === 'light' ? 'light' : 'dark'
   })
 
-  /* ------------------------------------------------------- pane tree helpers */
-  function firstPane(node: PaneNode): Extract<PaneNode, { kind: 'pane' }> | null {
-    if (node.kind === 'pane') return node
-    return firstPane(node.first) ?? firstPane(node.second)
-  }
-
-  function findPane(node: PaneNode, id: string): Extract<PaneNode, { kind: 'pane' }> | null {
-    if (node.kind === 'pane') return node.id === id ? node : null
-    return findPane(node.first, id) ?? findPane(node.second, id)
-  }
-
-  function paneSessionIds(node: PaneNode): Id[] {
-    return node.kind === 'pane'
-      ? [node.sessionId]
-      : [...paneSessionIds(node.first), ...paneSessionIds(node.second)]
-  }
-
-  /** Removing a leaf collapses its split into the surviving sibling. */
-  function removePane(node: PaneNode, id: string): PaneNode | null {
-    if (node.kind === 'pane') return node.id === id ? null : node
-    const first = removePane(node.first, id)
-    const second = removePane(node.second, id)
-    if (!first) return second
-    if (!second) return first
-    return { ...node, first, second }
-  }
-
-  function toWire(node: PaneNode): PaneTree {
-    return node.kind === 'pane'
-      ? { kind: 'pane', sessionId: node.sessionId }
-      : {
-          kind: 'split',
-          direction: node.direction,
-          ratio: node.ratio,
-          first: toWire(node.first),
-          second: toWire(node.second),
-        }
-  }
-
-  function splitToWire(node: RuntimeSplitTree): SplitTabTree {
-    return node.kind === 'tab'
-      ? { kind: 'tab', tabId: node.tabId }
-      : {
-          kind: 'split',
-          direction: node.direction,
-          ratio: node.ratio,
-          first: splitToWire(node.first),
-          second: splitToWire(node.second),
-        }
-  }
-
-  function splitFromWire(node: SplitTabTree): RuntimeSplitTree {
-    return node.kind === 'tab'
-      ? { kind: 'tab', tabId: node.tabId }
-      : {
-          kind: 'split',
-          id: identifier(),
-          direction: node.direction,
-          ratio: node.ratio,
-          first: splitFromWire(node.first),
-          second: splitFromWire(node.second),
-        }
-  }
-
   /* -------------------------------------------------------------- notices */
   function notify(kind: Notice['kind'], message: string, action?: Notice['action']) {
     const notice: Notice = { id: identifier(), kind, message, action }
@@ -525,7 +458,7 @@ export const useAppStore = defineStore('app', () => {
           id: tab.id,
           workspaceId: tab.workspaceId,
           name: tab.name,
-          root: toWire(tab.root),
+          root: paneTreeToWire(tab.root),
           position: tab.position,
           organized: tab.organized,
           folderId: tab.folderId,
@@ -545,7 +478,7 @@ export const useAppStore = defineStore('app', () => {
         id: group.id,
         workspaceId: group.workspaceId,
         tabIds: [...group.tabIds],
-        root: splitToWire(group.root),
+        root: splitTreeToWire(group.root),
       })
       .catch((error) => report('Impossible d’enregistrer le groupe de splits', error))
   }
@@ -599,7 +532,7 @@ export const useAppStore = defineStore('app', () => {
       workspaceId: group.workspaceId,
       windowId: windowId.value,
       tabIds: [...group.tabIds],
-      root: splitFromWire(group.root),
+      root: splitTreeFromWire(group.root, identifier),
     }))
     settings.value = { ...defaultSettings, ...data.settings }
     if (!workspaces.value.some((item) => item.id === activeWorkspaceId.value))
@@ -963,17 +896,8 @@ export const useAppStore = defineStore('app', () => {
     for (const tab of tabs.value) {
       const pane = paneSessionIds(tab.root).includes(sessionId)
       if (!pane) continue
-      tab.root = rewriteSession(tab.root, sessionId, started.id)
+      tab.root = replaceSession(tab.root, sessionId, started.id)
       scheduleLayoutSave(tab.id)
-    }
-  }
-
-  function rewriteSession(node: PaneNode, from: Id, to: Id): PaneNode {
-    if (node.kind === 'pane') return node.sessionId === from ? { ...node, sessionId: to } : node
-    return {
-      ...node,
-      first: rewriteSession(node.first, from, to),
-      second: rewriteSession(node.second, from, to),
     }
   }
 
@@ -1032,14 +956,6 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  function findPaneBySession(
-    node: PaneNode,
-    sessionId: Id,
-  ): Extract<PaneNode, { kind: 'pane' }> | null {
-    if (node.kind === 'pane') return node.sessionId === sessionId ? node : null
-    return findPaneBySession(node.first, sessionId) ?? findPaneBySession(node.second, sessionId)
-  }
-
   async function selectTab(id: Id, forceStart = false) {
     const tab = tabs.value.find((item) => item.id === id)
     if (!tab) return
@@ -1051,7 +967,7 @@ export const useAppStore = defineStore('app', () => {
       if (preferences.value.startFavoritesManually && !forceStart) return
       const replacement = await startSession(stopped.targetKind, stopped.targetId)
       if (!replacement) return
-      tab.root = rewriteSession(tab.root, stopped.id, replacement.id)
+      tab.root = replaceSession(tab.root, stopped.id, replacement.id)
       tab.activePaneId = findPaneBySession(tab.root, replacement.id)?.id ?? tab.activePaneId
       sessions.value = sessions.value.filter((session) => session.id !== stopped.id)
       scheduleLayoutSave(tab.id)
@@ -1151,16 +1067,8 @@ export const useAppStore = defineStore('app', () => {
   function detachFromSplit(tabId: Id) {
     const group = splitGroups.value.find((item) => item.tabIds.includes(tabId))
     if (!group) return
-    const remove = (node: RuntimeSplitTree): RuntimeSplitTree | null => {
-      if (node.kind === 'tab') return node.tabId === tabId ? null : node
-      const first = remove(node.first)
-      const second = remove(node.second)
-      if (!first) return second
-      if (!second) return first
-      return { ...node, first, second }
-    }
     group.tabIds = group.tabIds.filter((id) => id !== tabId)
-    group.root = remove(group.root) ?? { kind: 'tab', tabId: group.tabIds[0] }
+    group.root = removeSplitTab(group.root, tabId) ?? { kind: 'tab', tabId: group.tabIds[0] }
     if (group.tabIds.length < 2) {
       splitGroups.value = splitGroups.value.filter((item) => item.id !== group.id)
       if (isNative()) void api.deleteSplitGroup(group.id).catch(() => undefined)
@@ -1202,14 +1110,8 @@ export const useAppStore = defineStore('app', () => {
         first: { kind: 'tab', tabId: sourceFirst ? sourceTabId : targetTabId },
         second: { kind: 'tab', tabId: sourceFirst ? targetTabId : sourceTabId },
       }
-      const replace = (node: RuntimeSplitTree): RuntimeSplitTree => {
-        if (node.kind === 'tab') return node.tabId === anchorId ? replacement : node
-        return { ...node, first: replace(node.first), second: replace(node.second) }
-      }
-      existingGroup.root = replace(existingGroup.root)
-      const leaves = (node: RuntimeSplitTree): Id[] =>
-        node.kind === 'tab' ? [node.tabId] : [...leaves(node.first), ...leaves(node.second)]
-      existingGroup.tabIds = leaves(existingGroup.root)
+      existingGroup.root = replaceSplitTab(existingGroup.root, anchorId, replacement)
+      existingGroup.tabIds = splitTabIds(existingGroup.root)
       const siblings = tabs.value
         .filter(
           (tab) => tab.workspaceId === anchor.workspaceId && !existingGroup.tabIds.includes(tab.id),
@@ -1318,25 +1220,14 @@ export const useAppStore = defineStore('app', () => {
   function setGroupSplitRatio(splitId: string, ratio: number) {
     const group = activeSplitGroup.value
     if (!group) return
-    const apply = (node: RuntimeSplitTree): RuntimeSplitTree => {
-      if (node.kind === 'tab') return node
-      if (node.id === splitId) return { ...node, ratio: Math.min(0.85, Math.max(0.15, ratio)) }
-      return { ...node, first: apply(node.first), second: apply(node.second) }
-    }
-    group.root = apply(group.root)
+    group.root = updateGroupSplitRatio(group.root, splitId, ratio)
     void persistSplitGroup(group)
   }
 
   function setSplitRatio(splitId: string, ratio: number) {
     const tab = activeTab.value
     if (!tab) return
-    const clamped = Math.min(Math.max(ratio, 0.15), 0.85)
-    const apply = (node: PaneNode): PaneNode => {
-      if (node.kind === 'pane') return node
-      if (node.id === splitId) return { ...node, ratio: clamped }
-      return { ...node, first: apply(node.first), second: apply(node.second) }
-    }
-    tab.root = apply(tab.root)
+    tab.root = setPaneSplitRatio(tab.root, splitId, ratio)
     scheduleLayoutSave(tab.id)
   }
 
@@ -1444,7 +1335,7 @@ export const useAppStore = defineStore('app', () => {
       terminals.rebind(previous, next)
       for (const tab of tabs.value) {
         if (!paneSessionIds(tab.root).includes(previous)) continue
-        tab.root = rewriteSession(tab.root, previous, next)
+        tab.root = replaceSession(tab.root, previous, next)
         scheduleLayoutSave(tab.id)
       }
       notify('success', `« ${session.name} » est reconnecté.`)
@@ -1486,7 +1377,7 @@ export const useAppStore = defineStore('app', () => {
       terminals.rebind(previous, result.sessionId)
       for (const tab of tabs.value) {
         if (!paneSessionIds(tab.root).includes(previous)) continue
-        tab.root = rewriteSession(tab.root, previous, result.sessionId)
+        tab.root = replaceSession(tab.root, previous, result.sessionId)
         scheduleLayoutSave(tab.id)
       }
     } catch (error) {
