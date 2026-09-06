@@ -39,6 +39,7 @@ import { usePointerDrag } from '@/composables/usePointerDrag'
 import { isNative } from '@/ipc/client'
 import { terminals } from '@/terminal/registry'
 import { useAppStore } from '@/stores/app'
+import WorkspaceDeleteDialog from '@/components/workspace/WorkspaceDeleteDialog.vue'
 import { toast } from 'vue-sonner'
 import 'vue-sonner/style.css'
 
@@ -53,9 +54,6 @@ let unbind: (() => void) | undefined
 
 const closingTab = computed(
   () => store.tabs.find((tab) => tab.id === store.pendingTabClose) ?? null,
-)
-const deletingWorkspace = computed(
-  () => store.workspaces.find((workspace) => workspace.id === store.pendingWorkspaceDelete) ?? null,
 )
 const nodeDeleteDescription = computed(() => {
   const impact = store.pendingNodeDelete
@@ -372,31 +370,7 @@ let closingWindow = false
     <TargetDialog :mode="targetDialog" @close="targetDialog = null" />
     <Toaster position="bottom-right" :duration="6000" close-button />
 
-    <AlertDialog
-      :open="Boolean(deletingWorkspace)"
-      @update:open="store.pendingWorkspaceDelete = $event ? store.pendingWorkspaceDelete : null"
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Supprimer « {{ deletingWorkspace?.name }} » ?</AlertDialogTitle>
-          <AlertDialogDescription>
-            L’espace, ses dossiers et ses ressources seront retirés. Les sessions ouvertes de cet
-            espace seront arrêtées.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel @click="store.pendingWorkspaceDelete = null"
-            >Annuler</AlertDialogCancel
-          >
-          <AlertDialogAction
-            class="bg-destructive text-white hover:bg-destructive/90"
-            @click="deletingWorkspace && store.deleteWorkspace(deletingWorkspace.id)"
-          >
-            Supprimer
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <WorkspaceDeleteDialog />
 
     <AlertDialog
       :open="Boolean(store.pendingNodeDelete)"
