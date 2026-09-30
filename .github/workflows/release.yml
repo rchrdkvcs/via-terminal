@@ -39,6 +39,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: Synchronize version from release tag
+        run: node .github/scripts/sync-release-version.mjs
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -93,6 +95,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: Synchronize version from release tag
+        run: node .github/scripts/sync-release-version.mjs
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust_targets }}
@@ -100,35 +104,6 @@ jobs:
         with:
           workspaces: src-tauri
       - run: pnpm install --frozen-lockfile
-      - name: Version guard
-        shell: node {0}
-        env:
-          TAG_NAME: ${{ env.RELEASE_TAG }}
-        run: |
-          const fs = require('fs');
-          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
-          const tauri = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8')).version;
-          const cargoToml = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
-          const cargoMatch = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
-          if (!cargoMatch) {
-            console.error('Could not parse version from src-tauri/Cargo.toml');
-            process.exit(1);
-          }
-          const cargo = cargoMatch[1];
-          if (pkg !== tauri || pkg !== cargo) {
-            console.error(`Version mismatch: package.json=${pkg} tauri.conf.json=${tauri} Cargo.toml=${cargo}`);
-            process.exit(1);
-          }
-          const tag = (process.env.TAG_NAME || '').replace(/^v/, '');
-          if (!tag) {
-            console.error('Release tag is missing');
-            process.exit(1);
-          }
-          if (tag !== pkg) {
-            console.error(`Tag version ${tag} does not match package version ${pkg}`);
-            process.exit(1);
-          }
-          console.log(`Version ${pkg} is consistent`);
       - name: Resolve GitHub Release
         id: gh_release
         shell: bash
