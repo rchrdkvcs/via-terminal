@@ -8,6 +8,8 @@ import PaneLayout from '@/components/workspace/PaneLayout.vue'
 import SplitGroupLayout from '@/components/workspace/SplitGroupLayout.vue'
 import SettingsPage from '@/components/settings/SettingsPage.vue'
 import TargetDialog from '@/components/TargetDialog.vue'
+import NewTabDialog from '@/components/NewTabDialog.vue'
+import type { SshConfigurationRequest } from '@/components/new-tab/types'
 import TerminalSearch from '@/components/TerminalSearch.vue'
 import TopBar from '@/components/workspace/TopBar.vue'
 import { Button } from '@/components/ui/button'
@@ -48,6 +50,17 @@ useAppearance()
 useShortcuts()
 
 const targetDialog = ref<'resource' | null>(null)
+const targetResourceId = ref<string | null>(null)
+const duplicateResource = ref(false)
+function openResourceDialog(request: SshConfigurationRequest) {
+  targetResourceId.value = request.id
+  duplicateResource.value = request.duplicate
+  targetDialog.value = 'resource'
+}
+function closeResourceDialog(connect = false) {
+  targetDialog.value = null
+  if (!connect) store.requestNewTab('ssh')
+}
 const { width: windowWidth } = useWindowSize()
 const sidebarDrag = usePointerDrag()
 let unbind: (() => void) | undefined
@@ -229,7 +242,7 @@ let closingWindow = false
           :class="resizingSidebar ? '' : 'transition-[width] duration-200 ease-out'"
           :style="{ width: `${sidebarWidth}px` }"
         >
-          <AppSidebar @add-resource="targetDialog = 'resource'" />
+          <AppSidebar />
           <div
             class="group absolute inset-y-0 end-0 z-20 w-2 cursor-ew-resize"
             role="separator"
@@ -276,7 +289,7 @@ let closingWindow = false
               class="floating-material floating-material--large absolute -top-1 bottom-1 start-1 overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl"
               :style="{ width: `${sidebarWidth}px` }"
             >
-              <AppSidebar @add-resource="targetDialog = 'resource'" />
+              <AppSidebar />
             </div>
           </Transition>
           <div
@@ -301,7 +314,7 @@ let closingWindow = false
       </template>
 
       <main class="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl">
-        <SettingsPage v-if="store.route === 'settings'" @add-resource="targetDialog = 'resource'" />
+        <SettingsPage v-if="store.route === 'settings'" />
 
         <template v-else>
           <TerminalSearch />
@@ -342,14 +355,14 @@ let closingWindow = false
               </EmptyMedia>
               <EmptyTitle>Prêt quand vous l’êtes.</EmptyTitle>
               <EmptyDescription>
-                Ouvrez un terminal local ou reprenez une ressource depuis la barre latérale.
+                Créez un onglet pour ouvrir un terminal local ou une connexion SSH.
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <div class="flex items-center gap-3">
-                <Button class="gap-2 active:scale-[0.96]" @click="store.createTerminal()">
+                <Button class="gap-2 active:scale-[0.96]" @click="store.requestNewTab()">
                   <Terminal :size="15" :stroke-width="1.5" />
-                  Nouveau terminal
+                  Nouvel onglet
                 </Button>
                 <KbdGroup>
                   <Kbd>Ctrl</Kbd>
@@ -367,7 +380,13 @@ let closingWindow = false
     </div>
 
     <CommandPalette />
-    <TargetDialog :mode="targetDialog" @close="targetDialog = null" />
+    <NewTabDialog @configure="openResourceDialog" />
+    <TargetDialog
+      :mode="targetDialog"
+      :resource-id="targetResourceId"
+      :duplicate="duplicateResource"
+      @close="closeResourceDialog"
+    />
     <Toaster position="bottom-right" :duration="6000" close-button />
 
     <WorkspaceDeleteDialog />

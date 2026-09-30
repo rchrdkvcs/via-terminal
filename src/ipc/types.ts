@@ -44,6 +44,20 @@ export interface Identity {
   identityFile: string | null
 }
 
+export interface SshHostInput {
+  workspaceId: Id
+  id: Id | null
+  name: string
+  host: string | null
+  sshAlias: string | null
+  port: number | null
+  identityId: Id | null
+  identityName: string
+  username: string
+  identityFile: string | null
+  parentId: Id | null
+}
+
 export type SidebarNodeKind = 'folder' | 'profile' | 'resource'
 
 export interface SidebarNodeRecord {
@@ -131,7 +145,7 @@ export interface Settings {
   theme: ThemePreference
   fontFamily: string
   fontSize: number
-  /** Executable used when « Nouveau terminal » opens a local shell. */
+  /** Executable proposed for new local terminal tabs. */
   defaultShell: string
 }
 

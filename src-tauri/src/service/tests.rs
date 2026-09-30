@@ -1,5 +1,97 @@
 use super::*;
 
+fn ssh_input(workspace_id: Id) -> SshHostInput {
+    SshHostInput {
+        workspace_id,
+        id: None,
+        name: "Production".into(),
+        host: Some("example.test".into()),
+        ssh_alias: None,
+        port: Some(22),
+        identity_id: None,
+        identity_name: "Admin".into(),
+        username: "admin".into(),
+        identity_file: None,
+        parent_id: None,
+    }
+}
+
+#[test]
+fn ssh_host_save_is_atomic_and_reuses_identities() {
+    let service = DomainService::new(Repository::memory().unwrap());
+    let workspace = service.snapshot().unwrap().workspaces[0].id;
+    let mut invalid = ssh_input(workspace);
+    invalid.parent_id = Some(Uuid::new_v4());
+    assert!(service.save_ssh_host(invalid).is_err());
+    let data = service.snapshot().unwrap();
+    assert!(data.resources.is_empty());
+    assert!(data.identities.is_empty());
+    assert!(data.sidebar_nodes.is_empty());
+
+    let host = service.save_ssh_host(ssh_input(workspace)).unwrap();
+    let mut duplicate = ssh_input(workspace);
+    duplicate.name = "Production copy".into();
+    duplicate.identity_id = host.identity_id;
+    let copy = service.save_ssh_host(duplicate).unwrap();
+    assert_ne!(host.id, copy.id);
+    assert_eq!(host.identity_id, copy.identity_id);
+    let data = service.snapshot().unwrap();
+    assert_eq!(data.identities.len(), 1);
+    assert_eq!(data.resources.len(), 2);
+    assert_eq!(data.sidebar_nodes.len(), 2);
+    assert!(data.tabs.is_empty());
+    assert!(data.saved_sessions.is_empty());
+}
+
+#[test]
+fn saved_ssh_hosts_survive_reopening_the_local_database_without_sessions() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("via.sqlite");
+    let host = {
+        let service = DomainService::new(Repository::open(&path).unwrap());
+        let workspace = service.snapshot().unwrap().workspaces[0].id;
+        service.save_ssh_host(ssh_input(workspace)).unwrap()
+    };
+    let reopened = DomainService::new(Repository::open(&path).unwrap());
+    let data = reopened.snapshot().unwrap();
+    assert_eq!(data.resources, vec![host]);
+    assert_eq!(data.identities[0].username, "admin");
+    assert!(data.saved_sessions.is_empty());
+    assert!(data.tabs.is_empty());
+}
+
+#[test]
+fn ssh_host_edit_keeps_organization_and_rejects_invalid_references() {
+    let service = DomainService::new(Repository::memory().unwrap());
+    let workspace = service.snapshot().unwrap().workspaces[0].id;
+    let host = service.save_ssh_host(ssh_input(workspace)).unwrap();
+    let node = service.snapshot().unwrap().sidebar_nodes[0].clone();
+    let mut edit = ssh_input(workspace);
+    edit.id = Some(host.id);
+    edit.identity_id = host.identity_id;
+    edit.name = "Renamed".into();
+    edit.port = Some(2222);
+    service.save_ssh_host(edit.clone()).unwrap();
+    let data = service.snapshot().unwrap();
+    assert_eq!(data.sidebar_nodes[0].id, node.id);
+    assert_eq!(data.sidebar_nodes[0].position, node.position);
+    assert_eq!(data.sidebar_nodes[0].label, "Renamed");
+    assert_eq!(data.resources[0].port, Some(2222));
+    edit.port = Some(0);
+    assert!(service.save_ssh_host(edit.clone()).is_err());
+    edit.port = Some(22);
+    edit.identity_id = Some(Uuid::new_v4());
+    assert!(service.save_ssh_host(edit.clone()).is_err());
+    edit.identity_id = host.identity_id;
+    edit.workspace_id = service
+        .create_workspace("Other".into(), "terminal".into(), "#000".into(), None)
+        .unwrap()
+        .id;
+    edit.id = None;
+    assert!(service.save_ssh_host(edit).is_err());
+    assert_eq!(service.snapshot().unwrap().resources.len(), 1);
+}
+
 #[test]
 fn removing_a_split_leaf_collapses_its_parent() {
     let removed = Uuid::new_v4();

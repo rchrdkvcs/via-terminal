@@ -12,11 +12,22 @@ export function useShortcuts() {
   const store = useAppStore()
 
   function dialogOpen() {
-    return store.paletteOpen || store.searchOpen
+    return (
+      store.paletteOpen ||
+      store.searchOpen ||
+      store.newTabOpen ||
+      Boolean(
+        document.querySelector(
+          '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]',
+        ),
+      )
+    )
   }
 
   function handle(event: KeyboardEvent) {
     const control = event.ctrlKey || event.metaKey
+
+    if (dialogOpen() && !store.paletteOpen) return
 
     if (control && event.key.toLowerCase() === 'k') {
       event.preventDefault()
@@ -34,7 +45,7 @@ export function useShortcuts() {
 
     if (control && !event.shiftKey && event.key.toLowerCase() === 't') {
       event.preventDefault()
-      void store.createTerminal()
+      store.requestNewTab()
       return
     }
 

@@ -14,6 +14,7 @@ import type {
   SshConnectionResult,
   SshStatus,
   SshTarget,
+  SshHostInput,
   Tab,
   SplitGroupRecord,
   TargetKind,
@@ -43,6 +44,7 @@ async function call<T>(command: string, args: Record<string, unknown> = {}): Pro
 }
 
 export const api = {
+  saveSshHost: (input: SshHostInput) => call<Resource>('ssh_host_save', { input }),
   /* ------------------------------------------------------------- lifecycle */
   snapshot: () => call<AppData>('app_snapshot'),
   recoveryState: () => call<AppState>('app_recovery_state'),

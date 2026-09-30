@@ -18,7 +18,7 @@ const groups = [
   {
     title: 'Sessions',
     items: [
-      { keys: ['Ctrl', 'T'], label: 'Nouveau terminal' },
+      { keys: ['Ctrl', 'T'], label: 'Nouvel onglet' },
       { keys: ['Ctrl', 'W'], label: 'Fermer l’onglet actif' },
       { keys: ['Ctrl', 'Maj', '"'], label: 'Diviser horizontalement' },
       { keys: ['Ctrl', 'Maj', '%'], label: 'Diviser verticalement' },

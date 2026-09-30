@@ -13,7 +13,6 @@ import InlineRenameInput from './InlineRenameInput.vue'
 import { workspaceIcon, workspaceIconNames, workspaceIcons } from '@/lib/icons'
 import { useAppStore } from '@/stores/app'
 
-const emit = defineEmits<{ addResource: [] }>()
 const store = useAppStore()
 const editing = ref(false)
 const draft = ref('')
@@ -141,7 +140,7 @@ function openContextMenu() {
           </ToggleGroupItem>
         </ToggleGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem @select="emit('addResource')">Nouvelle ressource SSH</DropdownMenuItem>
+        <DropdownMenuItem @select="store.requestNewTab()">Nouvel onglet</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"

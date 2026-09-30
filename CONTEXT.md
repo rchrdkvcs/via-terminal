@@ -52,7 +52,7 @@ The ordered, hierarchical area above the sidebar divider. It contains favorites 
 
 ## Temporary area
 
-The ordered, flat area below New Terminal. It contains unpinned tabs and is never hidden by collapsing the pinned area.
+The ordered, flat area below New Tab. It contains unpinned tabs and is never hidden by collapsing the pinned area.
 
 ## Temporary tab
 
@@ -70,6 +70,6 @@ A tab with no live session. Explicitly activating a stopped favorite starts its 
 
 The tab whose pane currently receives keyboard input. In a visible split group, exactly one member is focused.
 
-## New Terminal
+## New Tab
 
-The primary action that creates a temporary tab at the end of the current workspace's temporary area and starts the workspace's default local profile.
+The primary action for choosing a session type and destination before creating a temporary tab at the end of the current workspace's temporary area. Local terminals use local profiles and SSH sessions use saved resources; cancelling the choice creates neither a tab nor a session.

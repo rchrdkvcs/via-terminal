@@ -20,7 +20,7 @@ The product name is **via terminal**. The native application is **Via**: that is
 - One tab represents one session and one sidebar row; identity is never duplicated.
 - Workspaces isolate organization, resources, identities, default profiles, and tabs.
 - Favorites and one-level folders live above the divider.
-- New Terminal and runtime-only temporary tabs live below it.
+- New Tab and runtime-only temporary tabs live below it.
 - Tabs can link into groups of two to four split panes.
 - A bottom workspace strip follows Zen's horizontal overflow behavior.
 - Workspace switching works by click, palette, Alt+1…9, and Ctrl+wheel over the sidebar.
@@ -33,8 +33,8 @@ The exhaustive sidebar contract is in [SIDEBAR.md](./SIDEBAR.md).
 ## Terminal and connection behavior
 
 - Each workspace has a default local profile: PowerShell, CMD, WSL, or Git Bash on Windows; zsh or bash on macOS; bash, sh, or another detected shell on Linux.
-- New Terminal appends and starts a temporary tab with that profile.
-- Alternative profiles and SSH resources are available from a secondary selector.
+- New Tab and Ctrl+T open a session-type picker. Choosing a local profile or saved SSH connection appends and starts a temporary tab. Cancelling the picker starts no process.
+- Local profiles and SSH connections are selected from New Tab. SSH connection creation, editing, duplication, search, and deletion belong to this flow, never application settings. New session types can extend the picker as their backends become available.
 - Activating a stopped favorite starts it immediately unless manual connection is enabled.
 - A successful temporary-session exit removes its tab; failures remain inspectable.
 - Running sessions continue across workspace navigation and sidebar organization.
