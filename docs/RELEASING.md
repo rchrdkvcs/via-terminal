@@ -6,10 +6,11 @@ The workflow already requests `contents: write`. If asset upload fails with “R
 
 ## Version and GitHub Release
 
-- [ ] Bump the same version in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`.
-- [ ] Merge that bump to `main`.
-- [ ] Create a GitHub Release whose tag is `vX.Y.Z` matching that version. A **draft** is enough: write the notes, save, and wait for the three installer jobs to attach files. Then publish.
+- [ ] Merge the changes to release into `main`. For local builds, synchronize the version with `node .github/scripts/sync-release-version.mjs vX.Y.Z`.
+- [ ] Create a GitHub Release with tag `vX.Y.Z` on that commit. A **draft** is enough: write the notes, save, and wait for the three installer jobs to attach files. Then publish.
 - [ ] Do not create a second release for the same tag. Re-run the **Release** workflow (`workflow_dispatch` with the tag) if an asset is missing.
+
+The release tag is the source of truth: both quality and installer jobs automatically synchronize `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the application entry in `src-tauri/Cargo.lock` before building. These changes are local to the runners; they do not create a commit. A forgotten version bump no longer blocks the release. Use a stable tag in the format `vX.Y.Z`.
 
 ## Build readiness
 
@@ -41,7 +42,7 @@ The workflow already requests `contents: write`. If asset upload fails with “R
 
 ## Publication and rollback
 
-- [ ] Tag `vX.Y.Z` matches the three version files above.
+- [ ] Tag `vX.Y.Z` identifies the intended release commit; the workflow sets the installer version from this tag.
 - [ ] Release notes link to upgrade notes, privacy behavior, and known issues, including unsigned Windows install steps and any legacy macOS Gatekeeper instructions.
 - [ ] Downloaded artifacts are installed and launched on a clean machine for each target OS.
 - [ ] After the three installer jobs finish, a human reviews the GitHub Release (publish it if it was still a draft). Collaborators download installers from that Release; the repository may remain private.

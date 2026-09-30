@@ -1,6 +1,6 @@
 [package]
 name = "via-terminal"
-version = "0.1.0"
+version = "0.2.1"
 description = "A workspace-oriented native terminal"
 authors = ["via terminal contributors"]
 edition = "2021"

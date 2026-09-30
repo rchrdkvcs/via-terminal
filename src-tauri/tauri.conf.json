@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Via",
   "mainBinaryName": "Via",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "identifier": "dev.viaterminal.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
