@@ -47,6 +47,23 @@ pub struct Identity {
     pub username: String,
     pub identity_file: Option<String>,
 }
+
+/// Non-secret connection configuration. Saving this never starts a session.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SshHostInput {
+    pub workspace_id: Id,
+    pub id: Option<Id>,
+    pub name: String,
+    pub host: Option<String>,
+    pub ssh_alias: Option<String>,
+    pub port: Option<u16>,
+    pub identity_id: Option<Id>,
+    pub identity_name: String,
+    pub username: String,
+    pub identity_file: Option<String>,
+    pub parent_id: Option<Id>,
+}
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SidebarNode {

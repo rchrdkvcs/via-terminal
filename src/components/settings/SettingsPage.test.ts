@@ -32,7 +32,6 @@ function renderPage() {
         KeybindingsSection: true,
         DataSection: true,
         AboutSection: true,
-        ResourcesSection: true,
         Transition: passthrough,
       },
     },
@@ -58,20 +57,17 @@ describe('SettingsPage', () => {
     expect(store.route).toBe('workspace')
   })
 
-  it('transmet l’ajout de ressource et restaure la section active', async () => {
+  it('does not expose SSH management, even for a stale resources section', async () => {
+    store.settingsSection = 'resources'
     const wrapper = renderPage()
-    const resourcesButton = wrapper
-      .findAll('nav button')
-      .find((button) => button.text().includes('Ressources SSH'))!
-
-    await resourcesButton.trigger('click')
-    wrapper.findComponent({ name: 'ResourcesSection' }).vm.$emit('add')
-    expect(wrapper.emitted('addResource')).toHaveLength(1)
-
+    expect(wrapper.findAll('nav button').some((button) => button.text().includes('SSH'))).toBe(
+      false,
+    )
+    expect(wrapper.findComponent({ name: 'GeneralSection' }).exists()).toBe(true)
     const restoreButton = wrapper
       .findAll('button')
       .find((button) => button.text().trim() === 'Rétablir')!
     await restoreButton.trigger('click')
-    expect(store.restoreDefaults).toHaveBeenCalledWith('resources')
+    expect(store.restoreDefaults).toHaveBeenCalledWith('general')
   })
 })

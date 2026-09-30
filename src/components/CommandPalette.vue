@@ -56,11 +56,11 @@ const workspaceActions = computed<Action[]>(() =>
 
 const commands = computed<Action[]>(() => [
   {
-    id: 'new-terminal',
-    label: 'Nouveau terminal',
-    detail: 'Terminal par défaut · Ctrl T',
+    id: 'new-tab',
+    label: 'Nouvel onglet',
+    detail: 'Choisir un type de session · Ctrl T',
     icon: Terminal,
-    run: () => store.createTerminal(),
+    run: () => store.requestNewTab(),
   },
   {
     id: 'split-vertical',
@@ -86,7 +86,7 @@ const commands = computed<Action[]>(() => [
   {
     id: 'settings',
     label: 'Ouvrir les réglages',
-    detail: 'Apparence, terminal, ressources',
+    detail: 'Apparence, terminal, raccourcis',
     icon: Settings,
     run: () => {
       store.route = 'settings'

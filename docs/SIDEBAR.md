@@ -11,12 +11,12 @@ The expanded sidebar contains, from top to bottom:
 1. current workspace header;
 2. pinned area;
 3. divider;
-4. New Terminal;
+4. New Tab;
 5. temporary area;
 6. flexible space;
 7. workspace strip and global add action.
 
-The workspace header collapses only the pinned area. New Terminal, temporary tabs, and the workspace strip remain visible. Collapsing never stops a session.
+The workspace header collapses only the pinned area. New Tab, temporary tabs, and the workspace strip remain visible. Collapsing never stops a session.
 
 The sidebar width is adjustable between a usable minimum and about 40% of the window. Double-clicking the resize edge restores the default. Width is remembered per window. The only visibility states are expanded and hidden: there is no compact mode or compact-density setting. A shortcut toggles visibility, and delayed edge reveal may expose it temporarily.
 
@@ -39,7 +39,7 @@ Activating a stopped favorite immediately starts its configured shell or connect
 
 ### Temporary tabs
 
-New Terminal appends a temporary tab and starts the workspace's default local profile. A successful or intentional process exit removes the tab immediately. A launch failure or unexpected SSH disconnection preserves it so the user can inspect output and Retry, Choose another profile, or Close.
+Choosing a local profile or SSH connection in New Tab appends a temporary tab and starts its session. A successful or intentional process exit removes the tab immediately. A launch failure or unexpected SSH disconnection preserves it so the user can inspect output and Retry, Choose another profile, or Close.
 
 Temporary tabs are never persisted or restored after exit or crash.
 
@@ -63,9 +63,9 @@ Moving a temporary tab into a folder pins that same tab. Unpinning moves it to t
 
 The folder menu contains Rename, New folder after, and Delete folder. It does not create or start terminals.
 
-## New Terminal
+## New Tab
 
-A primary click appends and focuses a temporary tab using the workspace default. A chevron, secondary click, or keyboard command opens the profile and resource selector. An alternative choice never changes the default silently. New tabs always go to the end of the temporary area.
+A primary click, Ctrl+T, the workspace menus, and the command palette open the same session-type picker. Choose Terminal local and a local profile, or SSH and a saved connection. SSH connections can also be created, edited, duplicated, searched, and deleted here. Cancelling starts no session. An alternative choice never changes the default silently. New tabs always go to the end of the temporary area; existing tab, pinning, folder, and split interactions remain unchanged.
 
 ## Split groups
 
@@ -144,7 +144,7 @@ Transfer is context-menu only. Transfer this tab detaches one grouped member if 
 
 A tab follows a safe terminal title until renamed. A manual name ignores later terminal title changes; Use automatic title restores dynamic naming. Workspace and folder renaming is inline: Enter commits, Escape cancels, and focus returns to the initiating row.
 
-With no displayed process, the main surface has no card background, border, shadow, or fake terminal frame. It uses the continuous application background with restrained copy and New Terminal. Explicitly selecting a stopped favorite may show Start or Reconnect on the same unframed surface.
+With no displayed process, the main surface has no card background, border, shadow, or fake terminal frame. It uses the continuous application background with restrained copy and New Tab. Explicitly selecting a stopped favorite may show Start or Reconnect on the same unframed surface.
 
 Launch and connection errors remain visible and actionable. A temporary error tab is not removed before it can be inspected or closed.
 

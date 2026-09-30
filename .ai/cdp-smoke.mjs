@@ -94,7 +94,15 @@ check(
   JSON.stringify(boot),
 )
 
-await evaluate('window.__clickText("Nouveau terminal")')
+await evaluate('window.__clickText("Nouvel onglet")')
+await wait(300)
+await evaluate(`(() => {
+  const store = window.__store();
+  const profile = store.workspaceProfiles.find((p) => p.id === store.defaultProfileId);
+  const button = [...document.querySelectorAll('[role="dialog"] button')].find((b) => b.textContent.includes(profile.name));
+  if (!button) throw new Error('default local profile is missing from the new-tab picker');
+  button.click();
+})()`)
 await wait(3000)
 
 const rendered = await evaluate(
@@ -161,7 +169,15 @@ check(
 )
 
 // Switching sessions must not rebuild the renderer.
-await evaluate('window.__clickText("Nouveau terminal")')
+await evaluate('window.__clickText("Nouvel onglet")')
+await wait(300)
+await evaluate(`(() => {
+  const store = window.__store();
+  const profile = store.workspaceProfiles.find((p) => p.id === store.defaultProfileId);
+  const button = [...document.querySelectorAll('[role="dialog"] button')].find((b) => b.textContent.includes(profile.name));
+  if (!button) throw new Error('default local profile is missing from the new-tab picker');
+  button.click();
+})()`)
 await wait(2500)
 await evaluate('document.querySelectorAll(\'[role="tab"]\')[0].click()')
 await wait(1200)

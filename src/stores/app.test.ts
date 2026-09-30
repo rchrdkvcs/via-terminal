@@ -9,6 +9,8 @@ vi.mock('@/ipc/client', () => ({
   api: {
     spawnSession: vi.fn(async () => ({ id: `session-${++native.next}` })),
     saveTab: vi.fn(async (tab) => tab),
+    saveSshHost: vi.fn(async () => ({ id: 'ssh-host', name: 'SSH' })),
+    snapshot: vi.fn(),
     saveSplitGroup: vi.fn(async (group) => group),
     deleteSplitGroup: vi.fn(async () => undefined),
     deleteTab: vi.fn(async () => undefined),
@@ -19,6 +21,7 @@ vi.mock('@/ipc/client', () => ({
 }))
 
 import { useAppStore } from './app'
+import { api } from '@/ipc/client'
 
 const WORKSPACE = 'workspace'
 const PROFILE = 'profile'
@@ -62,6 +65,40 @@ describe('application sidebar lifecycle', () => {
   beforeEach(() => {
     native.next = 0
     setActivePinia(createPinia())
+  })
+
+  it('saving SSH metadata preserves live tabs, sessions, focus and split groups', async () => {
+    const store = useAppStore()
+    store.applySnapshot(snapshot())
+    await store.createTerminal()
+    await store.splitActivePane('vertical')
+    const before = JSON.stringify({
+      tabs: store.tabs,
+      sessions: store.sessions,
+      groups: store.splitGroups,
+      active: store.activeTabId,
+    })
+    vi.mocked(api.snapshot).mockResolvedValue(snapshot())
+    await store.saveSshResource({
+      id: null,
+      name: 'SSH',
+      host: 'example.test',
+      sshAlias: null,
+      port: 22,
+      identityId: null,
+      identityName: 'Admin',
+      username: 'admin',
+      identityFile: null,
+      parentId: null,
+    })
+    expect(
+      JSON.stringify({
+        tabs: store.tabs,
+        sessions: store.sessions,
+        groups: store.splitGroups,
+        active: store.activeTabId,
+      }),
+    ).toBe(before)
   })
 
   it('pins the same temporary tab instead of creating a second row', async () => {

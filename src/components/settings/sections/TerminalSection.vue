@@ -34,7 +34,7 @@ const shellChoices = computed(() => {
   >
     <SettingRow
       label="Terminal par défaut"
-      description="Shell ouvert par « Nouveau terminal » et Ctrl T."
+      description="Shell proposé pour les nouveaux onglets de type Terminal local."
       for-id="default-shell"
     >
       <Select

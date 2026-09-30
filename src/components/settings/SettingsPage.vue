@@ -8,7 +8,6 @@ import {
   Keyboard,
   Palette,
   RotateCcw,
-  Server,
   SquareTerminal,
 } from '@lucide/vue'
 import {
@@ -27,11 +26,9 @@ import AppearanceSection from './sections/AppearanceSection.vue'
 import DataSection from './sections/DataSection.vue'
 import GeneralSection from './sections/GeneralSection.vue'
 import KeybindingsSection from './sections/KeybindingsSection.vue'
-import ResourcesSection from './sections/ResourcesSection.vue'
 import TerminalSection from './sections/TerminalSection.vue'
 import { useAppStore } from '@/stores/app'
 
-const emit = defineEmits<{ addResource: [] }>()
 const store = useAppStore()
 const confirmRestore = ref(false)
 const sections = [
@@ -62,13 +59,6 @@ const sections = [
     description: 'Commandes clavier',
     icon: Keyboard,
     component: KeybindingsSection,
-  },
-  {
-    id: 'resources',
-    label: 'Ressources SSH',
-    description: 'Hôtes et identités',
-    icon: Server,
-    component: ResourcesSection,
   },
   {
     id: 'data',
@@ -112,11 +102,11 @@ function restoreDefaults() {
           :key="section.id"
           class="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-start transition-colors duration-150"
           :class="
-            section.id === store.settingsSection
+            section.id === activeSection.id
               ? 'bg-accent text-accent-foreground'
               : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
           "
-          :aria-current="section.id === store.settingsSection ? 'page' : undefined"
+          :aria-current="section.id === activeSection.id ? 'page' : undefined"
           @click="store.settingsSection = section.id"
         >
           <component :is="section.icon" :size="16" :stroke-width="1.5" class="shrink-0" />
@@ -151,11 +141,7 @@ function restoreDefaults() {
       <div class="thin-scrollbar min-h-0 flex-1 overflow-y-auto border-t">
         <div class="mx-auto max-w-2xl px-6 py-8">
           <Transition name="settings-section" mode="out-in">
-            <component
-              :is="activeSection.component"
-              :key="activeSection.id"
-              @add="emit('addResource')"
-            />
+            <component :is="activeSection.component" :key="activeSection.id" />
           </Transition>
         </div>
       </div>

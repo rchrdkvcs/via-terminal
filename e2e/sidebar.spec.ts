@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { seedWorkspace } from './workspace-fixture'
 
 test('hidden sidebar has a generous edge target and a detached overlay', async ({ page }) => {
   await page.goto('/')
@@ -48,11 +49,15 @@ test('hidden sidebar has a generous edge target and a detached overlay', async (
   await expect(panel).toBeVisible()
   await expect(panel).toHaveCSS('transform', 'none')
 
+  // The parent slide transition can still be running when the inner panel's
+  // transform is already none. Wait for its final physical position.
+  await expect.poll(async () => (await panel.boundingBox())?.x).toBeCloseTo(4, 0)
   const panelBox = await panel.boundingBox()
   if (!panelBox) throw new Error('sidebar peek panel is not visible')
 
   expect(panelBox.x).toBeCloseTo(4, 0)
-  expect(panelBox.y - zoneBox.y).toBeCloseTo(4, 0)
+  // The existing overlay extends 4 px above the workspace surface.
+  expect(panelBox.y - zoneBox.y).toBeCloseTo(-4, 0)
   expect(zoneBox.y + zoneBox.height - (panelBox.y + panelBox.height)).toBeCloseTo(4, 0)
 })
 
@@ -81,9 +86,15 @@ test('sidebar peek removes movement when reduced motion is requested', async ({ 
 
 test('tab drag keeps stable identities when reordering and splitting', async ({ page }) => {
   await page.goto('/')
-  await page.getByText('Nouveau terminal').click()
-  await page.getByText('Nouveau terminal').click()
-  await page.getByText('Nouveau terminal').click()
+  await seedWorkspace(page)
+  for (let index = 0; index < 3; index++) {
+    await page
+      .getByRole('button', { name: /Nouvel onglet/ })
+      .first()
+      .click()
+    await page.getByRole('dialog').getByRole('button', { name: /Bash/ }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+  }
 
   const state = () =>
     page.evaluate(() => {
@@ -115,6 +126,9 @@ test('tab drag keeps stable identities when reordering and splitting', async ({ 
 
   const source = page.locator(`[data-tab-id="${reordered.order[2]}"]`)
   const target = page.locator(`[data-tab-id="${reordered.order[0]}"]`)
+  // A row leaving its previous area remains in the DOM during the transition.
+  await expect(source).toHaveCount(1)
+  await expect(target).toHaveCount(1)
   const sourceBox = await source.boundingBox()
   const targetBox = await target.boundingBox()
   if (!sourceBox || !targetBox) throw new Error('tab rows are not visible')

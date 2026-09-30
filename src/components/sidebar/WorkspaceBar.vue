@@ -177,8 +177,8 @@ onBeforeUnmount(() => cleanupStrip?.())
             <DropdownMenuItem @select="emit('editWorkspace', workspace.id)">
               <Pencil :stroke-width="1.5" />Modifier
             </DropdownMenuItem>
-            <DropdownMenuItem @select="store.createTerminal()">
-              <Terminal :stroke-width="1.5" />Nouveau terminal
+            <DropdownMenuItem @select="store.requestNewTab()">
+              <Terminal :stroke-width="1.5" />Nouvel onglet
             </DropdownMenuItem>
             <DropdownMenuItem @select="store.createFolder('Nouveau dossier')">
               <FolderPlus :stroke-width="1.5" />Nouveau dossier
@@ -208,8 +208,8 @@ onBeforeUnmount(() => cleanupStrip?.())
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="end" class="w-56">
-        <DropdownMenuItem @select="store.createTerminal()">
-          <Terminal :stroke-width="1.5" />Nouveau terminal
+        <DropdownMenuItem @select="store.requestNewTab()">
+          <Terminal :stroke-width="1.5" />Nouvel onglet
         </DropdownMenuItem>
         <DropdownMenuItem @select="store.createFolder('Nouveau dossier')">
           <FolderPlus :stroke-width="1.5" />Nouveau dossier

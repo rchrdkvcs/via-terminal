@@ -125,6 +125,10 @@ fn resource_create(
         .create_resource(workspace_id, name, host, ssh_alias, port, identity_id)
 }
 #[tauri::command]
+fn ssh_host_save(state: State<BackendState>, input: SshHostInput) -> Result<Resource, String> {
+    state.domain.save_ssh_host(input)
+}
+#[tauri::command]
 fn settings_get(state: State<BackendState>) -> Result<Settings, String> {
     Ok(state.domain.snapshot()?.settings)
 }
@@ -286,6 +290,7 @@ pub fn run() {
             workspace_delete,
             identity_create,
             resource_create,
+            ssh_host_save,
             profile_create,
             sidebar_node_create,
             sidebar_node_rename,

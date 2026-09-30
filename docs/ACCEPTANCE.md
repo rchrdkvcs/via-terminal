@@ -13,14 +13,14 @@ These are release-level outcomes. The detailed behavior is defined in [SIDEBAR.m
 
 ## Sidebar structure
 
-- Collapse the workspace header; favorites and folders hide while New Terminal and temporary tabs remain visible and running.
+- Collapse the workspace header; favorites and folders hide while New Tab and temporary tabs remain visible and running.
 - Resize, reset, hide, edge-reveal, and restore the sidebar; state is remembered per window.
 - Confirm there is no compact mode or compact-density setting.
 - With no displayed process, verify the main surface has no card background, border, shadow, or fake terminal frame.
 
 ## Favorites, temporary tabs, and folders
 
-- Start a temporary tab with New Terminal; it appends at the end using the workspace default profile.
+- Open New Tab by click and Ctrl+T; choose a local profile or saved SSH connection and verify a temporary tab appends at the end. Cancel the picker and verify no process or tab is created. Confirm SSH management is absent from settings.
 - Exit successfully; its row disappears immediately and a stopped tab is not activated automatically.
 - Cause launch failure and unexpected SSH disconnect; output and Retry, Choose another profile, and Close remain available.
 - Pin a running temporary tab; the same identity moves above the divider and the process continues.

@@ -1,6 +1,117 @@
 use super::*;
 
 impl DomainService {
+    pub fn save_ssh_host(&self, input: SshHostInput) -> Result<Resource, String> {
+        fn optional(value: Option<String>) -> Option<String> {
+            value
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty())
+        }
+        let name = input.name.trim().to_string();
+        let host = optional(input.host);
+        let alias = optional(input.ssh_alias);
+        let key = optional(input.identity_file);
+        if name.is_empty() {
+            return Err("Le nom est requis.".into());
+        }
+        let destination = alias
+            .as_deref()
+            .or(host.as_deref())
+            .ok_or("L’hôte est requis.")?;
+        if destination.chars().any(char::is_whitespace) {
+            return Err("L’hôte ne doit pas contenir d’espaces.".into());
+        }
+        crate::ssh::connection_args(
+            destination,
+            Some(input.username.trim()),
+            input.port,
+            key.as_deref(),
+        )?;
+        self.mutate(|d| {
+            if !d.workspaces.iter().any(|w| w.id == input.workspace_id) {
+                return Err("workspace not found".into());
+            }
+            // Resolve the existing resource before creating any identity.
+            if let Some(id) = input.id {
+                if !d
+                    .resources
+                    .iter()
+                    .any(|r| r.id == id && r.workspace_id == input.workspace_id)
+                {
+                    return Err("resource not found in workspace".into());
+                }
+            }
+            let identity_id = if let Some(id) = input.identity_id {
+                if !d
+                    .identities
+                    .iter()
+                    .any(|i| i.id == id && i.workspace_id == input.workspace_id)
+                {
+                    return Err("identity not found in workspace".into());
+                }
+                id
+            } else {
+                let username = input.username.trim();
+                if username.is_empty() || username.chars().any(char::is_whitespace) {
+                    return Err(
+                        "L’utilisateur est requis et ne doit pas contenir d’espaces.".into(),
+                    );
+                }
+                let id = Uuid::new_v4();
+                d.identities.push(Identity {
+                    id,
+                    workspace_id: input.workspace_id,
+                    name: if input.identity_name.trim().is_empty() {
+                        username.into()
+                    } else {
+                        input.identity_name.trim().into()
+                    },
+                    username: username.into(),
+                    identity_file: key,
+                });
+                id
+            };
+            let resource = Resource {
+                id: input.id.unwrap_or_else(Uuid::new_v4),
+                workspace_id: input.workspace_id,
+                name: name.clone(),
+                host,
+                ssh_alias: alias,
+                port: input.port,
+                identity_id: Some(identity_id),
+            };
+            if let Some(existing) = d.resources.iter_mut().find(|r| r.id == resource.id) {
+                *existing = resource.clone();
+                for node in d
+                    .sidebar_nodes
+                    .iter_mut()
+                    .filter(|n| n.target_id == Some(resource.id))
+                {
+                    node.label = name.clone();
+                }
+            } else {
+                d.resources.push(resource.clone());
+                let position = d
+                    .sidebar_nodes
+                    .iter()
+                    .filter(|n| {
+                        n.workspace_id == input.workspace_id && n.parent_id == input.parent_id
+                    })
+                    .count() as i64;
+                d.sidebar_nodes.push(SidebarNode {
+                    id: Uuid::new_v4(),
+                    workspace_id: input.workspace_id,
+                    parent_id: input.parent_id,
+                    kind: "resource".into(),
+                    label: name,
+                    target_id: Some(resource.id),
+                    position,
+                });
+            }
+            Ok(resource)
+        })
+    }
+
     pub fn create_workspace(
         &self,
         name: String,

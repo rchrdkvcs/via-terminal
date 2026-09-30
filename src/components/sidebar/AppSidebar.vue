@@ -28,8 +28,6 @@ import {
 } from '@/lib/sidebar-dnd'
 import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
 
-const emit = defineEmits<{ addResource: [] }>()
-
 const store = useAppStore()
 const workspaceFormId = ref<string | undefined>()
 const workspaceFormOpen = ref(false)
@@ -100,7 +98,7 @@ function hasPinnedItems() {
 
       <div v-else class="flex min-h-0 flex-1 flex-col">
         <SidebarHeader class="gap-0 p-2 pb-1">
-          <WorkspaceIndicator @add-resource="emit('addResource')" />
+          <WorkspaceIndicator />
         </SidebarHeader>
 
         <SidebarContent
@@ -126,7 +124,10 @@ function hasPinnedItems() {
             leave-active-class="transition-opacity duration-100 ease-out"
             leave-to-class="opacity-0"
           >
-            <div v-if="!store.workspaceContentCollapsed" id="workspace-sidebar-content">
+            <div
+              v-if="!store.workspaceContentCollapsed && (hasPinnedItems() || activeDrag)"
+              id="workspace-sidebar-content"
+            >
               <SidebarGroup class="min-h-12 p-2 py-1" aria-label="Épinglés et dossiers">
                 <div>
                   <PinnedArea />
@@ -159,11 +160,11 @@ function hasPinnedItems() {
             </div>
           </Transition>
 
-          <SidebarGroup class="px-2 py-1" aria-label="Créer un terminal">
+          <SidebarGroup class="px-2 py-1" aria-label="Créer un onglet">
             <SidebarMenuItem>
-              <SidebarMenuButton class="text-sidebar-foreground/70" @click="store.createTerminal()">
+              <SidebarMenuButton class="text-sidebar-foreground/70" @click="store.requestNewTab()">
                 <Plus :stroke-width="1.5" />
-                <span>Nouveau terminal</span>
+                <span>Nouvel onglet</span>
                 <KbdGroup class="ms-auto shrink-0">
                   <Kbd>Ctrl</Kbd>
                   <Kbd>T</Kbd>

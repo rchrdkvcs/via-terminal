@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import type { TabTypeId } from '@/domain/tab-types'
 import { computed, nextTick, ref, shallowRef } from 'vue'
 import { api, describeError, isNative } from '@/ipc/client'
 import { on } from '@/ipc/events'
@@ -10,6 +11,7 @@ import type {
   LocalProfile,
   PaneTree,
   Resource,
+  SshHostInput,
   SavedSession,
   Settings,
   SidebarNodeRecord,
@@ -198,6 +200,8 @@ export const useAppStore = defineStore('app', () => {
   const route = ref<'workspace' | 'settings'>('workspace')
   const settingsSection = ref('general')
   const paletteOpen = ref(false)
+  const newTabOpen = ref(false)
+  const newTabType = ref<TabTypeId>('local')
   const searchOpen = ref(false)
   const recoveryAvailable = ref(false)
   const windowId = ref<Id>(MAIN_WINDOW_ID)
@@ -933,7 +937,7 @@ export const useAppStore = defineStore('app', () => {
       return
     }
     const session = await startSession(targetKind, targetId)
-    if (session) openSessionInTab(session, false)
+    if (session) return openSessionInTab(session, false)
   }
 
   function openSessionInTab(session: SessionSummary, organized = false) {
@@ -1019,7 +1023,12 @@ export const useAppStore = defineStore('app', () => {
     }
     const session = await startSession('profile', id)
     if (!session) return
-    openSessionInTab(session, false)
+    return openSessionInTab(session, false)
+  }
+
+  function requestNewTab(type: TabTypeId = 'local') {
+    newTabType.value = type
+    newTabOpen.value = true
   }
 
   async function organizeTab(id: Id) {
@@ -1493,44 +1502,21 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function createSshResource(input: {
-    name: string
-    host: string | null
-    sshAlias: string | null
-    port: number | null
-    identityName: string
-    username: string
-    identityFile: string | null
-    parentId: Id | null
-  }) {
-    if (!activeWorkspaceId.value) return
-    try {
-      const identity = await api.createIdentity(
-        activeWorkspaceId.value,
-        input.identityName.trim() || input.username.trim(),
-        input.username.trim(),
-        input.identityFile,
-      )
-      const resource = await api.createResource(
-        activeWorkspaceId.value,
-        input.name.trim(),
-        input.host,
-        input.sshAlias,
-        input.port,
-        identity.id,
-      )
-      await api.createSidebarNode(
-        activeWorkspaceId.value,
-        'resource',
-        resource.name,
-        input.parentId,
-        resource.id,
-      )
-      await refresh()
-      notify('success', `Ressource « ${resource.name} » ajoutée.`)
-    } catch (error) {
-      report('Création de la ressource impossible', error)
-    }
+  async function saveSshResource(input: Omit<SshHostInput, 'workspaceId'>): Promise<Resource> {
+    if (!activeWorkspaceId.value) throw new Error('Aucun espace actif.')
+    const resource = await api.saveSshHost({ ...input, workspaceId: activeWorkspaceId.value })
+    // Reload connection metadata only: a full snapshot also restores saved
+    // split groups and window focus, which must not replace live tab state.
+    const data = await api.snapshot()
+    resources.value = data.resources
+    identities.value = data.identities
+    sidebarNodes.value = data.sidebarNodes
+    notify('success', `Connexion « ${resource.name} » enregistrée.`)
+    return resource
+  }
+
+  async function createSshResource(input: Omit<SshHostInput, 'workspaceId' | 'id' | 'identityId'>) {
+    return saveSshResource({ ...input, id: null, identityId: null })
   }
 
   /**
@@ -2070,6 +2056,8 @@ export const useAppStore = defineStore('app', () => {
     route,
     settingsSection,
     paletteOpen,
+    newTabOpen,
+    newTabType,
     searchOpen,
     recoveryAvailable,
     renamingNodeId,
@@ -2121,6 +2109,7 @@ export const useAppStore = defineStore('app', () => {
     toggleWorkspaceContent,
     openTarget,
     createTerminal,
+    requestNewTab,
     activateRestorableSession,
     reconnectSession,
     setSessionContext,
@@ -2147,6 +2136,7 @@ export const useAppStore = defineStore('app', () => {
     createFolderAfter,
     createLocalProfile,
     createSshResource,
+    saveSshResource,
     nodeIdForTarget,
     restoreDefaults,
     renameNode,
