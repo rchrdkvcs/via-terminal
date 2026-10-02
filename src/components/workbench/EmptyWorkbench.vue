@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Search, Server, SquareTerminal } from '@lucide/vue'
+import { Search, Server, Terminal } from '@lucide/vue'
 import { Kbd } from '@/components/ui/kbd'
 import { useHostName } from '@/composables/useHostName'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
@@ -67,7 +67,7 @@ const hasRows = computed(() => rows(spaces.active).length > 0)
           class="row flex h-9 w-full items-center gap-3 px-2.5 text-start text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           @click="workbench.open({ kind: 'local', shell: null, cwd: null })"
         >
-          <SquareTerminal :size="16" :stroke-width="1.5" class="text-ink-muted" />
+          <Terminal :size="16" :stroke-width="1.5" class="text-ink-muted" />
           <span class="flex-1">{{ shell.name }}</span>
           <span class="text-xs text-ink-faint">Shell par défaut</span>
         </button>

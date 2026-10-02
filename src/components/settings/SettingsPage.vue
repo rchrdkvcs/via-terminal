@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useTimeoutFn } from '@vueuse/core'
-import { Keyboard, Palette, Settings2, SquareTerminal } from '@lucide/vue'
+import { Keyboard, Palette, Settings2, Terminal } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { notify } from '@/lib/notify'
@@ -17,7 +17,7 @@ const settings = useSettings()
 const sections = [
   { id: 'general', label: 'Général', icon: Settings2, view: GeneralSection },
   { id: 'appearance', label: 'Apparence', icon: Palette, view: AppearanceSection },
-  { id: 'terminal', label: 'Terminal', icon: SquareTerminal, view: TerminalSection },
+  { id: 'terminal', label: 'Terminal', icon: Terminal, view: TerminalSection },
   { id: 'shortcuts', label: 'Raccourcis', icon: Keyboard, view: ShortcutsSection },
 ] satisfies (PageSection & { view: unknown })[]
 

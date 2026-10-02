@@ -9,14 +9,14 @@ import {
   House,
   Server,
   Shield,
-  SquareTerminal,
+  Terminal,
   Wrench,
 } from '@lucide/vue'
 import type { Component } from 'vue'
 
 /** Lucide components for the icon names a space can store. */
 export const spaceIconComponents: Record<string, Component> = {
-  terminal: SquareTerminal,
+  terminal: Terminal,
   server: Server,
   briefcase: Briefcase,
   house: House,
@@ -31,5 +31,5 @@ export const spaceIconComponents: Record<string, Component> = {
 }
 
 export function spaceIcon(name: string): Component {
-  return spaceIconComponents[name] ?? SquareTerminal
+  return spaceIconComponents[name] ?? Terminal
 }

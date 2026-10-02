@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { PanelLeft } from '@lucide/vue'
-import WindowControls from '@/components/shell/WindowControls.vue'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
 import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
 
-/** The window's title bar lives in the sidebar, as in Arc. */
+/** The top of the sidebar: room for the macOS traffic lights, and its toggle. */
 const settings = useSettings()
 const spaces = useSpaces()
 const kbd = useShortcutLabel()
@@ -29,6 +28,5 @@ const kbd = useShortcutLabel()
       <PanelLeft :size="15" :stroke-width="1.5" />
     </button>
     <div data-tauri-drag-region class="h-full flex-1" />
-    <WindowControls v-if="settings.platform !== 'macos'" />
   </div>
 </template>

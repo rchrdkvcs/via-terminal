@@ -1,4 +1,4 @@
-import { AppWindow, Server, SquareTerminal, Zap } from '@lucide/vue'
+import { AppWindow, Server, Terminal, Zap } from '@lucide/vue'
 import { formatQuickTarget, parseQuickConnect } from '@/domain/quick-connect'
 import { rank } from '@/domain/search'
 import { tabs } from '@/domain/space'
@@ -43,7 +43,7 @@ export function useCommandTargets() {
       section: 'Terminaux',
       label: shell.name,
       detail: shell.path,
-      icon: SquareTerminal,
+      icon: Terminal,
       target: { kind: 'local', shell: shell.path, cwd: null },
     }))
   }

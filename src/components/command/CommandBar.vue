@@ -93,12 +93,7 @@ const showSection = (index: number) =>
             @keydown.enter.prevent="submit"
           />
         </div>
-        <div
-          id="command-results"
-          ref="list"
-          role="listbox"
-          class="scrollbar-thin min-h-0 overflow-y-auto p-1.5"
-        >
+        <div id="command-results" ref="list" role="listbox" class="min-h-0 overflow-y-auto p-1.5">
           <template v-for="(item, index) in items" :key="item.id">
             <div
               v-if="showSection(index)"

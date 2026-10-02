@@ -95,7 +95,7 @@ function tabbable(id: Id): boolean {
       ref="list"
       role="listbox"
       :aria-label="title"
-      class="scrollbar-thin flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-3 pb-3"
+      class="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-3 pb-3"
       @keydown="onKeydown"
     >
       <slot :tabbable="tabbable" />

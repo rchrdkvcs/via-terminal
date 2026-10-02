@@ -26,7 +26,6 @@ export interface Confirmation {
 export const useUi = defineStore('ui', () => {
   const route = ref<Route>('workbench')
   const command = ref<CommandMode | null>(null)
-  const peek = ref(false)
   const renaming = ref<Id | null>(null)
   const spaceForm = ref<{ id: Id | null } | null>(null)
   const confirmation = ref<Confirmation | null>(null)
@@ -62,7 +61,6 @@ export const useUi = defineStore('ui', () => {
   return {
     route,
     command,
-    peek,
     renaming,
     spaceForm,
     confirmation,

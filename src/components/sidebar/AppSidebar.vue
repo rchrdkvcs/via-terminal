@@ -51,10 +51,7 @@ function onWheel(event: WheelEvent) {
     <div class="px-2 pb-2">
       <AddressPill />
     </div>
-    <div
-      :key="spaces.active.id"
-      class="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto px-2"
-    >
+    <div :key="spaces.active.id" class="flex min-h-0 flex-1 flex-col overflow-y-auto px-2">
       <SpaceHeader />
       <RowArea area="pinned" :entries="spaces.active.pinned" label="Onglets épinglés" />
       <div class="mx-2.5 mb-1.5 h-px bg-hairline" role="separator" />

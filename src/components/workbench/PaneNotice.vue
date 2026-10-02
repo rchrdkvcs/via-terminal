@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { AlertTriangle, Server, SquareTerminal, Zap } from '@lucide/vue'
+import { AlertTriangle, Server, Terminal, Zap } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/kbd'
 import type { Tab } from '@/ipc/types'
@@ -23,7 +23,7 @@ const icon = computed(() =>
   props.mode === 'failed'
     ? AlertTriangle
     : props.tab.target.kind === 'local'
-      ? SquareTerminal
+      ? Terminal
       : props.tab.target.kind === 'host'
         ? Server
         : Zap,

@@ -14,7 +14,7 @@ defineProps<{ title: string; subtitle?: string; error?: string | null }>()
         <slot name="actions" />
       </div>
     </header>
-    <div class="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-5 pb-5">
+    <div class="min-h-0 flex-1 overflow-y-auto px-5 pb-5">
       <div class="grid gap-4">
         <slot />
       </div>

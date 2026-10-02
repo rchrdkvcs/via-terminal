@@ -5,6 +5,7 @@ import CommandBar from '@/components/command/CommandBar.vue'
 import ConfirmDialog from '@/components/shell/ConfirmDialog.vue'
 import SidebarFrame from '@/components/shell/SidebarFrame.vue'
 import SpaceDialog from '@/components/shell/SpaceDialog.vue'
+import TitleBar from '@/components/shell/TitleBar.vue'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Workbench from '@/components/workbench/Workbench.vue'
@@ -32,14 +33,10 @@ const ui = useUi()
       <template v-if="ready">
         <SidebarFrame />
         <div
-          class="flex min-w-0 flex-1 flex-col"
-          :class="spaces.sidebar.visible ? 'py-2 pe-2' : 'p-2'"
+          class="flex min-w-0 flex-1 flex-col pb-2"
+          :class="spaces.sidebar.visible ? 'pe-2' : 'px-2'"
         >
-          <div
-            v-if="!spaces.sidebar.visible"
-            data-tauri-drag-region
-            class="absolute inset-x-0 top-0 z-30 h-2"
-          />
+          <TitleBar />
           <!-- The terminal surface stays mounted under the vault and settings. -->
           <main
             class="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-surface text-surface-ink shadow-surface"

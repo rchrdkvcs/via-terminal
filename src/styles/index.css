@@ -109,8 +109,3 @@
     display: none;
   }
 }
-
-@utility scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: var(--hairline-strong) transparent;
-}

@@ -40,7 +40,7 @@ useEventListener(window, 'keydown', (event: KeyboardEvent) => {
   <div class="flex h-full min-h-0 text-[13px] text-foreground">
     <nav
       :aria-label="title"
-      class="scrollbar-thin flex w-[248px] shrink-0 flex-col gap-5 overflow-y-auto bg-rail px-3 pt-4 pb-3"
+      class="flex w-[248px] shrink-0 flex-col gap-5 overflow-y-auto bg-rail px-3 pt-4 pb-3"
     >
       <header class="flex h-7 items-center justify-between ps-2.5">
         <h1 class="text-[15px] font-semibold tracking-[-0.01em]">{{ title }}</h1>
