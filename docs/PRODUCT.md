@@ -31,7 +31,7 @@ Via is a terminal you enjoy living in: the sidebar of Arc and Zen for your sessi
 
 - **Sidebar**, from top to bottom: the sidebar toggle and window controls, the address pill of the current tab, the space name and its pinned area (pinned tabs, split views and folders), a divider, New tab, the temporary tabs, and the space switcher with vault and settings buttons.
 - **Content**: the active row, shown as a single terminal or a split view, on a rounded surface. Nothing else: no top bar, no tab strip.
-- The sidebar can be hidden (Ctrl+Shift+B); resting the pointer on the left edge reveals it over the content.
+- The sidebar can be hidden and shown again with Ctrl+Shift+B or its button. The window controls stay top right, in a thin title bar above the content.
 
 ## Opening things
 
