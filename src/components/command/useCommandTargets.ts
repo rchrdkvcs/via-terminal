@@ -2,6 +2,7 @@ import { AppWindow, Server, SquareTerminal, Zap } from '@lucide/vue'
 import { formatQuickTarget, parseQuickConnect } from '@/domain/quick-connect'
 import { rank } from '@/domain/search'
 import { tabs } from '@/domain/space'
+import { useHostName } from '@/composables/useHostName'
 import { useTabLabel } from '@/composables/useTabLabel'
 import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
@@ -16,6 +17,7 @@ export function useCommandTargets() {
   const spaces = useSpaces()
   const vault = useVault()
   const names = useTabLabel()
+  const hostName = useHostName()
 
   function quick(query: string): CommandItem[] {
     const target = parseQuickConnect(query)
@@ -50,6 +52,7 @@ export function useCommandTargets() {
     const all = vault.view.hosts
     const list = query.trim()
       ? rank(query, all, (host) => [
+          hostName(host.id),
           host.label,
           host.address,
           vault.view.effective[host.id]?.username?.value,
@@ -60,7 +63,7 @@ export function useCommandTargets() {
     return list.slice(0, 30).map((host) => ({
       id: `host:${host.id}`,
       section: query.trim() ? 'Hôtes' : 'Hôtes récents',
-      label: host.label,
+      label: hostName(host.id),
       detail: [vault.describe(host.id), ...vault.groupPath(host.groupId)].join('  '),
       icon: Server,
       target: { kind: 'host', hostId: host.id },

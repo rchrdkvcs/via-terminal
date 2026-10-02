@@ -23,6 +23,16 @@ export function useSidebarActions() {
     spaces.dispatch({ type: 'move', id: sourceId, to })
   }
 
+  function dropInFolder(sourceId: Id, folderId: Id) {
+    spaces.dispatch({ type: 'move', id: sourceId, to: { area: 'pinned', folderId, before: null } })
+  }
+
+  /** Dropped on New tab: first of the temporary rows, where new tabs appear. */
+  function dropAtStart(sourceId: Id) {
+    const first = spaces.active.temporary[0]?.id ?? null
+    spaces.dispatch({ type: 'move', id: sourceId, to: { area: 'temporary', before: first } })
+  }
+
   /** Dropped on an edge of the content: split with the visible row. */
   function splitWithActive(sourceId: Id, edge: Edge) {
     const target = workbench.activeRow
@@ -57,5 +67,15 @@ export function useSidebarActions() {
     if (row && spaces.transfer(row.id, spaceId)) workbench.activate(tabId, { wake: false })
   }
 
-  return { dropOnRow, dropAtEnd, splitWithActive, detach, newFolder, rename, moveToSpace }
+  return {
+    dropOnRow,
+    dropAtEnd,
+    dropInFolder,
+    dropAtStart,
+    splitWithActive,
+    detach,
+    newFolder,
+    rename,
+    moveToSpace,
+  }
 }

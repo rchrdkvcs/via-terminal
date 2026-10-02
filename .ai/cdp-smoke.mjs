@@ -1,6 +1,7 @@
 /**
  * Smoke check of the real application over CDP: local shell round trip,
- * command bar, pin, split, and restoration after a reload.
+ * command bar, pin, split, and restoration after a reload. It works in a
+ * throwaway space so the user's own spaces are never touched.
  */
 import { connect } from './cdp.mjs'
 
@@ -16,8 +17,9 @@ const buffer = () =>
 
 await app.evaluate('location.reload()')
 await app.wait(4000)
-await app.press('Ctrl+1')
 check('the window boots', (await text('aside')).includes('Nouvel onglet'))
+await app.evaluate(`window.__via.spaces.create({ name: 'Smoke', icon: 'flask-conical', defaultShell: null }).id`)
+const smoke = () => `window.__via.spaces.spaces.find((s) => s.name === 'Smoke')`
 
 await app.press('Ctrl+Shift+T')
 await app.type('powershell')
@@ -37,13 +39,18 @@ const splitRows = await app.evaluate(`document.querySelectorAll('[role=group][ar
 check('a split view is one sidebar row', splitRows >= 1, `${splitRows}`)
 
 const saved = await app.evaluate(
-  `window.__TAURI_INTERNALS__.invoke('app_bootstrap').then((b) => b.layout.spaces[0].pinned.length + ' ' + JSON.stringify(b.layout.spaces.map((s) => s.name + ':' + s.pinned.map((e) => e.kind).join('/'))))`,
+  `window.__TAURI_INTERNALS__.invoke('app_bootstrap').then((b) => b.layout.spaces.find((s) => s.name === 'Smoke').pinned.length)`,
 )
-check('the pinned rows are saved', parseInt(saved) >= 1, saved)
+check('the pinned rows are saved', saved >= 1, `${saved} pinned`)
 await app.evaluate('location.reload()')
 await app.wait(4000)
+await app.evaluate(`window.__via.spaces.activate(${smoke()}.id)`)
+await app.wait(500)
 const asleep = await app.evaluate(`document.querySelectorAll('[aria-label="en veille"]').length`)
 check('pinned tabs come back asleep', asleep >= 2, `${asleep} asleep`)
+await app.evaluate(`(() => { const v = window.__via; const s = ${smoke()};
+  for (const r of s.pinned) for (const t of r.kind === 'split' ? r.tabs : [r]) v.sessions.release(t.id)
+  v.spaces.remove(s.id) })()`)
 check('no runtime errors', app.errors.length === 0, app.errors.join(' | '))
 
 for (const result of results) console.log(`${result.ok ? 'ok  ' : 'FAIL'} ${result.name} ${result.detail}`)

@@ -1,50 +1,69 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { Entry } from '@/ipc/types'
+import type { Entry, Id } from '@/ipc/types'
 import { dragging, useDropZone } from '@/composables/useRowDnd'
+import { endTarget, useDropGap } from '@/composables/useDropGap'
 import { useSidebarActions } from '@/composables/useSidebarActions'
+import DropLine from './DropLine.vue'
 import FolderItem from './FolderItem.vue'
 import RowItem from './RowItem.vue'
 
 /**
- * The pinned or temporary list. Its trailing space is a drop zone, so a row
- * can be dropped at the end, or into an empty pinned area.
+ * A list of rows: the pinned root, a folder's content, or the temporary
+ * area. The space after the last row belongs to the list, so dropping there
+ * appends, and an empty pinned area offers a clear place to pin.
  */
-const props = defineProps<{ area: 'pinned' | 'temporary'; entries: Entry[]; label: string }>()
+const props = defineProps<{
+  area: 'pinned' | 'temporary'
+  folderId?: Id | null
+  entries: Entry[]
+  label: string
+}>()
 const actions = useSidebarActions()
+const gap = useDropGap()
 const tail = ref<HTMLElement>()
-const over = ref(false)
+const folder = computed(() => props.folderId ?? null)
 
 useDropZone(tail, {
-  canDrop: (source) => props.area === 'pinned' || !source.isFolder,
-  onOver: () => (over.value = true),
-  onLeave: () => (over.value = false),
-  onDrop: (source) => actions.dropAtEnd(source.rowId, props.area),
+  target: () => endTarget(props.area, folder.value),
+  canDrop: (source) => !source.isFolder || (props.area === 'pinned' && !folder.value),
+  onDrop: (source) => {
+    if (folder.value) actions.dropInFolder(source.rowId, folder.value)
+    else actions.dropAtEnd(source.rowId, props.area)
+  },
 })
 
-const empty = computed(() => props.entries.length === 0)
+const emptyPinned = computed(
+  () => props.area === 'pinned' && !folder.value && !props.entries.length,
+)
 </script>
 
 <template>
   <div>
     <ul :aria-label="label" class="flex flex-col gap-px">
-      <template v-for="entry in entries" :key="entry.id">
+      <li v-for="entry in entries" :key="entry.id" class="relative list-none">
+        <DropLine v-if="gap.lineBefore(area, folder, entry.id)" at="top" />
         <FolderItem v-if="entry.kind === 'folder'" :folder="entry" />
         <RowItem v-else :row="entry" />
-      </template>
+      </li>
     </ul>
     <div
       ref="tail"
-      class="rounded-md transition-[height,background-color] duration-150"
-      :class="[
-        empty && area === 'pinned' ? (dragging ? 'h-10' : 'h-0') : 'h-3',
-        over ? 'bg-row-hover' : '',
-        empty && area === 'pinned' && dragging
-          ? 'mt-1 grid place-items-center border border-dashed border-border text-xs text-muted-foreground'
-          : '',
-      ]"
+      class="relative"
+      :class="emptyPinned ? (dragging ? 'py-1' : 'h-0') : folder ? 'h-1.5' : 'h-4'"
     >
-      <span v-if="empty && area === 'pinned' && dragging">Déposer ici pour épingler</span>
+      <DropLine v-if="!emptyPinned && gap.lineAtEnd(area, folder)" at="top" />
+      <div
+        v-if="emptyPinned && dragging"
+        class="grid h-10 place-items-center rounded-lg border border-dashed text-xs transition-colors duration-100"
+        :class="
+          gap.lineAtEnd('pinned')
+            ? 'border-foreground/40 bg-row-hover text-foreground'
+            : 'border-hairline text-ink-faint'
+        "
+      >
+        Déposer ici pour épingler
+      </div>
     </div>
   </div>
 </template>

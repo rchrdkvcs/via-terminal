@@ -34,7 +34,6 @@ pub struct Space {
     pub id: Uuid,
     pub name: String,
     pub icon: String,
-    pub color: String,
     pub default_shell: Option<String>,
     pub pinned: Vec<Entry>,
 }
@@ -115,7 +114,6 @@ impl Default for Layout {
             id: Uuid::new_v4(),
             name: "Personnel".into(),
             icon: "terminal".into(),
-            color: "slate".into(),
             default_shell: None,
             pinned: vec![],
         };

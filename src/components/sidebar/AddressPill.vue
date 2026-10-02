@@ -24,11 +24,11 @@ function open() {
 <template>
   <button
     type="button"
-    class="flex h-8 w-full items-center gap-2 rounded-md bg-row-hover px-2.5 text-start text-[13px] text-muted-foreground transition-colors duration-100 hover:bg-row-selected hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+    class="material-sunken flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-start text-[13px] text-ink-muted outline-none hover:text-foreground"
     :aria-label="tab ? `Changer la cible : ${text}` : 'Ouvrir la barre de commande'"
     @click="open"
   >
     <Search v-if="!tab" :size="14" :stroke-width="1.5" class="shrink-0" />
-    <span class="min-w-0 flex-1 truncate" :class="tab ? 'text-foreground/80' : ''">{{ text }}</span>
+    <span class="min-w-0 flex-1 truncate" :class="tab ? 'text-foreground' : ''">{{ text }}</span>
   </button>
 </template>

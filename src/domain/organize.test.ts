@@ -22,7 +22,6 @@ function space(pinned: Space['pinned'] = [], temporary: Row[] = []): Space {
     id: 's',
     name: 'S',
     icon: 'terminal',
-    color: 'slate',
     defaultShell: null,
     pinned,
     temporary,

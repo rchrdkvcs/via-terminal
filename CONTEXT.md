@@ -5,7 +5,7 @@ A native terminal where **spaces** organize **tabs**, and a **vault** remembers 
 ## Organization
 
 **Space**:
-A named context of tabs with its own icon, color and optional default shell. Spaces never own hosts or credentials.
+A named context of tabs with its own icon and optional default shell. Spaces never own hosts or credentials.
 _Avoid_: Workspace, project, profile
 
 **Tab**:

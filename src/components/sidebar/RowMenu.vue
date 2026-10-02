@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import {
   ArrowRightLeft,
   Columns2,
+  FolderInput,
   Moon,
   Pencil,
   Pin,
@@ -70,7 +71,9 @@ const otherSpaces = computed(() => spaces.spaces.filter((space) => space.id !== 
       <Unlink :stroke-width="1.5" /> Détacher de la vue partagée
     </ContextMenuItem>
     <ContextMenuSub v-if="otherSpaces.length">
-      <ContextMenuSubTrigger>Déplacer vers l’espace</ContextMenuSubTrigger>
+      <ContextMenuSubTrigger>
+        <FolderInput :stroke-width="1.5" /> Déplacer vers l’espace
+      </ContextMenuSubTrigger>
       <ContextMenuSubContent>
         <ContextMenuItem
           v-for="space in otherSpaces"

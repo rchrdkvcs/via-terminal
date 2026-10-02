@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { KeyRound, LockKeyhole } from '@lucide/vue'
+import { KeyRound, LockKeyhole, Server } from '@lucide/vue'
 import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import type { Host } from '@/ipc/types'
+import { useHostName } from '@/composables/useHostName'
 import { useVault } from '@/stores/vault'
 import VaultRow from './VaultRow.vue'
 
@@ -10,6 +11,7 @@ import VaultRow from './VaultRow.vue'
 const props = defineProps<{ host: Host; selected: boolean; tabbable: boolean }>()
 defineEmits<{ select: []; connect: [] }>()
 const vault = useVault()
+const hostName = useHostName()
 
 const credential = computed(() => {
   const effective = vault.view.effective[props.host.id]
@@ -31,12 +33,17 @@ const shownTags = computed(() => props.host.tags.slice(0, 3))
     @select="$emit('select')"
     @activate="$emit('connect')"
   >
+    <span
+      class="material-control grid size-8 shrink-0 place-items-center rounded-lg text-ink-muted"
+    >
+      <Server :size="15" :stroke-width="1.5" />
+    </span>
     <div class="min-w-0 flex-1">
       <div
         class="truncate font-medium"
         :class="selected ? 'text-foreground' : 'text-foreground/90'"
       >
-        {{ host.label || host.address }}
+        {{ hostName(host.id) }}
       </div>
       <div class="text-muted-foreground truncate text-xs">{{ vault.describe(host.id) }}</div>
     </div>
@@ -47,7 +54,7 @@ const shownTags = computed(() => props.host.tags.slice(0, 3))
       <span
         v-for="tag in shownTags"
         :key="tag"
-        class="bg-muted text-muted-foreground rounded-sm px-1.5 py-px text-[11px] leading-4"
+        class="rounded-[5px] px-1.5 py-px text-[11px] leading-4 text-ink-muted shadow-[0_0_0_1px_var(--hairline)]"
       >
         {{ tag }}
       </span>
@@ -64,7 +71,7 @@ const shownTags = computed(() => props.host.tags.slice(0, 3))
       role="img"
     />
     <template #actions>
-      <Button size="xs" variant="outline" tabindex="-1" @click.stop="$emit('connect')"
+      <Button size="sm" variant="secondary" tabindex="-1" @click.stop="$emit('connect')"
         >Connecter</Button
       >
     </template>

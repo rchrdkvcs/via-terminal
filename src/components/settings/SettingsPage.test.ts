@@ -34,9 +34,9 @@ describe('SettingsPage', () => {
 
   it('switches sections from the rail', async () => {
     const page = render()
-    const shortcuts = page.findAll('nav button').find((b) => b.text() === 'Raccourcis')
+    const shortcuts = page.findAll('nav button').find((b) => b.text().includes('Raccourcis'))
     await shortcuts?.trigger('click')
-    expect(page.get('h1').text()).toBe('Raccourcis')
+    expect(page.get('h2').text()).toBe('Raccourcis')
     expect(page.text()).toContain('Nouvel onglet')
     page.unmount()
   })

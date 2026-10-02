@@ -40,7 +40,6 @@ export interface PersistedSpace {
   id: Id
   name: string
   icon: string
-  color: string
   defaultShell: string | null
   pinned: Entry[]
 }

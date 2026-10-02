@@ -4,6 +4,7 @@ import { useSessions } from '@/stores/sessions'
 import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
 import { useVault } from '@/stores/vault'
+import { useHostName } from './useHostName'
 
 /**
  * How a tab is named everywhere: its manual name, else the terminal title,
@@ -14,10 +15,11 @@ export function useTabLabel() {
   const settings = useSettings()
   const spaces = useSpaces()
   const vault = useVault()
+  const hostName = useHostName()
 
   function targetName(tab: Tab): string {
     const target = tab.target
-    if (target.kind === 'host') return vault.host(target.hostId)?.label ?? 'Hôte supprimé'
+    if (target.kind === 'host') return hostName(target.hostId)
     if (target.kind === 'quick') return formatQuickTarget(target)
     const space = spaces.spaceOf(tab.id)
     return settings.shellName(target.shell, space?.defaultShell ?? null)

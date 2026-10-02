@@ -38,7 +38,6 @@ class Registry {
     cursorBlink: true,
     scrollback: 10_000,
     appearance: 'dark',
-    hue: 255,
   }
 
   configure(callbacks: Callbacks) {

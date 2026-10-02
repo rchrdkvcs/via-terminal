@@ -64,11 +64,18 @@ function tabbable(id: Id): boolean {
 
 <template>
   <section class="flex h-full min-w-0 flex-col" :aria-label="title">
-    <header class="flex h-12 shrink-0 items-center gap-2 ps-4 pe-3">
-      <h2 class="me-1 shrink-0 text-[13px] font-medium">{{ title }}</h2>
-      <div v-if="searchLabel" class="relative max-w-72 min-w-0 flex-1">
+    <header class="shrink-0 px-5 pt-3.5 pb-3">
+      <div class="flex h-8 items-center gap-3">
+        <h2 class="min-w-0 flex-1 truncate text-[15px] font-semibold tracking-[-0.01em]">
+          {{ title }}
+        </h2>
+        <div class="flex shrink-0 items-center gap-1.5">
+          <slot name="actions" />
+        </div>
+      </div>
+      <div v-if="searchLabel" class="relative mt-2.5">
         <Search
-          class="text-muted-foreground pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2"
+          class="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-faint"
           :stroke-width="1.5"
           aria-hidden="true"
         />
@@ -77,12 +84,9 @@ function tabbable(id: Id): boolean {
           type="search"
           :aria-label="searchLabel"
           :placeholder="searchLabel"
-          class="h-8 ps-8 text-[13px] md:text-[13px]"
+          class="ps-8"
           @keydown="onSearchKeydown"
         />
-      </div>
-      <div class="ms-auto flex shrink-0 items-center gap-1.5">
-        <slot name="actions" />
       </div>
     </header>
     <slot name="before" />
@@ -91,7 +95,7 @@ function tabbable(id: Id): boolean {
       ref="list"
       role="listbox"
       :aria-label="title"
-      class="min-h-0 flex-1 overflow-y-auto px-2 pb-2"
+      class="scrollbar-thin flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-3 pb-3"
       @keydown="onKeydown"
     >
       <slot :tabbable="tabbable" />

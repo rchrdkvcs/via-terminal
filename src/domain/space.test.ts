@@ -12,7 +12,6 @@ const space = (temporary: Row[]): Space => ({
   id: 's',
   name: 'S',
   icon: 'terminal',
-  color: 'slate',
   defaultShell: null,
   pinned: [tab('p')],
   temporary,

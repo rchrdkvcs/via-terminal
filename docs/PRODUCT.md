@@ -32,7 +32,6 @@ Via is a terminal you enjoy living in: the sidebar of Arc and Zen for your sessi
 - **Sidebar**, from top to bottom: the sidebar toggle and window controls, the address pill of the current tab, the space name and its pinned area (pinned tabs, split views and folders), a divider, New tab, the temporary tabs, and the space switcher with vault and settings buttons.
 - **Content**: the active row, shown as a single terminal or a split view, on a rounded surface. Nothing else: no top bar, no tab strip.
 - The sidebar can be hidden (Ctrl+Shift+B); resting the pointer on the left edge reveals it over the content.
-- The window is tinted by the active space's color.
 
 ## Opening things
 
@@ -64,7 +63,7 @@ Via is a terminal you enjoy living in: the sidebar of Arc and Zen for your sessi
 
 - Folders exist only in the pinned area, one level deep. Dragging a temporary tab into a folder pins it. Deleting a folder keeps its tabs.
 - Spaces are listed at the bottom of the sidebar. Click, Ctrl+1…9, or a horizontal swipe / Ctrl+wheel switches space; sessions keep running in the background.
-- Creating or editing a space asks for a name, an icon, a color and an optional default shell. The last space cannot be deleted. Deleting a space with running tabs asks for confirmation.
+- Creating or editing a space asks for a name, an icon and an optional default shell. The last space cannot be deleted. Deleting a space with running tabs asks for confirmation.
 - A tab moves to another space from its menu (**Move to space**).
 
 ## Connecting over SSH
@@ -100,10 +99,13 @@ A full page with General (default shell, behavior on close, quick-connect auto-s
 
 ## Visual principles
 
-- Calm surfaces: the sidebar sits on the window background without borders; only the content surface is raised.
-- One accent per space, used sparingly (tint, selection, focus).
-- Selected rows use a subtle fill and stronger text. Asleep rows are dimmed. Connection progress is the only animated indicator.
-- Motion explains spatial change, stays short and interruptible, and disappears with reduced motion.
+- One neutral palette, black and white, in a dark and a light theme. Spaces have no color.
+- Depth comes from materials, not color: the sidebar sits on the window chrome; content is a raised surface; menus, dialogs and inspectors float above it with a lit top edge; controls are lit keys with a hairline and a soft drop; fields are pressed into the surface.
+- Full pages (vault, settings) share one frame: a wide rail of sections on a half-step tint, the page beside it, no borders between them. Inspectors float on the right and can be resized.
+- Selected rows are lit; asleep rows are dimmed; connection progress is the only animated indicator.
+- Things used many times a day (command bar, space switch, shortcuts) appear at once. Motion is reserved for spatial changes, stays under 250 ms, and disappears with reduced motion.
+- A drop target is always one line in one gap; a drop that would change nothing shows nothing.
+- The window chrome quiets down while the window is in the background.
 - Every pointer action has a keyboard or menu equivalent.
 
 ## Outside this release

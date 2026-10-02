@@ -8,6 +8,8 @@ import {
   DialogRoot,
   DialogTitle,
 } from 'reka-ui'
+import { Search } from '@lucide/vue'
+import { Kbd } from '@/components/ui/kbd'
 import { useUi } from '@/stores/ui'
 import CommandRow from './CommandRow.vue'
 import { useCommandResults } from './useCommandResults'
@@ -57,33 +59,40 @@ const showSection = (index: number) =>
 <template>
   <DialogRoot v-model:open="open">
     <DialogPortal>
-      <DialogOverlay
-        class="fixed inset-0 z-50 bg-black/25 data-[state=open]:animate-in data-[state=open]:fade-in-0 motion-reduce:animate-none"
-      />
+      <!-- Opened dozens of times a day: it appears at once, without motion. -->
+      <DialogOverlay class="fixed inset-0 z-50 bg-black/15 dark:bg-black/35" />
       <DialogContent
-        class="fixed start-1/2 top-[14vh] z-50 flex max-h-[min(560px,72vh)] w-[min(640px,calc(100vw-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.98] motion-reduce:animate-none"
+        class="material-raised fixed start-1/2 top-[13vh] z-50 flex max-h-[min(580px,72vh)] w-[min(660px,calc(100vw-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-2xl text-popover-foreground outline-none"
         @open-auto-focus.prevent
       >
         <DialogTitle class="sr-only">Barre de commande</DialogTitle>
         <DialogDescription class="sr-only"
           >Rechercher un hôte, un terminal ou une action.</DialogDescription
         >
-        <input
-          ref="input"
-          v-model="query"
-          role="combobox"
-          aria-expanded="true"
-          aria-controls="command-results"
-          :aria-activedescendant="items[active] ? `command-${items[active].id}` : undefined"
-          :placeholder="placeholder"
-          spellcheck="false"
-          autocomplete="off"
-          class="h-12 w-full shrink-0 border-b border-border bg-transparent px-4 text-[15px] outline-none placeholder:text-muted-foreground"
-          @keydown.down.prevent="move(1)"
-          @keydown.up.prevent="move(-1)"
-          @keydown.tab.prevent="move($event.shiftKey ? -1 : 1)"
-          @keydown.enter.prevent="submit"
-        />
+        <div class="flex h-[52px] shrink-0 items-center gap-3 border-b border-hairline px-4">
+          <Search
+            :size="17"
+            :stroke-width="1.5"
+            class="shrink-0 text-ink-faint"
+            aria-hidden="true"
+          />
+          <input
+            ref="input"
+            v-model="query"
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="command-results"
+            :aria-activedescendant="items[active] ? `command-${items[active].id}` : undefined"
+            :placeholder="placeholder"
+            spellcheck="false"
+            autocomplete="off"
+            class="h-full min-w-0 flex-1 bg-transparent text-[15px] tracking-[-0.01em] outline-none placeholder:text-ink-faint"
+            @keydown.down.prevent="move(1)"
+            @keydown.up.prevent="move(-1)"
+            @keydown.tab.prevent="move($event.shiftKey ? -1 : 1)"
+            @keydown.enter.prevent="submit"
+          />
+        </div>
         <div
           id="command-results"
           ref="list"
@@ -93,7 +102,7 @@ const showSection = (index: number) =>
           <template v-for="(item, index) in items" :key="item.id">
             <div
               v-if="showSection(index)"
-              class="px-2.5 pt-2.5 pb-1 text-xs text-muted-foreground"
+              class="px-2.5 pt-2.5 pb-1 text-xs font-medium text-ink-faint"
               role="presentation"
             >
               {{ item.section }}
@@ -105,10 +114,17 @@ const showSection = (index: number) =>
               @click="choose(item)"
             />
           </template>
-          <p v-if="!items.length" class="px-3 py-6 text-center text-[13px] text-muted-foreground">
+          <p v-if="!items.length" class="px-3 py-8 text-center text-[13px] text-ink-muted">
             Aucun résultat. Tapez une adresse comme admin@10.0.0.5 pour vous y connecter.
           </p>
         </div>
+        <footer
+          class="flex h-9 shrink-0 items-center gap-4 border-t border-hairline px-3.5 text-[11.5px] text-ink-faint"
+        >
+          <span class="flex items-center gap-1.5"><Kbd>↑</Kbd><Kbd>↓</Kbd> naviguer</span>
+          <span class="flex items-center gap-1.5"><Kbd>Entrée</Kbd> ouvrir</span>
+          <span class="ms-auto flex items-center gap-1.5"><Kbd>Échap</Kbd> fermer</span>
+        </footer>
       </DialogContent>
     </DialogPortal>
   </DialogRoot>

@@ -25,19 +25,19 @@ function newFolder() {
 </script>
 
 <template>
-  <div class="group/space flex h-8 items-center gap-2 px-2 text-[13px] font-medium">
+  <div class="group/space flex h-8 items-center gap-2 px-2 text-[13px] font-semibold">
     <component
       :is="spaceIcon(spaces.active.icon)"
       :size="15"
       :stroke-width="1.5"
-      class="text-primary"
+      class="text-ink-muted"
     />
     <span class="min-w-0 flex-1 truncate" @dblclick="ui.spaceForm = { id: spaces.active.id }">
       {{ spaces.active.name }}
     </span>
     <DropdownMenu>
       <DropdownMenuTrigger
-        class="grid size-6 place-items-center rounded-sm text-muted-foreground opacity-0 transition-opacity duration-100 group-hover/space:opacity-100 hover:bg-row-hover hover:text-foreground focus-visible:opacity-100 data-[state=open]:opacity-100"
+        class="grid size-6 place-items-center rounded-[5px] text-muted-foreground opacity-0 transition-opacity duration-100 group-hover/space:opacity-100 hover:bg-row-hover hover:text-foreground focus-visible:opacity-100 data-[state=open]:opacity-100"
         aria-label="Options de l’espace"
       >
         <Ellipsis :size="15" :stroke-width="1.5" />

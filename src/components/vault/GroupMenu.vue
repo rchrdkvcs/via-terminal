@@ -20,7 +20,7 @@ const tree = useGroupTree()
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger
-      class="text-muted-foreground hover:text-foreground focus-visible:ring-ring data-[state=open]:opacity-100 grid size-6 shrink-0 place-items-center rounded-sm opacity-0 outline-none group-hover/item:opacity-100 focus-visible:opacity-100 focus-visible:ring-2"
+      class="text-muted-foreground hover:text-foreground focus-visible:ring-ring data-[state=open]:opacity-100 grid size-6 shrink-0 place-items-center rounded-[5px] opacity-0 outline-none group-hover/item:opacity-100 focus-visible:opacity-100 focus-visible:ring-2"
       :aria-label="`Actions du groupe ${name}`"
     >
       <Ellipsis class="size-3.5" :stroke-width="1.5" />

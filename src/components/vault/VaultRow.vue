@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Id } from '@/ipc/types'
 
-/** One ≈36px row of a vault list. Hover actions go in the `actions` slot. */
+/** One row of a vault list. Hover actions go in the `actions` slot. */
 defineProps<{ id: Id; selected: boolean; tabbable: boolean }>()
 defineEmits<{ select: []; activate: [] }>()
 </script>
@@ -12,8 +12,7 @@ defineEmits<{ select: []; activate: [] }>()
     :data-row-id="id"
     :aria-selected="selected"
     :tabindex="tabbable ? 0 : -1"
-    class="group/row relative flex min-h-9 cursor-default items-center gap-3 rounded-md px-2.5 py-1.5 text-[13px] outline-none select-none focus-visible:ring-2 focus-visible:ring-ring"
-    :class="selected ? 'bg-row-selected shadow-row' : 'hover:bg-row-hover'"
+    class="row group/row relative flex min-h-12 cursor-default items-center gap-3 px-2.5 py-1.5 text-[13px] outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/40"
     @click="$emit('select')"
     @dblclick="$emit('activate')"
   >

@@ -37,7 +37,7 @@ function onKeydown(event: KeyboardEvent) {
       <button
         v-if="node.children.length"
         type="button"
-        class="text-muted-foreground hover:text-foreground focus-visible:ring-ring grid size-6 shrink-0 place-items-center rounded-sm outline-none focus-visible:ring-2"
+        class="text-muted-foreground hover:text-foreground focus-visible:ring-ring grid size-6 shrink-0 place-items-center rounded-[5px] outline-none focus-visible:ring-2"
         :aria-label="open ? `Replier ${node.group.name}` : `Déplier ${node.group.name}`"
         :aria-expanded="open"
         @click="tree.toggle(id)"
@@ -58,7 +58,7 @@ function onKeydown(event: KeyboardEvent) {
       <button
         v-else
         type="button"
-        class="focus-visible:ring-ring flex h-7 min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-start outline-none focus-visible:ring-2"
+        class="focus-visible:ring-ring flex h-7 min-w-0 flex-1 items-center gap-2 rounded-[5px] px-1 text-start outline-none focus-visible:ring-2"
         :aria-current="current ? 'true' : undefined"
         @click="tree.choose(id)"
         @dblclick="state.renaming.value = id"

@@ -1,0 +1,112 @@
+/*
+  Materials: the few recipes every control is made of. A control is lit from
+  above (a bright top edge), outlined by a hairline and lifted by a soft drop;
+  pressing it sinks it. Fields are pressed into the surface instead.
+*/
+
+@utility material-control {
+  background-color: var(--control);
+  box-shadow: var(--shadow-control);
+  transition-property: background-color, box-shadow, scale;
+  transition-duration: 120ms;
+  transition-timing-function: var(--ease-out);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background-color: var(--control-hover);
+      box-shadow: var(--shadow-control-hover);
+    }
+  }
+  &:active:not(:disabled),
+  &[data-state='on'],
+  &[aria-pressed='true'] {
+    box-shadow: var(--shadow-pressed);
+  }
+}
+
+@utility material-accent {
+  background-color: var(--accent-fill);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-accent);
+  transition-property: opacity, box-shadow, scale;
+  transition-duration: 120ms;
+  transition-timing-function: var(--ease-out);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      opacity: 0.92;
+    }
+  }
+}
+
+@utility material-sunken {
+  background-color: var(--sunken);
+  box-shadow: var(--shadow-sunken);
+  transition-property: box-shadow;
+  transition-duration: 120ms;
+  &:focus-visible,
+  &:focus-within {
+    box-shadow:
+      var(--shadow-sunken),
+      0 0 0 3px rgb(127 127 127 / 22%);
+  }
+}
+
+@utility material-raised {
+  background-color: var(--raised);
+  box-shadow: var(--shadow-raised);
+}
+
+/* Pressed controls give a little: felt, not seen. */
+@utility press {
+  &:active:not(:disabled) {
+    scale: 0.96;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:active:not(:disabled) {
+      scale: 1;
+    }
+  }
+}
+
+/* Sidebar-like rows: quiet until hovered, lit when selected. */
+@utility row {
+  border-radius: calc(var(--radius) - 2px);
+  transition-property: background-color, color, box-shadow;
+  transition-duration: 100ms;
+  transition-timing-function: var(--ease-out);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background-color: var(--row-hover);
+    }
+  }
+  &[aria-current='page'],
+  &[aria-selected='true'],
+  &[data-selected] {
+    background-color: var(--row-selected);
+    box-shadow: var(--shadow-row);
+    color: var(--ink);
+  }
+}
+
+/* Toasts share the raised material; the action is a lit control. */
+[data-sonner-toast][data-styled='true'] {
+  box-shadow: var(--shadow-raised) !important;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 12px 14px !important;
+}
+[data-sonner-toast] [data-button] {
+  background: var(--control) !important;
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-control);
+  border-radius: 6px !important;
+  font-weight: 500;
+}
+[data-sonner-toast] [data-icon] svg {
+  color: var(--ink-muted);
+}
+
+/* A window in the background keeps its content but quiets its chrome. */
+[data-inactive] aside[aria-label='Barre latérale'] {
+  opacity: 0.72;
+  transition: opacity 150ms var(--ease-out);
+}

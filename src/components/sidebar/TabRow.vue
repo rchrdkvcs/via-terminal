@@ -36,10 +36,10 @@ const asleep = computed(() => state.value === 'asleep' || state.value === 'exite
         tabindex="0"
         :aria-current="selected ? 'page' : undefined"
         :title="names.detail(tab)"
-        class="group/tab relative flex min-w-0 items-center gap-2 rounded-md text-[13px] outline-none transition-[background-color,color,box-shadow] duration-100 focus-visible:ring-2 focus-visible:ring-ring"
+        class="row group/tab relative flex min-w-0 items-center gap-2 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
         :class="[
           compact ? 'h-7 flex-1 px-1.5' : 'h-8 px-2',
-          selected ? 'bg-row-selected text-foreground shadow-row' : 'hover:bg-row-hover',
+          selected ? 'font-medium' : '',
           asleep && !selected ? 'text-muted-foreground' : '',
         ]"
         @click="workbench.activate(tab.id)"
@@ -59,7 +59,7 @@ const asleep = computed(() => state.value === 'asleep' || state.value === 'exite
         <button
           v-if="ui.renaming !== tab.id"
           type="button"
-          class="-me-1 grid size-6 shrink-0 place-items-center rounded-sm text-muted-foreground opacity-0 transition-opacity duration-100 group-hover/tab:opacity-100 group-focus-within/tab:opacity-100 hover:bg-row-hover hover:text-foreground focus-visible:opacity-100"
+          class="-me-1 grid size-6 shrink-0 place-items-center rounded-[5px] text-muted-foreground opacity-0 transition-opacity duration-100 group-hover/tab:opacity-100 group-focus-within/tab:opacity-100 hover:bg-row-hover hover:text-foreground focus-visible:opacity-100"
           :aria-label="`Fermer ${label}`"
           @click.stop="closing.close(tab.id)"
         >

@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Plus } from '@lucide/vue'
 import { Kbd } from '@/components/ui/kbd'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
+import { useDropZone } from '@/composables/useRowDnd'
+import { endTarget } from '@/composables/useDropGap'
+import { useSidebarActions } from '@/composables/useSidebarActions'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import AddressPill from './AddressPill.vue'
@@ -17,6 +21,16 @@ import SpaceSwitcher from './SpaceSwitcher.vue'
 const spaces = useSpaces()
 const ui = useUi()
 const kbd = useShortcutLabel()
+const actions = useSidebarActions()
+
+// Dropping on New tab puts the row first among temporary tabs, where new ones open.
+const newTab = ref<HTMLElement>()
+useDropZone(newTab, {
+  target: () => spaces.active.temporary[0]?.id ?? endTarget('temporary'),
+  position: 'before',
+  canDrop: (source) => !source.isFolder,
+  onDrop: (source) => actions.dropAtStart(source.rowId),
+})
 
 let wheelLock = 0
 function onWheel(event: WheelEvent) {
@@ -37,37 +51,30 @@ function onWheel(event: WheelEvent) {
     <div class="px-2 pb-2">
       <AddressPill />
     </div>
-    <Transition
-      mode="out-in"
-      enter-active-class="transition-[opacity,translate] duration-200 ease-out motion-reduce:transition-none"
-      enter-from-class="opacity-0 translate-x-2"
-      leave-active-class="transition-opacity duration-100 motion-reduce:transition-none"
-      leave-to-class="opacity-0"
+    <div
+      :key="spaces.active.id"
+      class="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto px-2"
     >
-      <div
-        :key="spaces.active.id"
-        class="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto px-2"
+      <SpaceHeader />
+      <RowArea area="pinned" :entries="spaces.active.pinned" label="Onglets épinglés" />
+      <div class="mx-2.5 mb-1.5 h-px bg-hairline" role="separator" />
+      <button
+        ref="newTab"
+        type="button"
+        class="row flex h-8 w-full shrink-0 items-center gap-2 px-2 text-[13px] text-ink-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+        @click="ui.openCommand({ kind: 'new' })"
       >
-        <SpaceHeader />
-        <RowArea area="pinned" :entries="spaces.active.pinned" label="Onglets épinglés" />
-        <div class="mx-2 mb-1 h-px bg-border" role="separator" />
-        <button
-          type="button"
-          class="flex h-8 w-full shrink-0 items-center gap-2 rounded-md px-2 text-[13px] text-muted-foreground transition-colors duration-100 hover:bg-row-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-          @click="ui.openCommand({ kind: 'new' })"
-        >
-          <Plus :size="16" :stroke-width="1.5" />
-          <span class="flex-1 text-start">Nouvel onglet</span>
-          <Kbd class="opacity-70">{{ kbd('newTab') }}</Kbd>
-        </button>
-        <RowArea
-          area="temporary"
-          :entries="spaces.active.temporary"
-          label="Onglets temporaires"
-          class="flex-1"
-        />
-      </div>
-    </Transition>
+        <Plus :size="16" :stroke-width="1.5" />
+        <span class="flex-1 text-start">Nouvel onglet</span>
+        <Kbd>{{ kbd('newTab') }}</Kbd>
+      </button>
+      <RowArea
+        area="temporary"
+        :entries="spaces.active.temporary"
+        label="Onglets temporaires"
+        class="flex-1"
+      />
+    </div>
     <div class="p-2 pt-1">
       <SpaceSwitcher />
     </div>

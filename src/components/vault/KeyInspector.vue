@@ -76,7 +76,7 @@ function rename() {
         readonly
         :value="key.publicKey"
         rows="4"
-        class="border-input bg-muted/40 focus-visible:ring-ring w-full resize-none rounded-md border px-2.5 py-2 font-mono text-xs break-all outline-none focus-visible:ring-2"
+        class="material-sunken w-full resize-none rounded-md px-2.5 py-2 font-mono text-xs break-all outline-none"
         @focus="($event.target as HTMLTextAreaElement).select()"
       />
     </VaultField>

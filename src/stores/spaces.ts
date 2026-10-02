@@ -10,7 +10,6 @@ import { notify } from '@/lib/notify'
 export interface SpaceDraft {
   name: string
   icon: string
-  color: string
   defaultShell: string | null
 }
 

@@ -82,10 +82,16 @@ export function useRowDnd(element: Ref<HTMLElement | undefined>, options: Option
   onBeforeUnmount(() => cleanup.forEach((dispose) => dispose()))
 }
 
-/** A whole region (empty pinned area, temporary area end, content edges). */
+/**
+ * A whole region: the end of a list, the empty pinned area, the content edges.
+ * With `target`, hovering it publishes that id as the current hint.
+ */
 export function useDropZone(
   element: Ref<HTMLElement | undefined>,
   options: {
+    target?: () => Id
+    /** How the hint reads against `target`; the end of a list by default. */
+    position?: DropPosition
     canDrop?: (source: DragState) => boolean
     onOver?: (source: DragState, input: { clientX: number; clientY: number }) => void
     onLeave?: () => void
@@ -93,16 +99,23 @@ export function useDropZone(
   },
 ) {
   let dispose: (() => void) | undefined
+  const leave = () => {
+    if (options.target && hint.value?.targetId === options.target()) hint.value = null
+    options.onLeave?.()
+  }
   onMounted(() => {
     if (!element.value) return
     dispose = dropTargetForElements({
       element: element.value,
       canDrop: ({ source }) => options.canDrop?.(source.data as unknown as DragState) ?? true,
-      onDrag: ({ source, location }) =>
-        options.onOver?.(source.data as unknown as DragState, location.current.input),
-      onDragLeave: () => options.onLeave?.(),
+      onDrag: ({ source, location }) => {
+        if (options.target)
+          hint.value = { targetId: options.target(), position: options.position ?? 'after' }
+        options.onOver?.(source.data as unknown as DragState, location.current.input)
+      },
+      onDragLeave: leave,
       onDrop: ({ source, location }) => {
-        options.onLeave?.()
+        leave()
         options.onDrop(source.data as unknown as DragState, location.current.input)
       },
     })

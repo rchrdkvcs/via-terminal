@@ -1,8 +1,8 @@
 import { ref, watchEffect } from 'vue'
 import { api, describeError, isNative } from '@/ipc/client'
 import type { Bootstrap } from '@/ipc/types'
-import { hueOf } from '@/domain/palette'
 import { terminals } from '@/terminal/registry'
+import { dragging, hint } from './useRowDnd'
 import { useSessions } from '@/stores/sessions'
 import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
@@ -18,9 +18,7 @@ function previewBootstrap(): Bootstrap {
     layout: {
       activeSpaceId: id,
       sidebar: { width: 264, visible: true },
-      spaces: [
-        { id, name: 'Personnel', icon: 'terminal', color: 'slate', defaultShell: null, pinned: [] },
-      ],
+      spaces: [{ id, name: 'Personnel', icon: 'terminal', defaultShell: null, pinned: [] }],
     },
     settings: useSettings().settings,
     vault: useVault().view,
@@ -71,10 +69,6 @@ export function useBootstrap() {
   }
 
   watchEffect(() => {
-    const hue = hueOf(spaces.active?.color ?? 'slate')
-    const root = document.documentElement
-    root.classList.toggle('dark', settings.appearance === 'dark')
-    root.style.setProperty('--space-hue', String(hue))
     const { fontFamily, fontSize, lineHeight, cursorStyle, cursorBlink, scrollback } =
       settings.settings
     terminals.setPresentation({
@@ -85,12 +79,15 @@ export function useBootstrap() {
       cursorBlink,
       scrollback,
       appearance: settings.appearance,
-      hue,
     })
   })
 
   void load()
   // Dev-only handle for the CDP checks in `.ai/`.
-  if (import.meta.env.DEV) Object.assign(window, { __via: { spaces, sessions, workbench } })
+  if (import.meta.env.DEV) {
+    Object.assign(window, {
+      __via: { spaces, sessions, workbench, settings, dnd: { dragging, hint } },
+    })
+  }
   return { ready, failure }
 }

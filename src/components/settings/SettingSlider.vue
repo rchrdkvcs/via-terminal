@@ -33,7 +33,9 @@ function onUpdate(values: number[] | undefined) {
     :model-value="[value]"
     @update:model-value="onUpdate"
   >
-    <SliderTrack class="relative h-1 grow overflow-hidden rounded-full bg-muted">
+    <SliderTrack
+      class="relative h-1 grow overflow-hidden rounded-full bg-sunken shadow-[var(--shadow-sunken)]"
+    >
       <SliderRange class="absolute h-full bg-primary" />
     </SliderTrack>
     <SliderThumb

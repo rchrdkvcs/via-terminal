@@ -33,18 +33,16 @@ function onKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div
-    class="border-input dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/50 flex min-h-8 flex-wrap items-center gap-1 rounded-md border px-1.5 py-1 shadow-xs focus-within:ring-3"
-  >
+  <div class="material-sunken flex min-h-8 flex-wrap items-center gap-1 rounded-md px-1.5 py-1">
     <span
       v-for="tag in model"
       :key="tag"
-      class="bg-muted text-foreground inline-flex h-5 items-center gap-0.5 rounded-sm ps-1.5 text-xs"
+      class="material-control inline-flex h-5 items-center gap-0.5 rounded-[5px] ps-1.5 text-xs text-foreground"
     >
       {{ tag }}
       <button
         type="button"
-        class="text-muted-foreground hover:text-foreground focus-visible:ring-ring grid size-4 place-items-center rounded-sm outline-none focus-visible:ring-2"
+        class="text-muted-foreground hover:text-foreground focus-visible:ring-ring grid size-4 place-items-center rounded-[5px] outline-none focus-visible:ring-2"
         :aria-label="`Retirer le tag ${tag}`"
         @click="remove(tag)"
       >
@@ -54,7 +52,7 @@ function onKeydown(event: KeyboardEvent) {
     <input
       :id="id"
       v-model="text"
-      class="placeholder:text-muted-foreground h-5 min-w-20 flex-1 bg-transparent px-1 text-[13px] outline-none"
+      class="h-5 min-w-20 flex-1 bg-transparent px-1 text-[13px] outline-none placeholder:text-ink-faint"
       :placeholder="model.length ? '' : 'prod, web'"
       @keydown="onKeydown"
       @blur="add"

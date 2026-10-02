@@ -1,5 +1,4 @@
 import type { ITheme } from '@xterm/xterm'
-import { oklchToHex } from '@/lib/oklch'
 
 export interface Presentation {
   fontFamily: string
@@ -9,69 +8,65 @@ export interface Presentation {
   cursorBlink: boolean
   scrollback: number
   appearance: 'dark' | 'light'
-  /** Hue of the active space; the terminal surface carries a trace of it. */
-  hue: number
 }
 
 /** The ANSI ramp belongs to the shell's output, so it stays in full color. */
 const ansiDark = {
-  black: '#3b4048',
-  red: '#f07178',
-  green: '#a6d189',
-  yellow: '#e5c07b',
-  blue: '#82aaff',
-  magenta: '#c792ea',
-  cyan: '#89ddff',
-  white: '#d0d4dc',
-  brightBlack: '#6b7280',
-  brightRed: '#ff8b92',
-  brightGreen: '#bde3a2',
-  brightYellow: '#f2d49b',
-  brightBlue: '#a3c0ff',
-  brightMagenta: '#dab1f5',
-  brightCyan: '#a8e8ff',
-  brightWhite: '#f5f7fa',
+  black: '#3a3a3c',
+  red: '#ff6b6b',
+  green: '#7ee787',
+  yellow: '#f2cc60',
+  blue: '#79b8ff',
+  magenta: '#d2a8ff',
+  cyan: '#76e3ea',
+  white: '#d1d1d6',
+  brightBlack: '#6e6e73',
+  brightRed: '#ff8f8f',
+  brightGreen: '#a2f0aa',
+  brightYellow: '#f8dd8a',
+  brightBlue: '#a5d0ff',
+  brightMagenta: '#e2c5ff',
+  brightCyan: '#a3f0f4',
+  brightWhite: '#f5f5f7',
 }
 
 const ansiLight = {
-  black: '#2b2f36',
-  red: '#c0392b',
-  green: '#2f7d32',
-  yellow: '#8a6500',
-  blue: '#1f5fbf',
-  magenta: '#8a3ab9',
-  cyan: '#0b7285',
-  white: '#6b7280',
-  brightBlack: '#4b5563',
-  brightRed: '#d64535',
-  brightGreen: '#38913c',
-  brightYellow: '#9c7400',
-  brightBlue: '#2a6fd6',
-  brightMagenta: '#9b4bcc',
-  brightCyan: '#0f8299',
-  brightWhite: '#111318',
+  black: '#1d1d1f',
+  red: '#c9302c',
+  green: '#1f7a37',
+  yellow: '#8a6100',
+  blue: '#1a5fd0',
+  magenta: '#8a3fc2',
+  cyan: '#0a7285',
+  white: '#6e6e73',
+  brightBlack: '#48484a',
+  brightRed: '#dd3c37',
+  brightGreen: '#25903f',
+  brightYellow: '#9f7000',
+  brightBlue: '#2470e0',
+  brightMagenta: '#9c4fd4',
+  brightCyan: '#0e8399',
+  brightWhite: '#000000',
 }
 
 /** Must match `--surface` and `--surface-ink` in `styles/tokens.css`. */
-export function terminalTheme({ appearance, hue }: Presentation): ITheme {
+export function terminalTheme({ appearance }: Presentation): ITheme {
   if (appearance === 'light') {
-    const background = oklchToHex(0.995, 0.003, hue)
     return {
       ...ansiLight,
-      background,
-      foreground: oklchToHex(0.24, 0.012, hue),
-      cursor: oklchToHex(0.45, 0.08, hue),
-      cursorAccent: background,
-      selectionBackground: oklchToHex(0.88, 0.04, hue),
+      background: '#ffffff',
+      foreground: '#1d1d1f',
+      cursor: '#1d1d1f',
+      cursorAccent: '#ffffff',
+      selectionBackground: '#0000001f',
     }
   }
-  const background = oklchToHex(0.185, 0.012, hue)
   return {
     ...ansiDark,
-    background,
-    foreground: oklchToHex(0.93, 0.008, hue),
-    cursor: oklchToHex(0.8, 0.09, hue),
-    cursorAccent: background,
-    selectionBackground: oklchToHex(0.36, 0.04, hue),
+    background: '#141415',
+    foreground: '#ececee',
+    cursor: '#ececee',
+    cursorAccent: '#141415',
+    selectionBackground: '#ffffff2e',
   }
 }

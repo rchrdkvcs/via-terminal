@@ -20,7 +20,6 @@ pub fn check(layout: &Layout) -> AppResult<()> {
         ids.claim(space.id)?;
         name(&space.name, MAX_NAME)?;
         short(&space.icon)?;
-        short(&space.color)?;
         for entry in &space.pinned {
             match entry {
                 Entry::Tab(tab) => check_tab(tab, &mut ids)?,
@@ -99,7 +98,7 @@ fn name(value: &str, max: usize) -> AppResult<()> {
 
 fn short(value: &str) -> AppResult<()> {
     if value.is_empty() || value.len() > 32 {
-        return Err(AppError::invalid("invalid icon or color"));
+        return Err(AppError::invalid("invalid icon"));
     }
     Ok(())
 }

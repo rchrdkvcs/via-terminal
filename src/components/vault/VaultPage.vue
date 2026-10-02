@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { Fingerprint, KeyRound, Server, UserRound } from '@lucide/vue'
+import Inspector from '@/components/page/Inspector.vue'
+import PageShell, { type PageSection } from '@/components/page/PageShell.vue'
+import { useVault } from '@/stores/vault'
 import GroupEditor from './GroupEditor.vue'
+import GroupTree from './GroupTree.vue'
 import HostEditor from './HostEditor.vue'
 import HostList from './HostList.vue'
 import IdentityEditor from './IdentityEditor.vue'
@@ -9,15 +13,26 @@ import IdentityList from './IdentityList.vue'
 import KeyInspector from './KeyInspector.vue'
 import KeyList from './KeyList.vue'
 import KnownHostList from './KnownHostList.vue'
-import { provideVaultState } from './useVaultState'
-import VaultRail from './VaultRail.vue'
+import { provideVaultState, type Section } from './useVaultState'
 
 /**
- * The vault: sections and groups on the left, the current list in the
- * middle, and the selected item's inspector on the right when there is one.
+ * The vault: sections and groups in the rail, the current list in the
+ * middle, and the selected item's inspector floating on the right.
  */
 const state = provideVaultState()
+const vault = useVault()
 
+const sections = computed<PageSection<Section>[]>(() => [
+  { id: 'hosts', label: 'Hôtes', icon: Server, count: vault.view.hosts.length },
+  { id: 'identities', label: 'Identités', icon: UserRound, count: vault.view.identities.length },
+  { id: 'keys', label: 'Clés', icon: KeyRound, count: vault.view.keys.length },
+  {
+    id: 'knownHosts',
+    label: 'Empreintes connues',
+    icon: Fingerprint,
+    count: vault.view.knownHosts.length,
+  },
+])
 const lists = {
   hosts: HostList,
   identities: IdentityList,
@@ -31,34 +46,37 @@ const inspectorKey = computed(() => `${state.inspecting.value}:${state.selected.
 </script>
 
 <template>
-  <TooltipProvider :delay-duration="500">
-    <div class="text-foreground flex h-full min-h-0 font-sans text-[13px]">
-      <VaultRail class="border-e border-border" />
-      <main class="min-w-0 flex-1">
-        <component :is="list" :key="state.section.value" />
-      </main>
-      <Transition
-        enter-active-class="transition duration-150 ease-out motion-reduce:transition-none"
-        enter-from-class="translate-x-2 opacity-0"
-      >
-        <aside
-          v-if="state.inspecting.value"
-          aria-label="Détails"
-          class="w-[340px] shrink-0 border-s border-border"
-        >
-          <div :key="inspectorKey" class="contents">
-            <HostEditor v-if="state.inspecting.value === 'host'" :host-id="id" />
-            <HostEditor v-else-if="state.inspecting.value === 'new-host'" :host-id="null" />
-            <GroupEditor v-else-if="state.inspecting.value === 'group'" :group-id="id" />
-            <IdentityEditor v-else-if="state.inspecting.value === 'identity'" :identity-id="id" />
-            <IdentityEditor
-              v-else-if="state.inspecting.value === 'new-identity'"
-              :identity-id="null"
-            />
-            <KeyInspector v-else-if="state.inspecting.value === 'key'" :key-id="id" />
-          </div>
-        </aside>
-      </Transition>
-    </div>
-  </TooltipProvider>
+  <PageShell
+    v-model="state.section.value"
+    title="Coffre"
+    close-label="Fermer le coffre"
+    :sections="sections"
+  >
+    <template #rail>
+      <GroupTree v-if="state.section.value === 'hosts'" />
+    </template>
+    <main class="min-w-[320px] flex-1">
+      <component :is="list" :key="state.section.value" />
+    </main>
+    <Transition
+      enter-active-class="transition-[opacity,translate] duration-200 ease-[var(--ease-out)] motion-reduce:transition-none"
+      enter-from-class="translate-x-3 opacity-0"
+      leave-active-class="transition-[opacity,translate] duration-150 ease-[var(--ease-out)] motion-reduce:transition-none"
+      leave-to-class="translate-x-3 opacity-0"
+    >
+      <Inspector v-if="state.inspecting.value" label="Détails">
+        <div :key="inspectorKey" class="contents">
+          <HostEditor v-if="state.inspecting.value === 'host'" :host-id="id" />
+          <HostEditor v-else-if="state.inspecting.value === 'new-host'" :host-id="null" />
+          <GroupEditor v-else-if="state.inspecting.value === 'group'" :group-id="id" />
+          <IdentityEditor v-else-if="state.inspecting.value === 'identity'" :identity-id="id" />
+          <IdentityEditor
+            v-else-if="state.inspecting.value === 'new-identity'"
+            :identity-id="null"
+          />
+          <KeyInspector v-else-if="state.inspecting.value === 'key'" :key-id="id" />
+        </div>
+      </Inspector>
+    </Transition>
+  </PageShell>
 </template>

@@ -12,7 +12,7 @@ const values = ref(props.prompt.fields.map(() => ''))
 
 <template>
   <form class="flex flex-col gap-3" @submit.prevent="emit('answer', { kind: 'fields', values })">
-    <h2 class="text-sm font-semibold">
+    <h2 class="text-[15px] font-semibold tracking-[-0.01em]">
       {{ prompt.name || 'Le serveur demande une vérification' }}
     </h2>
     <p v-if="prompt.instructions" class="text-[13px] whitespace-pre-line text-muted-foreground">
@@ -33,10 +33,10 @@ const values = ref(props.prompt.fields.map(() => ''))
       />
     </label>
     <div class="flex justify-end gap-2">
-      <Button type="button" variant="ghost" size="sm" @click="emit('answer', { kind: 'cancel' })"
+      <Button type="button" variant="secondary" @click="emit('answer', { kind: 'cancel' })"
         >Annuler</Button
       >
-      <Button type="submit" size="sm">Envoyer</Button>
+      <Button type="submit">Envoyer</Button>
     </div>
   </form>
 </template>

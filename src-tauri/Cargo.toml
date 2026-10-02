@@ -32,6 +32,7 @@ async-trait = "0.1.92"
 russh = { version = "0.63", default-features = false, features = ["ring", "flate2", "rsa"] }
 tokio = { version = "1", features = ["sync", "time", "rt", "macros", "net"] }
 rand = "0.10"
+tauri-plugin-window-state = "2"
 
 [dev-dependencies]
 tempfile = "3"

@@ -47,7 +47,7 @@ onMounted(() => (input.value?.$el as HTMLInputElement | undefined)?.focus())
 
 <template>
   <form class="flex flex-col gap-3" @submit.prevent="submit">
-    <h2 class="text-sm font-semibold">{{ copy.title }}</h2>
+    <h2 class="text-[15px] font-semibold tracking-[-0.01em]">{{ copy.title }}</h2>
     <p v-if="retry" role="alert" class="text-[13px] text-destructive">
       Refusé par le serveur. Réessayez.
     </p>
@@ -65,10 +65,10 @@ onMounted(() => (input.value?.$el as HTMLInputElement | undefined)?.focus())
       <Switch v-model="remember" /> Mémoriser dans le coffre
     </label>
     <div class="flex justify-end gap-2">
-      <Button type="button" variant="ghost" size="sm" @click="emit('answer', { kind: 'cancel' })"
+      <Button type="button" variant="secondary" @click="emit('answer', { kind: 'cancel' })"
         >Annuler</Button
       >
-      <Button type="submit" size="sm">Continuer</Button>
+      <Button type="submit">Continuer</Button>
     </div>
   </form>
 </template>

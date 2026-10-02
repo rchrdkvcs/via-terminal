@@ -12,9 +12,8 @@ import { dragging, hint, useRowDnd } from '@/composables/useRowDnd'
 import { useSidebarActions } from '@/composables/useSidebarActions'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
-import DropLine from './DropLine.vue'
 import InlineRename from './InlineRename.vue'
-import RowItem from './RowItem.vue'
+import RowArea from './RowArea.vue'
 
 /** A one-level folder; its icon is the only open/closed indicator. */
 const props = defineProps<{ folder: FolderEntry }>()
@@ -34,8 +33,8 @@ useRowDnd(element, {
   },
 })
 
-const target = computed(() =>
-  hint.value?.targetId === props.folder.id ? hint.value.position : null,
+const into = computed(
+  () => hint.value?.targetId === props.folder.id && hint.value.position === 'into',
 )
 const toggle = () => spaces.dispatch({ type: 'toggleFolder', id: props.folder.id })
 const rename = (name: string) => {
@@ -45,7 +44,7 @@ const rename = (name: string) => {
 </script>
 
 <template>
-  <li class="list-none">
+  <div>
     <ContextMenu>
       <ContextMenuTrigger as-child>
         <div
@@ -53,9 +52,9 @@ const rename = (name: string) => {
           role="button"
           tabindex="0"
           :aria-expanded="folder.open"
-          class="relative flex h-8 items-center gap-2 rounded-md px-2 text-[13px] text-muted-foreground outline-none transition-colors duration-100 hover:bg-row-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          class="row relative flex h-8 items-center gap-2 px-2 text-[13px] text-ink-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
           :class="[
-            target === 'into' ? 'bg-row-selected text-foreground ring-1 ring-primary/60' : '',
+            into ? 'bg-row-selected text-foreground shadow-[0_0_0_1.5px_var(--focus)]' : '',
             dragging?.rowId === folder.id ? 'opacity-40' : '',
           ]"
           @click="toggle"
@@ -63,7 +62,6 @@ const rename = (name: string) => {
           @keydown.f2.prevent="ui.renaming = folder.id"
           @dblclick.stop="ui.renaming = folder.id"
         >
-          <DropLine v-if="target === 'before' || target === 'after'" :position="target" />
           <component :is="folder.open ? FolderOpen : Folder" :size="16" :stroke-width="1.5" />
           <InlineRename
             v-if="ui.renaming === folder.id"
@@ -84,11 +82,13 @@ const rename = (name: string) => {
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
-    <ul
-      v-if="folder.open && folder.rows.length"
-      class="ms-3 flex flex-col gap-px border-s border-border ps-1.5"
-    >
-      <RowItem v-for="row in folder.rows" :key="row.id" :row="row" />
-    </ul>
-  </li>
+    <RowArea
+      v-if="folder.open"
+      area="pinned"
+      :folder-id="folder.id"
+      :entries="folder.rows"
+      :label="`Contenu de ${folder.name}`"
+      class="ms-[15px] border-s border-hairline ps-1.5 pt-px"
+    />
+  </div>
 </template>

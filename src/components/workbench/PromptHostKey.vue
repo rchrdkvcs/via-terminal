@@ -22,7 +22,7 @@ const emit = defineEmits<{ answer: [answer: PromptAnswer] }>()
         class="mt-0.5 shrink-0"
       />
       <div class="space-y-1">
-        <h2 class="text-sm font-semibold">
+        <h2 class="text-[15px] font-semibold tracking-[-0.01em]">
           {{ prompt.previousFingerprint ? 'La clé de ce serveur a changé' : 'Nouveau serveur' }}
         </h2>
         <p class="text-[13px] text-muted-foreground">
@@ -37,7 +37,7 @@ const emit = defineEmits<{ answer: [answer: PromptAnswer] }>()
         </p>
       </div>
     </div>
-    <dl class="space-y-2 rounded-md bg-row-hover p-3 text-xs">
+    <dl class="material-sunken space-y-2.5 rounded-lg p-3 text-xs">
       <div v-if="prompt.previousFingerprint">
         <dt class="text-muted-foreground">Clé enregistrée</dt>
         <dd class="font-mono break-all line-through decoration-destructive/60">
@@ -52,9 +52,8 @@ const emit = defineEmits<{ answer: [answer: PromptAnswer] }>()
       </div>
     </dl>
     <div class="flex justify-end gap-2">
-      <Button variant="ghost" size="sm" @click="emit('answer', { kind: 'cancel' })">Annuler</Button>
+      <Button variant="secondary" @click="emit('answer', { kind: 'cancel' })">Annuler</Button>
       <Button
-        size="sm"
         :variant="prompt.previousFingerprint ? 'destructive' : 'default'"
         @click="emit('answer', { kind: 'accept' })"
       >

@@ -27,7 +27,7 @@ onMounted(async () => {
     ref="input"
     v-model="draft"
     :aria-label="label"
-    class="h-6 min-w-0 flex-1 rounded-sm bg-surface px-1 text-[13px] text-foreground outline-2 outline-ring"
+    class="material-sunken h-6 min-w-0 flex-1 rounded-[5px] px-1.5 text-[13px] text-foreground outline-none"
     @keydown.enter.prevent="finish(true)"
     @keydown.escape.prevent="finish(false)"
     @keydown.stop

@@ -40,7 +40,7 @@ watch(
 watch(query, () => find(1))
 
 const button =
-  'grid size-6 place-items-center rounded-sm text-muted-foreground hover:bg-row-hover hover:text-foreground'
+  'grid size-6 place-items-center rounded-[5px] text-muted-foreground hover:bg-row-hover hover:text-foreground'
 </script>
 
 <template>
