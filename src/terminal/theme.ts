@@ -1,72 +1,72 @@
 import type { ITheme } from '@xterm/xterm'
 
-/**
- * xterm paints on a canvas, so it cannot read CSS custom properties. The
- * surfaces below mirror the stock shadcn neutral tokens in `styles.css`
- * (`--background` and `--foreground`) expressed in sRGB.
- *
- * The ANSI ramp stays in colour on purpose: it belongs to the shell's output,
- * not to the application chrome.
- */
+export interface Presentation {
+  fontFamily: string
+  fontSize: number
+  lineHeight: number
+  cursorStyle: 'block' | 'bar' | 'underline'
+  cursorBlink: boolean
+  scrollback: number
+  appearance: 'dark' | 'light'
+}
+
+/** The ANSI ramp belongs to the shell's output, so it stays in full color. */
 const ansiDark = {
-  black: '#404040',
-  red: '#f2707f',
-  green: '#5fd58a',
-  yellow: '#e5b567',
-  blue: '#7aa5ef',
-  magenta: '#c48ff0',
-  cyan: '#5fc6d4',
-  white: '#d4d4d4',
-  brightBlack: '#737373',
-  brightRed: '#ff8b98',
-  brightGreen: '#7ce5a5',
-  brightYellow: '#f2ca7d',
-  brightBlue: '#9bbcf7',
-  brightMagenta: '#d6a9f7',
-  brightCyan: '#7fdcea',
-  brightWhite: '#fafafa',
+  black: '#3a3a3c',
+  red: '#ff6b6b',
+  green: '#7ee787',
+  yellow: '#f2cc60',
+  blue: '#79b8ff',
+  magenta: '#d2a8ff',
+  cyan: '#76e3ea',
+  white: '#d1d1d6',
+  brightBlack: '#6e6e73',
+  brightRed: '#ff8f8f',
+  brightGreen: '#a2f0aa',
+  brightYellow: '#f8dd8a',
+  brightBlue: '#a5d0ff',
+  brightMagenta: '#e2c5ff',
+  brightCyan: '#a3f0f4',
+  brightWhite: '#f5f5f7',
 }
 
 const ansiLight = {
-  black: '#262626',
-  red: '#c03a4c',
-  green: '#237a48',
-  yellow: '#8a6300',
-  blue: '#2c5bb8',
-  magenta: '#7a3fb0',
-  cyan: '#0f6d7c',
-  white: '#737373',
-  brightBlack: '#525252',
-  brightRed: '#d4485a',
-  brightGreen: '#2b8f55',
-  brightYellow: '#9c7100',
-  brightBlue: '#356ad0',
-  brightMagenta: '#8c4cc7',
-  brightCyan: '#137e90',
-  brightWhite: '#171717',
+  black: '#1d1d1f',
+  red: '#c9302c',
+  green: '#1f7a37',
+  yellow: '#8a6100',
+  blue: '#1a5fd0',
+  magenta: '#8a3fc2',
+  cyan: '#0a7285',
+  white: '#6e6e73',
+  brightBlack: '#48484a',
+  brightRed: '#dd3c37',
+  brightGreen: '#25903f',
+  brightYellow: '#9f7000',
+  brightBlue: '#2470e0',
+  brightMagenta: '#9c4fd4',
+  brightCyan: '#0e8399',
+  brightWhite: '#000000',
 }
 
-/** neutral-900 elevated terminal surface, neutral-50 text. */
-const darkTheme: ITheme = {
-  ...ansiDark,
-  background: '#171717',
-  foreground: '#fafafa',
-  cursor: '#a3a3a3',
-  cursorAccent: '#171717',
-  selectionBackground: '#ffffff2e',
-  selectionForeground: '#ffffff',
-}
-
-const lightTheme: ITheme = {
-  ...ansiLight,
-  background: '#ffffff',
-  foreground: '#171717',
-  cursor: '#525252',
-  cursorAccent: '#ffffff',
-  selectionBackground: '#0a0a0a24',
-  selectionForeground: '#0a0a0a',
-}
-
-export function terminalTheme(appearance: 'dark' | 'light'): ITheme {
-  return appearance === 'light' ? lightTheme : darkTheme
+/** Must match `--surface` and `--surface-ink` in `styles/tokens.css`. */
+export function terminalTheme({ appearance }: Presentation): ITheme {
+  if (appearance === 'light') {
+    return {
+      ...ansiLight,
+      background: '#ffffff',
+      foreground: '#1d1d1f',
+      cursor: '#1d1d1f',
+      cursorAccent: '#ffffff',
+      selectionBackground: '#0000001f',
+    }
+  }
+  return {
+    ...ansiDark,
+    background: '#141415',
+    foreground: '#ececee',
+    cursor: '#ececee',
+    cursorAccent: '#141415',
+    selectionBackground: '#ffffff2e',
+  }
 }

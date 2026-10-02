@@ -1,72 +1,122 @@
-# Product specification — V1
+# Product specification
 
 ## Promise
 
-via terminal is a fast, pleasant native terminal workspace for IT technicians: a Zen Browser-like navigator for local shells and SSH sessions, with durable organization and reliable spatial behavior.
+Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your sessions, a vault for your servers, and nothing in between. Opening a shell or a server is one shortcut and a few letters away.
 
-The product name is **via terminal**. The native application is **Via**: that is the executable, installer, install directory, and OS application list name.
+## Audience and platforms
 
-## Audience and platform
+- IT technicians, support engineers, system administrators and developers.
+- Windows x64, macOS arm64 and Linux x64. Installers are published on GitHub Releases.
+- Open source under Apache-2.0. No account, no cloud, works offline.
 
-- Primary audience: IT technicians, support engineers, and system administrators.
-- Official V1 platforms: Windows, macOS, and Linux.
-- Architectures: Windows x64, macOS Apple Silicon (arm64), Linux x64.
-- Installers are published on GitHub Releases for each version tag.
-- Distribution is open source under Apache-2.0; no account is required.
+## The window
 
-## Core experience
+```
+┌───────────────┬──────────────────────────────────────────┐
+│ ▯       – ▢ ✕ │                                          │
+│ ┌───────────┐ │                                          │
+│ │ prod-web  │ │                                          │
+│ └───────────┘ │            active tab or split           │
+│ Space name    │                                          │
+│ ▸ Clients     │                                          │
+│   pinned …    │                                          │
+│ ───────────── │                                          │
+│ + New tab     │                                          │
+│   temporary … │                                          │
+│               │                                          │
+│ ◉ ◯ ◯ +   ⚿ ⚙ │                                          │
+└───────────────┴──────────────────────────────────────────┘
+```
 
-- A resizable, hideable Zen-inspired sidebar is the primary product surface.
-- One tab represents one session and one sidebar row; identity is never duplicated.
-- Workspaces isolate organization, resources, identities, default profiles, and tabs.
-- Favorites and one-level folders live above the divider.
-- New Tab and runtime-only temporary tabs live below it.
-- Tabs can link into groups of two to four split panes.
-- A bottom workspace strip follows Zen's horizontal overflow behavior.
-- Workspace switching works by click, palette, Alt+1…9, and Ctrl+wheel over the sidebar.
-- Tabs transfer between workspaces only through an explicit context menu.
-- One application instance supports multiple native windows.
-- The UI is keyboard-complete and targets WCAG 2.2 AA outside terminal-rendered content.
+- **Sidebar**, from top to bottom: the sidebar toggle and window controls, the address pill of the current tab, the space name and its pinned area (pinned tabs, split views and folders), a divider, New tab, the temporary tabs, and the space switcher with vault and settings buttons.
+- **Content**: the active row, shown as a single terminal or a split view, on a rounded surface. Nothing else: no top bar, no tab strip.
+- The sidebar can be hidden and shown again with Ctrl+Shift+B or its button. The window controls stay top right, in a thin title bar above the content.
 
-The exhaustive sidebar contract is in [SIDEBAR.md](./SIDEBAR.md).
+## Opening things
 
-## Terminal and connection behavior
+- Shortcuts use Ctrl+Shift on Windows and Linux, so the shell keeps Ctrl+W, Ctrl+D, Ctrl+L and the other line-editing keys, and ⌘ on macOS.
+- **Ctrl+Shift+T** opens the command bar. It lists local shells, recent hosts, then every host matching what you type (label, address, user, tags, group). Enter opens the selection as a new temporary tab.
+- Typing `user@host`, `host:2222` or `ssh user@host -p 2222` offers **Connect to …**. When authentication succeeds, the host is saved in the vault automatically.
+- **Ctrl+Shift+L** (or clicking the address pill) opens the command bar for the current tab: Enter replaces what the tab connects to.
+- **Ctrl+Shift+P** opens the same bar with actions first: new space, open vault, settings, split, pin, rename, close.
+- From the vault, double-click or **Connect** opens a host in a new tab of the current space.
 
-- Each workspace has a default local profile: PowerShell, CMD, WSL, or Git Bash on Windows; zsh or bash on macOS; bash, sh, or another detected shell on Linux.
-- New Tab and Ctrl+T open a session-type picker. Choosing a local profile or saved SSH connection appends and starts a temporary tab. Cancelling the picker starts no process.
-- Local profiles and SSH connections are selected from New Tab. SSH connection creation, editing, duplication, search, and deletion belong to this flow, never application settings. New session types can extend the picker as their backends become available.
-- Activating a stopped favorite starts it immediately unless manual connection is enabled.
-- A successful temporary-session exit removes its tab; failures remain inspectable.
-- Running sessions continue across workspace navigation and sidebar organization.
-- SSH uses the operating system OpenSSH configuration, keys, known hosts, and agent.
-- Unknown host keys remain OpenSSH prompts.
-- Unexpected SSH disconnects retain output and offer bounded reconnection attempts.
+## Tabs
 
-## Durable and temporary state
+- New tabs appear at the top of the temporary area.
+- **Pin** (Ctrl+Shift+D, menu, or drag above the divider) keeps a tab across restarts. Unpinning drops it back to the temporary area.
+- At launch, pinned tabs are **asleep**: dimmed, no process running. Clicking one starts it. Nothing connects by itself.
+- A pinned tab remembers its target and its name. A local tab also remembers the folder its shell was last in, and reopens there (Git Bash, bash, zsh, PowerShell and cmd report it; other shells reopen in the home folder).
+- A host saved by quick connect is named after its address until named: naming its tab names the host, so the sidebar, the command bar and the vault show one name.
+- A temporary local shell that exits normally closes its tab. A failed launch or a dropped SSH connection keeps the tab with its output and offers Reconnect.
+- Ctrl+Shift+W closes the current tab; closing a pinned tab puts it to sleep, closing again removes it. Removing offers Undo.
+- Renaming: double-click a row or F2. A manual name stops following the terminal title until reset.
+- Ctrl+Tab / Ctrl+Shift+Tab cycle tabs in sidebar order; Ctrl+1…9 switch spaces.
 
-Persist workspaces, favorites, folders, pinned split layout, names, ordering, sidebar state, and window state. Never persist temporary tabs, live processes, terminal contents, scrollback, command history, passwords, or secrets.
+## Split view
 
-Normal exit and crash have the same restoration contract: durable organization returns stopped, no temporary tab returns, no recovery prompt appears, and no process starts automatically.
+- Drag a row onto the left, right, top or bottom of the content area, or onto another row's edge, or use **Split with…** from a row menu or Alt+Shift+D (opens the command bar for the second tab).
+- A split view holds two to four tabs, horizontally or vertically, with resizable panes. It is one row in the sidebar showing each member.
+- Clicking a member in the row focuses that pane. **Detach** turns a member back into its own row. Closing a member only closes that tab.
 
-## Visual behavior
+## Folders and spaces
 
-- Selected sidebar rows use restrained hierarchy rather than card borders.
-- Folder icons themselves communicate open and closed state.
-- Stop and remove actions appear on hover and keyboard focus.
-- The main surface has no card background or border when no process is displayed.
-- Motion explains spatial changes, remains interruptible, and respects reduced motion.
-- Compact sidebar mode and compact-density settings are outside V1.
+- Folders exist only in the pinned area, one level deep. Dragging a temporary tab into a folder pins it. Deleting a folder keeps its tabs.
+- Spaces are listed at the bottom of the sidebar. Click, Ctrl+1…9, or a horizontal swipe / Ctrl+wheel switches space; sessions keep running in the background.
+- Creating or editing a space asks for a name, an icon and an optional default shell. The last space cannot be deleted. Deleting a space with running tabs asks for confirmation.
+- A tab moves to another space from its menu (**Move to space**).
 
-## Explicitly outside V1
+## Connecting over SSH
 
-SFTP, port forwarding, tunnels, ProxyJump/bastions, command snippets, multi-machine execution, cloud synchronization, team collaboration, AI, plugins, monitoring, persistent processes after application exit, nested folders, workspace duplication, workspace theme editing, cross-workspace drag-and-drop, split-group merging, and temporary-tab restoration.
+- Via has its own SSH client. It never reads `~/.ssh/config`, the system `known_hosts` or `~/.ssh/id_*`.
+- While connecting, the pane shows the steps (resolving, connecting, verifying the server, authenticating) instead of a blank terminal.
+- **New server key**: the pane shows the fingerprint and asks Trust and connect / Cancel. **Changed key**: the pane warns clearly, shows both fingerprints and requires an explicit Replace and connect.
+- **Credentials** are tried in this order: the key, then the stored password, from the host first, then its identity, then its groups. Missing credentials are asked for in the pane, with a Remember option that stores them in the vault.
+- Keyboard-interactive challenges (2FA codes) are asked in the pane and never stored.
+- An unexpected disconnect keeps the output and shows Reconnect. Typing Enter in a disconnected pane also reconnects.
+
+## Vault
+
+A full page (sidebar stays) with:
+
+- **Hosts**: groups as a tree on the left, hosts of the selected group in the middle (including sub-groups), and an editor on the right. Creating a host only needs an address; everything else is optional. Search filters by label, address, user and tags.
+- **Identities**: username plus a password or key, referenced by hosts and groups.
+- **Keys**: generate Ed25519, import by pasting or choosing a file (the file is copied into the vault), copy the public key, delete.
+- **Known hosts**: accepted fingerprints, removable.
+- Every change is saved immediately; there is no Save button except when creating.
+- Inherited values appear as placeholders showing where they come from.
+- Deleting a host used by pinned tabs asks for confirmation; those tabs stay and show that their host is gone.
+
+## Settings
+
+A full page with General (default shell, behavior on close, quick-connect auto-save), Appearance (theme, font, size, cursor), Terminal (scrollback, line height, copy on select) and Shortcuts (read-only reference). SSH data never appears in settings.
+
+## Persistence
+
+- Persisted: spaces, pinned rows, folders, split layouts of pinned rows, sidebar width and visibility, settings, the vault.
+- Never persisted: temporary tabs, processes, terminal contents, scrollback, command history.
+- Secrets are encrypted with a key held in the OS keychain (Credential Manager, Keychain, Secret Service). If no keychain is available, Via does not remember secrets and asks for them each time.
+
+## Visual principles
+
+- One neutral palette, black and white, in a dark and a light theme. Spaces have no color.
+- Depth comes from materials, not color: the sidebar sits on the window chrome; content is a raised surface; menus, dialogs and inspectors float above it with a lit top edge; controls are lit keys with a hairline and a soft drop; fields are pressed into the surface.
+- Full pages (vault, settings) share one frame: a wide rail of sections on a half-step tint, the page beside it, no borders between them. Inspectors float on the right and can be resized.
+- Selected rows are lit; asleep rows are dimmed; connection progress is the only animated indicator.
+- Things used many times a day (command bar, space switch, shortcuts) appear at once. Motion is reserved for spatial changes, stays under 250 ms, and disappears with reduced motion.
+- A drop target is always one line in one gap; a drop that would change nothing shows nothing.
+- The window chrome quiets down while the window is in the background.
+- Every pointer action has a keyboard or menu equivalent.
+
+## Outside this release
+
+SFTP, port forwarding, jump hosts and proxies, snippets, broadcast input, multiple windows, cloud sync, teams, AI, plugins, SSH agent forwarding, and importing system SSH configuration.
 
 ## Success criteria
 
-- A drag or keyboard move cannot duplicate, lose, or restart a tab.
-- Invalid targets leave canonical state unchanged.
-- Input feels immediate and sustained output never freezes the surrounding UI.
-- A usable window appears within 1.5 seconds on the documented reference machine, excluding first-time WebView installation.
-- Workspace data never crosses isolation boundaries implicitly.
-- No terminal content, command history, or SSH password is persisted.
-- The core experience works offline except for intentional remote SSH connections and user-initiated browser downloads of a new GitHub Release. The running app does not check for updates.
+- From launch, opening a saved server takes Ctrl+Shift+T, a few letters and Enter.
+- Adding a new server takes typing `user@host` and authenticating once.
+- Moving, pinning or splitting a running tab never restarts it or loses its scrollback.
+- No secret is readable in the database, exports, logs or process list.
+- A usable window appears within 1.5 s on the reference machine.

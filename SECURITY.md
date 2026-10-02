@@ -12,9 +12,10 @@ Maintainers aim to acknowledge a report within 7 days, validate severity, coordi
 
 ## Security boundaries
 
-- via terminal uses the operating system's OpenSSH client and does not silently accept host fingerprints.
-- SSH passwords are entered interactively and are not saved.
-- Workspace isolation prevents implicit sharing but is not an operating-system security boundary.
-- Export excludes secrets and terminal contents, but users must inspect exports before sharing.
+- Via verifies every SSH server key against the known hosts in its vault. New keys require confirmation; changed keys require an explicit replacement.
+- Remembered passwords, passphrases and private keys are encrypted with ChaCha20-Poly1305. The key is held by the OS keychain. Without a keychain, nothing is remembered.
+- Secrets never reach the interface's state, logs, exports or process arguments.
+- The interface can only start shells that Via detected; it cannot launch an arbitrary executable.
+- Spaces organize tabs; they are not a security boundary. All spaces share one vault.
 
 See [docs/PRIVACY.md](docs/PRIVACY.md).

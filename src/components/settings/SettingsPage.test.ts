@@ -1,73 +1,59 @@
-import { reactive } from 'vue'
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useSettings } from '@/stores/settings'
+import { useUi } from '@/stores/ui'
 import SettingsPage from './SettingsPage.vue'
 
-const store = reactive({
-  route: 'settings',
-  settingsSection: 'general',
-  restoreDefaults: vi.fn(),
-})
+vi.mock('@/ipc/client', () => ({
+  api: { saveSettings: vi.fn(async () => undefined) },
+  describeError: String,
+}))
+vi.mock('@/lib/notify', () => ({ notify: { info: vi.fn(), success: vi.fn(), error: vi.fn() } }))
 
-vi.mock('@/stores/app', () => ({ useAppStore: () => store }))
-
-const passthrough = { template: '<div><slot /></div>' }
-
-function renderPage() {
-  return mount(SettingsPage, {
-    global: {
-      stubs: {
-        Button: { template: '<button><slot /></button>' },
-        AlertDialog: passthrough,
-        AlertDialogContent: passthrough,
-        AlertDialogHeader: passthrough,
-        AlertDialogTitle: passthrough,
-        AlertDialogDescription: passthrough,
-        AlertDialogFooter: passthrough,
-        AlertDialogCancel: { template: '<button><slot /></button>' },
-        AlertDialogAction: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
-        GeneralSection: true,
-        AppearanceSection: true,
-        TerminalSection: true,
-        KeybindingsSection: true,
-        DataSection: true,
-        AboutSection: true,
-        Transition: passthrough,
-      },
-    },
-  })
+function render() {
+  return mount(SettingsPage, { attachTo: document.body })
 }
 
 describe('SettingsPage', () => {
   beforeEach(() => {
-    store.route = 'settings'
-    store.settingsSection = 'general'
-    store.restoreDefaults.mockClear()
+    setActivePinia(createPinia())
+    useUi().route = 'settings'
   })
 
-  it('navigue entre les sections et revient au terminal', async () => {
-    const wrapper = renderPage()
-    const buttons = wrapper.findAll('nav button')
+  it('returns to the workbench on Escape and on the close button', async () => {
+    const page = render()
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(useUi().route).toBe('workbench')
 
-    await buttons.find((button) => button.text().includes('Terminal'))!.trigger('click')
-    expect(store.settingsSection).toBe('terminal')
-    expect(wrapper.findComponent({ name: 'TerminalSection' }).exists()).toBe(true)
-
-    await buttons.find((button) => button.text().includes('Retour au terminal'))!.trigger('click')
-    expect(store.route).toBe('workspace')
+    useUi().route = 'settings'
+    await page.get('[aria-label="Fermer les réglages"]').trigger('click')
+    expect(useUi().route).toBe('workbench')
+    page.unmount()
   })
 
-  it('does not expose SSH management, even for a stale resources section', async () => {
-    store.settingsSection = 'resources'
-    const wrapper = renderPage()
-    expect(wrapper.findAll('nav button').some((button) => button.text().includes('SSH'))).toBe(
-      false,
-    )
-    expect(wrapper.findComponent({ name: 'GeneralSection' }).exists()).toBe(true)
-    const restoreButton = wrapper
-      .findAll('button')
-      .find((button) => button.text().trim() === 'Rétablir')!
-    await restoreButton.trigger('click')
-    expect(store.restoreDefaults).toHaveBeenCalledWith('general')
+  it('switches sections from the rail', async () => {
+    const page = render()
+    const shortcuts = page.findAll('nav button').find((b) => b.text().includes('Raccourcis'))
+    await shortcuts?.trigger('click')
+    expect(page.get('h2').text()).toBe('Raccourcis')
+    expect(page.text()).toContain('Nouvel onglet')
+    page.unmount()
+  })
+
+  it('asks for a second press before resetting', async () => {
+    const settings = useSettings()
+    settings.update({ fontSize: 20 })
+    const page = render()
+    const button = () => page.findAll('button').find((b) => /Rétablir|Confirmer/.test(b.text()))
+
+    await button()?.trigger('click')
+    expect(button()?.text()).toBe('Confirmer')
+    expect(settings.settings.fontSize).toBe(20)
+
+    await button()?.trigger('click')
+    expect(settings.settings.fontSize).toBe(14)
+    expect(button()?.text()).toBe('Rétablir les valeurs par défaut')
+    page.unmount()
   })
 })

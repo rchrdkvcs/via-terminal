@@ -1,0 +1,162 @@
+/*
+  Materials: the few recipes every control is made of. Edges are 1px inner
+  shadows, never borders, so they never shift layout and hug any radius.
+  Nothing but menus and dialogs casts a drop shadow.
+*/
+
+@utility material-control {
+  background-color: var(--control);
+  box-shadow: var(--shadow-control);
+  transition-property: background-color, box-shadow, scale;
+  transition-duration: 120ms;
+  transition-timing-function: var(--ease-out);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background-color: var(--control-hover);
+      box-shadow: var(--shadow-control-hover);
+    }
+  }
+  &:active:not(:disabled) {
+    background-color: var(--control-pressed);
+    box-shadow: var(--shadow-pressed);
+  }
+}
+
+@utility material-accent {
+  background-color: var(--accent-fill);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-accent);
+  transition-property: opacity, box-shadow, scale;
+  transition-duration: 120ms;
+  transition-timing-function: var(--ease-out);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      opacity: 0.92;
+    }
+  }
+}
+
+@utility material-field {
+  background-color: var(--sunken);
+  box-shadow: var(--shadow-sunken);
+  transition-property: box-shadow;
+  transition-duration: 120ms;
+  &:focus-visible,
+  &:focus-within {
+    box-shadow: var(--shadow-field-focus);
+  }
+}
+
+/* A bordered region of the page (inspector), flat like the page itself. */
+@utility material-panel {
+  background-color: var(--raised);
+  box-shadow: var(--shadow-panel);
+}
+
+@utility material-raised {
+  background-color: var(--raised);
+  box-shadow: var(--shadow-raised);
+}
+
+/* Pressed controls give a little: felt, not seen. */
+@utility press {
+  &:active:not(:disabled) {
+    scale: 0.96;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:active:not(:disabled) {
+      scale: 1;
+    }
+  }
+}
+
+/* Sidebar-like rows: quiet until hovered, lit when selected. */
+@utility row {
+  border-radius: calc(var(--radius) - 2px);
+  transition-property: background-color, color, box-shadow;
+  transition-duration: 100ms;
+  transition-timing-function: var(--ease-out);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background-color: var(--row-hover);
+    }
+  }
+  &[aria-current='page'],
+  &[aria-selected='true'],
+  &[data-selected] {
+    background-color: var(--row-selected);
+    box-shadow: var(--shadow-row);
+    color: var(--ink);
+  }
+}
+
+/* Toasts share the raised material; the action is a lit control. */
+[data-sonner-toast][data-styled='true'] {
+  box-shadow: var(--shadow-raised) !important;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 12px 14px !important;
+}
+[data-sonner-toast] [data-button] {
+  background: var(--control) !important;
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-control);
+  border-radius: 6px !important;
+  font-weight: 500;
+}
+[data-sonner-toast] [data-icon] svg {
+  color: var(--ink-muted);
+}
+
+/* A window in the background keeps its content but quiets its chrome. */
+[data-inactive] aside[aria-label='Barre latérale'] {
+  opacity: 0.72;
+  transition: opacity 150ms var(--ease-out);
+}
+
+/*
+  Scrollbars: no native bars anywhere. A slim, rounded thumb floats on a
+  clear track, faint at rest and firmer under the pointer; there are no
+  arrows. The standard `scrollbar-*` properties are left unset on purpose:
+  Chromium ignores these pseudo-elements once they are set.
+*/
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background: transparent;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: var(--hairline-strong);
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ink-faint);
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* xterm draws its own scrollbar; give it the same thumb. */
+.xterm .xterm-scrollable-element > .scrollbar.vertical {
+  width: 10px !important;
+  background: transparent !important;
+}
+.xterm .xterm-scrollable-element > .scrollbar > .slider {
+  left: 3px !important;
+  width: 4px !important;
+  border-radius: 999px;
+  background: var(--hairline-strong) !important;
+}
+.xterm .xterm-scrollable-element > .scrollbar > .slider:hover,
+.xterm .xterm-scrollable-element > .scrollbar > .slider.active {
+  background: var(--ink-faint) !important;
+}
+.xterm .xterm-scrollable-element > .shadow {
+  display: none;
+}

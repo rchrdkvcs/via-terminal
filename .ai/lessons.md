@@ -46,3 +46,31 @@ the row to land before, and let the store resolve it against the records.
 
 That resets the window mid-run and makes a check fail for the wrong reason.
 `server.watch.ignored` now covers `.ai`.
+
+## Read the state before blaming persistence
+
+**2026-10-02 — redesign smoke check.** A smoke run "lost" a pinned split after
+reload. The store and the backend agreed all along: typing « powershell » in
+the command bar had switched to the existing PowerShell tab instead of opening
+a new one, so the next Ctrl+Shift+D unpinned the existing split. Print the
+store (`window.__via` in dev) and the backend (`app_bootstrap`) after every
+step before suspecting the save path.
+
+## The app restarts whenever a Rust file changes
+
+`pnpm tauri dev` rebuilds and relaunches on any edit under `src-tauri`, which
+drops the CDP connection and every temporary tab. Do not drive the window
+while someone else is editing Rust.
+
+## No raw control characters through the shell on Windows
+
+Git Bash rewrites `\r` and `\` in `node -e` strings and heredocs, which
+planted a literal carriage return in a source file. Write scripts to a file
+with the editor tools, and build control characters with
+`String.fromCharCode` in code that is evaluated over CDP.
+
+## Real SSH checks
+
+`sessions/ssh/tests.rs` runs the client against an in-process russh server.
+For the interface, a throwaway `ssh2` server in Node on 127.0.0.1:2222 is
+enough to see the host key, password and shell panes.

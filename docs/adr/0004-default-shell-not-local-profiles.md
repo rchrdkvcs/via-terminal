@@ -1,6 +1,6 @@
 # Default shell instead of named local profiles
 
-- Status: accepted
+- Status: deprecated (local shells are detected and chosen per tab; see CONTEXT.md)
 - Date: 2026-08-29
 
 ## Context

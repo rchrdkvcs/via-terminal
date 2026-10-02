@@ -1,6 +1,6 @@
 # ADR 0002: Use system OpenSSH in V1
 
-- Status: accepted
+- Status: superseded by ADR-0005
 - Date: 2026-08-28
 
 ## Context

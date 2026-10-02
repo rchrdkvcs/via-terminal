@@ -1,21 +1,41 @@
 <script setup lang="ts">
-import { Field, FieldContent, FieldDescription, FieldLabel } from '@/components/ui/field'
+import { useId } from 'vue'
 
-defineProps<{ label: string; description?: string; forId?: string; stacked?: boolean }>()
+defineProps<{
+  label: string
+  description?: string
+}>()
+
+/** Ids handed to the control so its label and description are announced. */
+const id = useId()
+const labelId = `${id}-label`
+const descriptionId = `${id}-description`
 </script>
 
 <template>
-  <!--
-    One row per setting: name and explanation on the leading edge, control on
-    the trailing edge. No divider — space alone carries the grouping.
-  -->
-  <Field :orientation="stacked ? 'vertical' : 'responsive'" class="py-4 sm:gap-6">
-    <FieldContent>
-      <FieldLabel :for="forId">{{ label }}</FieldLabel>
-      <FieldDescription v-if="description">{{ description }}</FieldDescription>
-    </FieldContent>
-    <div class="shrink-0" :class="stacked ? 'w-full' : 'w-full sm:w-auto'">
-      <slot />
+  <div class="flex items-center justify-between gap-6 py-3">
+    <div class="min-w-0 flex-1">
+      <label
+        :id="labelId"
+        :for="id"
+        class="block text-[13px] leading-5 font-medium text-foreground"
+      >
+        {{ label }}
+      </label>
+      <p
+        v-if="description"
+        :id="descriptionId"
+        class="mt-0.5 text-xs leading-4 text-pretty text-muted-foreground"
+      >
+        {{ description }}
+      </p>
     </div>
-  </Field>
+    <div class="flex shrink-0 items-center gap-2">
+      <slot
+        :id="id"
+        :label-id="labelId"
+        :description-id="description ? descriptionId : undefined"
+      />
+    </div>
+  </div>
 </template>
