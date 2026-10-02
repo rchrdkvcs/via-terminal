@@ -81,10 +81,7 @@ function submit() {
             autofocus
           />
         </div>
-        <fieldset
-          class="material-sunken grid grid-cols-6 gap-1 rounded-xl p-1.5"
-          aria-label="Icône"
-        >
+        <fieldset class="material-field grid grid-cols-6 gap-1 rounded-xl p-1.5" aria-label="Icône">
           <button
             v-for="icon in spaceIcons"
             :key="icon.id"

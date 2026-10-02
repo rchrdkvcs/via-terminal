@@ -24,7 +24,7 @@ function open() {
 <template>
   <button
     type="button"
-    class="material-sunken flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-start text-[13px] text-ink-muted outline-none hover:text-foreground"
+    class="material-field flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-start text-[13px] text-ink-muted outline-none hover:text-foreground"
     :aria-label="tab ? `Changer la cible : ${text}` : 'Ouvrir la barre de commande'"
     @click="open"
   >

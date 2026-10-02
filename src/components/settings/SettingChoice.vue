@@ -20,7 +20,7 @@ function onUpdate(next: unknown) {
   <ToggleGroup
     type="single"
     size="sm"
-    class="material-sunken gap-0.5 rounded-lg p-0.5"
+    class="gap-0.5 rounded-lg bg-row-hover p-0.5"
     :aria-labelledby="labelledby"
     :model-value="value"
     @update:model-value="onUpdate"

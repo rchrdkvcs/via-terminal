@@ -1,7 +1,7 @@
 /*
-  Materials: the few recipes every control is made of. A control is lit from
-  above (a bright top edge), outlined by a hairline and lifted by a soft drop;
-  pressing it sinks it. Fields are pressed into the surface instead.
+  Materials: the few recipes every control is made of. Edges are 1px inner
+  shadows, never borders, so they never shift layout and hug any radius.
+  Nothing but menus and dialogs casts a drop shadow.
 */
 
 @utility material-control {
@@ -16,9 +16,8 @@
       box-shadow: var(--shadow-control-hover);
     }
   }
-  &:active:not(:disabled),
-  &[data-state='on'],
-  &[aria-pressed='true'] {
+  &:active:not(:disabled) {
+    background-color: var(--control-pressed);
     box-shadow: var(--shadow-pressed);
   }
 }
@@ -37,17 +36,21 @@
   }
 }
 
-@utility material-sunken {
+@utility material-field {
   background-color: var(--sunken);
   box-shadow: var(--shadow-sunken);
   transition-property: box-shadow;
   transition-duration: 120ms;
   &:focus-visible,
   &:focus-within {
-    box-shadow:
-      var(--shadow-sunken),
-      0 0 0 3px rgb(127 127 127 / 22%);
+    box-shadow: var(--shadow-field-focus);
   }
+}
+
+/* A bordered region of the page (inspector), flat like the page itself. */
+@utility material-panel {
+  background-color: var(--raised);
+  box-shadow: var(--shadow-panel);
 }
 
 @utility material-raised {

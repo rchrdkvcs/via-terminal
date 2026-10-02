@@ -37,7 +37,7 @@ const emit = defineEmits<{ answer: [answer: PromptAnswer] }>()
         </p>
       </div>
     </div>
-    <dl class="material-sunken space-y-2.5 rounded-lg p-3 text-xs">
+    <dl class="material-field space-y-2.5 rounded-lg p-3 text-xs">
       <div v-if="prompt.previousFingerprint">
         <dt class="text-muted-foreground">Clé enregistrée</dt>
         <dd class="font-mono break-all line-through decoration-destructive/60">

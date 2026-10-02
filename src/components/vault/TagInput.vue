@@ -33,7 +33,7 @@ function onKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="material-sunken flex min-h-8 flex-wrap items-center gap-1 rounded-md px-1.5 py-1">
+  <div class="material-field flex min-h-8 flex-wrap items-center gap-1 rounded-md px-1.5 py-1">
     <span
       v-for="tag in model"
       :key="tag"

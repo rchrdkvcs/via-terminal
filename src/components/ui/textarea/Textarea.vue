@@ -25,7 +25,7 @@ const modelValue = useVModel(props, 'modelValue', emits, {
     data-slot="textarea"
     :class="
       cn(
-        'material-sunken flex field-sizing-content min-h-16 w-full rounded-md px-2.5 py-2 text-[13px] placeholder:text-ink-faint outline-none disabled:opacity-50 aria-invalid:shadow-[inset_0_0_0_1px_var(--state-error)]',
+        'material-field flex field-sizing-content min-h-16 w-full rounded-md px-2.5 py-2 text-[13px] placeholder:text-ink-faint outline-none disabled:opacity-50 aria-invalid:shadow-[inset_0_0_0_1px_var(--state-error)]',
         props.class,
       )
     "

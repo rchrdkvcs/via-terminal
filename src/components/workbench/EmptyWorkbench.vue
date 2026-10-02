@@ -52,7 +52,7 @@ const hasRows = computed(() => rows(spaces.active).length > 0)
 
       <button
         type="button"
-        class="material-sunken flex h-11 items-center gap-2.5 rounded-xl px-3.5 text-start text-[13.5px] text-ink-faint outline-none hover:text-ink-muted"
+        class="material-field flex h-11 items-center gap-2.5 rounded-xl px-3.5 text-start text-[13.5px] text-ink-faint outline-none hover:text-ink-muted"
         @click="ui.openCommand({ kind: 'new' })"
       >
         <Search :size="16" :stroke-width="1.5" class="shrink-0" />

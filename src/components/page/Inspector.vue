@@ -31,7 +31,7 @@ function resize(event: PointerEvent) {
 <template>
   <aside
     :aria-label="label"
-    class="material-raised relative my-2 me-2 flex shrink-0 flex-col overflow-hidden rounded-xl"
+    class="material-panel relative my-2 me-2 flex shrink-0 flex-col overflow-hidden rounded-xl"
     :style="{ width: `${clamp(width)}px` }"
   >
     <div

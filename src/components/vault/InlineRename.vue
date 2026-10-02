@@ -37,7 +37,7 @@ function onKeydown(event: KeyboardEvent) {
     ref="input"
     v-model="text"
     :aria-label="label"
-    class="material-sunken h-6 min-w-0 flex-1 rounded-[5px] px-1.5 text-[13px] outline-none"
+    class="material-field h-6 min-w-0 flex-1 rounded-[5px] px-1.5 text-[13px] outline-none"
     @click.stop
     @dblclick.stop
     @keydown="onKeydown"

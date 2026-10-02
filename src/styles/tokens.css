@@ -1,11 +1,12 @@
 /*
-  One neutral palette. Depth comes from surfaces, not color:
+  One neutral palette. Depth comes from crisp 1px edges, drawn as inner
+  shadows, and from fills a half step apart, not from drop shadows:
 
   - chrome   the window and the sidebar
-  - surface  the terminal and page content, the deepest plane
-  - raised   popovers, dialogs and inspectors floating above it
-  - sunken   text fields, pressed into the surface
-  - control  buttons, with a hairline, a lit top edge and a soft drop
+  - surface  the terminal and page content
+  - raised   menus and dialogs, the only things that cast a shadow
+  - field    text fields: a flat fill inside a hairline
+  - control  buttons: a flat fill, a hairline, a faint lit edge
 
   `terminal/theme.ts` mirrors `--surface` and `--surface-ink`.
 */
@@ -15,19 +16,21 @@
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-  --chrome: #e9e9eb;
+  --chrome: #ececee;
   --surface: #ffffff;
   --surface-ink: #1d1d1f;
   --raised: #ffffff;
-  --sunken: #f4f4f6;
+  --sunken: #ffffff;
   --control: #ffffff;
-  --control-hover: #fbfbfc;
+  --control-hover: #f9f9fa;
+  --control-pressed: #f2f2f4;
   --row-hover: rgb(0 0 0 / 4.5%);
   --row-selected: #ffffff;
-  --hairline: rgb(0 0 0 / 9%);
-  --hairline-strong: rgb(0 0 0 / 14%);
-  --highlight: rgb(255 255 255 / 90%);
-  --drop: rgb(0 0 0 / 8%);
+  --hairline: rgb(0 0 0 / 8%);
+  --hairline-strong: rgb(0 0 0 / 12%);
+  --edge: rgb(0 0 0 / 11%);
+  --edge-hover: rgb(0 0 0 / 17%);
+  --highlight: rgb(255 255 255 / 0%);
   --ink: #1d1d1f;
   --ink-muted: #6e6e73;
   --ink-faint: #a1a1a6;
@@ -35,20 +38,16 @@
   --accent-fill: #1d1d1f;
   --accent-ink: #ffffff;
 
-  --shadow-control:
-    inset 0 1px 0 var(--highlight), 0 0 0 1px var(--hairline), 0 1px 2px var(--drop);
-  --shadow-control-hover:
-    inset 0 1px 0 var(--highlight), 0 0 0 1px var(--hairline-strong), 0 1px 3px var(--drop);
-  --shadow-pressed: inset 0 1px 2px rgb(0 0 0 / 10%), 0 0 0 1px var(--hairline-strong);
-  --shadow-sunken: inset 0 1px 2px rgb(0 0 0 / 6%), 0 0 0 1px var(--hairline);
-  --shadow-row: 0 0 0 1px var(--hairline), 0 1px 2px var(--drop);
-  --shadow-surface:
-    0 0 0 1px var(--hairline), 0 1px 3px var(--drop), 0 8px 24px -12px rgb(0 0 0 / 10%);
-  --shadow-raised:
-    inset 0 1px 0 var(--highlight), 0 0 0 1px var(--hairline-strong),
-    0 12px 32px -8px rgb(0 0 0 / 18%), 0 2px 6px rgb(0 0 0 / 6%);
-  --shadow-accent:
-    inset 0 1px 0 rgb(255 255 255 / 16%), 0 0 0 1px rgb(0 0 0 / 80%), 0 1px 2px rgb(0 0 0 / 20%);
+  --shadow-control: inset 0 0 0 1px var(--edge), inset 0 -1px 0 rgb(0 0 0 / 4%);
+  --shadow-control-hover: inset 0 0 0 1px var(--edge-hover), inset 0 -1px 0 rgb(0 0 0 / 5%);
+  --shadow-pressed: inset 0 0 0 1px var(--edge-hover);
+  --shadow-sunken: inset 0 0 0 1px var(--edge);
+  --shadow-field-focus: inset 0 0 0 1px rgb(0 0 0 / 38%), 0 0 0 3px rgb(0 0 0 / 6%);
+  --shadow-row: inset 0 0 0 1px rgb(0 0 0 / 7%);
+  --shadow-surface: 0 0 0 1px var(--hairline);
+  --shadow-panel: inset 0 0 0 1px var(--hairline);
+  --shadow-raised: inset 0 0 0 1px var(--hairline-strong), 0 12px 32px -10px rgb(0 0 0 / 18%);
+  --shadow-accent: inset 0 0 0 1px rgb(0 0 0 / 90%), inset 0 1px 0 rgb(255 255 255 / 16%);
 
   --state-live: #1f9d4b;
   --state-pending: #b7791f;
@@ -59,16 +58,18 @@
   --chrome: #1b1b1d;
   --surface: #141415;
   --surface-ink: #ececee;
-  --raised: #232326;
-  --sunken: #111112;
-  --control: #2a2a2d;
-  --control-hover: #303034;
+  --raised: #1f1f22;
+  --sunken: #19191b;
+  --control: #222225;
+  --control-hover: #27272a;
+  --control-pressed: #1d1d20;
   --row-hover: rgb(255 255 255 / 4.5%);
-  --row-selected: rgb(255 255 255 / 8.5%);
-  --hairline: rgb(255 255 255 / 8%);
-  --hairline-strong: rgb(255 255 255 / 13%);
+  --row-selected: rgb(255 255 255 / 7%);
+  --hairline: rgb(255 255 255 / 7%);
+  --hairline-strong: rgb(255 255 255 / 11%);
+  --edge: rgb(255 255 255 / 9%);
+  --edge-hover: rgb(255 255 255 / 14%);
   --highlight: rgb(255 255 255 / 6%);
-  --drop: rgb(0 0 0 / 45%);
   --ink: #ececee;
   --ink-muted: #a1a1a6;
   --ink-faint: #6e6e73;
@@ -76,16 +77,18 @@
   --accent-fill: #ececee;
   --accent-ink: #141415;
 
-  --shadow-pressed: inset 0 1px 3px rgb(0 0 0 / 45%), 0 0 0 1px var(--hairline);
-  --shadow-sunken: inset 0 1px 2px rgb(0 0 0 / 40%), 0 0 0 1px var(--hairline);
-  --shadow-row: inset 0 1px 0 var(--highlight), 0 0 0 1px rgb(255 255 255 / 5%);
-  --shadow-surface: 0 0 0 1px var(--hairline), 0 8px 28px -10px rgb(0 0 0 / 60%);
+  --shadow-control: inset 0 0 0 1px var(--edge), inset 0 1px 0 var(--highlight);
+  --shadow-control-hover: inset 0 0 0 1px var(--edge-hover), inset 0 1px 0 var(--highlight);
+  --shadow-pressed: inset 0 0 0 1px var(--edge);
+  --shadow-sunken: inset 0 0 0 1px var(--edge);
+  --shadow-field-focus: inset 0 0 0 1px rgb(255 255 255 / 30%), 0 0 0 3px rgb(255 255 255 / 6%);
+  --shadow-row: inset 0 0 0 1px rgb(255 255 255 / 5%), inset 0 1px 0 rgb(255 255 255 / 4%);
+  --shadow-surface: 0 0 0 1px var(--hairline);
+  --shadow-panel: inset 0 0 0 1px var(--hairline);
   --shadow-raised:
-    inset 0 1px 0 rgb(255 255 255 / 7%), 0 0 0 1px var(--hairline-strong),
-    0 16px 40px -8px rgb(0 0 0 / 65%);
-  --shadow-accent:
-    inset 0 1px 0 rgb(255 255 255 / 60%), 0 0 0 1px rgb(255 255 255 / 30%),
-    0 1px 2px rgb(0 0 0 / 50%);
+    inset 0 0 0 1px var(--hairline-strong), inset 0 1px 0 rgb(255 255 255 / 5%),
+    0 16px 40px -12px rgb(0 0 0 / 60%);
+  --shadow-accent: inset 0 0 0 1px rgb(255 255 255 / 60%), inset 0 -1px 0 rgb(0 0 0 / 14%);
 
   --state-live: #34c759;
   --state-pending: #ffb340;
