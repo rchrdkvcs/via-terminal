@@ -15,7 +15,7 @@ import CommandRow from './CommandRow.vue'
 import { useCommandResults } from './useCommandResults'
 
 /**
- * Arc's command bar: one field for every way to open something. Arrow keys
+ * The command bar: one field for every way to open something. Arrow keys
  * move, Enter opens, Escape closes; the first line is always selected.
  */
 const ui = useUi()

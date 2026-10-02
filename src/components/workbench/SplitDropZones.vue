@@ -8,7 +8,7 @@ import { useSpaces } from '@/stores/spaces'
 import { useWorkbench } from '@/stores/workbench'
 
 /**
- * While a row is dragged, the content edges become split targets, as in Arc.
+ * While a row is dragged, the content edges become split targets.
  * The preview shows the half the dropped tab will take.
  */
 const spaces = useSpaces()

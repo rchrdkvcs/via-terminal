@@ -9,7 +9,7 @@ import TabRow from './TabRow.vue'
 
 /**
  * A draggable row: a tab, or a split view shown as its members side by side
- * (Arc's split row). Dragging a split moves the whole view.
+ * in a single row. Dragging a split moves the whole view.
  */
 const props = defineProps<{ row: Row }>()
 const actions = useSidebarActions()

@@ -1,6 +1,6 @@
 # via terminal
 
-Via is an open-source terminal for Windows, macOS and Linux. Its sidebar works like Arc or Zen: spaces, pinned and temporary tabs, folders and split views. Its vault keeps servers the way Termius does: hosts, groups with inherited settings, identities, keys and known fingerprints. It runs entirely locally, with no account or cloud. The shipped app is named **Via**.
+Via is an open-source terminal for Windows, macOS and Linux. Its sidebar organizes your work into spaces, with pinned and temporary tabs, folders and split views. Its vault keeps your servers: hosts, groups with inherited settings, identities, keys and known fingerprints. It runs entirely locally, with no account or cloud. The shipped app is named **Via**.
 
 > [!WARNING]
 > Via is pre-release software. Do not rely on it as your only way to reach production systems.

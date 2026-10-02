@@ -2,7 +2,7 @@
 
 ## Promise
 
-Via is a terminal you enjoy living in: the sidebar of Arc and Zen for your sessions, the host library of Termius for your servers, and nothing in between. Opening a shell or a server is one shortcut and a few letters away.
+Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your sessions, a vault for your servers, and nothing in between. Opening a shell or a server is one shortcut and a few letters away.
 
 ## Audience and platforms
 
@@ -44,7 +44,7 @@ Via is a terminal you enjoy living in: the sidebar of Arc and Zen for your sessi
 
 ## Tabs
 
-- New tabs appear at the top of the temporary area, like in Arc.
+- New tabs appear at the top of the temporary area.
 - **Pin** (Ctrl+Shift+D, menu, or drag above the divider) keeps a tab across restarts. Unpinning drops it back to the temporary area.
 - At launch, pinned tabs are **asleep**: dimmed, no process running. Clicking one starts it. Nothing connects by itself.
 - A pinned tab remembers its target and its name. A local tab also remembers the folder its shell was last in, and reopens there (Git Bash, bash, zsh, PowerShell and cmd report it; other shells reopen in the home folder).
