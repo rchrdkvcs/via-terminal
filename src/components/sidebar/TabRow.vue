@@ -1,272 +1,72 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { FolderInput, Pencil, Pin, PinOff, Square, Terminal, Unlink, X } from '@lucide/vue'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
-import InlineRenameInput from './InlineRenameInput.vue'
-import DropRowIndicator from './DropRowIndicator.vue'
-import { useAppStore } from '@/stores/app'
-import {
-  activeDrag,
-  clearDropHint,
-  dropHint,
-  registerSidebarDragAndDrop,
-  setDropHint,
-} from '@/lib/sidebar-dnd'
+import { computed } from 'vue'
+import { X } from '@lucide/vue'
+import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu'
+import type { Tab } from '@/ipc/types'
+import { useTabLabel } from '@/composables/useTabLabel'
+import { useSidebarActions } from '@/composables/useSidebarActions'
+import { useSessions } from '@/stores/sessions'
+import { useUi } from '@/stores/ui'
+import { useWorkbench } from '@/stores/workbench'
+import { useTabClosing } from '@/composables/useTabClosing'
+import InlineRename from './InlineRename.vue'
+import RowMenu from './RowMenu.vue'
+import TabIcon from './TabIcon.vue'
 
-const props = defineProps<{
-  id: string
-  label: string
-  detail?: string
-  state: 'online' | 'offline' | 'pending' | 'idle'
-  pinned?: boolean
-  grouped?: boolean
-  depth?: number
-}>()
-const emit = defineEmits<{
-  move: [direction: -1 | 1]
-  dropTab: [
-    payload: { id: string; zone?: 'before' | 'after'; edge?: 'left' | 'right' | 'top' | 'bottom' },
-  ]
-}>()
-const store = useAppStore()
-const editing = ref(false)
-const draft = ref('')
-const input = ref<InstanceType<typeof InlineRenameInput> | null>(null)
-const menuOpen = ref(false)
-const isGrouped = () => store.splitGroups.some((group) => group.tabIds.includes(props.id))
-type TabDropHint = 'before' | 'after' | 'left' | 'right' | 'top' | 'bottom'
-const hintPrefix = computed(() => `tab:${props.id}:`)
-const dragHint = computed<TabDropHint | null>(() => {
-  if (!dropHint.value?.startsWith(hintPrefix.value)) return null
-  return dropHint.value.slice(hintPrefix.value.length) as TabDropHint
-})
-const row = ref<HTMLElement | { $el: HTMLElement }>()
-let cleanupDragAndDrop: (() => void) | undefined
+/** One tab: a full row, or a compact member inside a split row. */
+const props = defineProps<{ tab: Tab; compact?: boolean }>()
+const sessions = useSessions()
+const ui = useUi()
+const workbench = useWorkbench()
+const closing = useTabClosing()
+const actions = useSidebarActions()
+const names = useTabLabel()
 
-function rowElement() {
-  const value = row.value
-  return value instanceof HTMLElement ? value : value?.$el
-}
-
-async function beginRename() {
-  draft.value = props.label
-  editing.value = true
-  await nextTick()
-  const element = input.value?.$el as HTMLInputElement | undefined
-  element?.focus()
-  element?.select()
-}
-
-function commitRename() {
-  const value = draft.value.trim()
-  editing.value = false
-  if (value && value !== props.label) store.renameTab(props.id, value)
-}
-
-const running = () => props.state === 'online' || props.state === 'pending'
-
-function zone(input: { clientX: number; clientY: number }) {
-  const element = rowElement()
-  if (!element) return null
-  const rect = element.getBoundingClientRect()
-  const x = (input.clientX - rect.left) / rect.width
-  const y = (input.clientY - rect.top) / rect.height
-  return (
-    x < 0.18
-      ? 'left'
-      : x > 0.82
-        ? 'right'
-        : y < 0.22
-          ? 'top'
-          : y > 0.78
-            ? 'bottom'
-            : y < 0.5
-              ? 'before'
-              : 'after'
-  ) as TabDropHint
-}
-
-onMounted(() => {
-  const element = rowElement()
-  if (!element) return
-  cleanupDragAndDrop = registerSidebarDragAndDrop(
-    element,
-    { type: 'tab', id: props.id },
-    {
-      canDrop: (drag) => drag.type === 'tab' && drag.id !== props.id,
-      onMove: (_drag, input) => {
-        const target = zone(input)
-        if (target) setDropHint(`tab:${props.id}`, `${hintPrefix.value}${target}`)
-      },
-      onLeave: () => clearDropHint(`tab:${props.id}`),
-      onDrop: (drag, input) => {
-        if (drag.type !== 'tab') return
-        const target = zone(input)
-        if (target === 'left' || target === 'right' || target === 'top' || target === 'bottom')
-          emit('dropTab', { id: drag.id, edge: target })
-        else if (target) emit('dropTab', { id: drag.id, zone: target })
-        clearDropHint(`tab:${props.id}`)
-      },
-    },
-  )
-})
-onBeforeUnmount(() => cleanupDragAndDrop?.())
-
-function runTrailingAction() {
-  if (running()) void store.stopTab(props.id)
-  else void store.closeTab(props.id, { force: true })
-}
+const state = computed(() => sessions.runtime(props.tab.id).state)
+const selected = computed(() => workbench.activeTab?.id === props.tab.id)
+const label = computed(() => names.label(props.tab))
+const asleep = computed(() => state.value === 'asleep' || state.value === 'exited')
 </script>
 
 <template>
-  <SidebarMenuItem
-    ref="row"
-    class="terminal-tab relative transition-[background-color,opacity,transform] duration-150 [transition-timing-function:var(--ease-out)]"
-    :class="[
-      props.grouped ? 'grouped-tab rounded-xl bg-sidebar-accent/55 p-1' : '',
-      activeDrag?.type === 'tab' && activeDrag.id === id ? 'scale-[0.96] opacity-55' : '',
-    ]"
-    :data-grouped="props.grouped || undefined"
-    :data-tab-id="id"
-    @contextmenu.stop.prevent="menuOpen = true"
-  >
-    <Transition name="drop-indicator">
-      <DropRowIndicator v-if="dragHint === 'before' || dragHint === 'after'" :position="dragHint" />
-    </Transition>
-    <span
-      v-if="dragHint && dragHint !== 'before' && dragHint !== 'after'"
-      class="pointer-events-none absolute z-10 rounded-sm bg-sidebar-ring/20"
-      :class="{
-        'inset-y-1 left-0 w-1/4': dragHint === 'left',
-        'inset-y-1 right-0 w-1/4': dragHint === 'right',
-        'inset-x-1 top-0 h-1/3': dragHint === 'top',
-        'inset-x-1 bottom-0 h-1/3': dragHint === 'bottom',
-      }"
-    />
-    <SidebarMenuButton
-      :as="editing ? 'div' : 'button'"
-      role="tab"
-      :aria-selected="id === store.activeTabId"
-      :tabindex="id === store.activeTabId ? 0 : -1"
-      :is-active="id === store.activeTabId"
-      :title="detail || label"
-      :class="[
-        'touch-none',
-        props.grouped
-          ? 'border border-sidebar-border/80 bg-sidebar shadow-xs hover:bg-sidebar-accent'
-          : '',
-      ]"
-      @click="store.selectTab(id)"
-      @auxclick.middle.prevent="store.closeTab(id)"
-      @keydown.alt.up.prevent="emit('move', -1)"
-      @keydown.alt.down.prevent="emit('move', 1)"
-    >
-      <span class="relative flex shrink-0 items-center">
-        <Terminal :size="16" :stroke-width="1.5" class="text-sidebar-foreground/60" />
-        <span
-          class="absolute -end-0.5 -bottom-0.5 size-1.5 rounded-full ring-2 ring-sidebar"
-          :class="{
-            'bg-state-online': state === 'online',
-            'bg-state-offline': state === 'offline',
-            'bg-state-pending': state === 'pending',
-            'bg-muted-foreground': state === 'idle',
-          }"
-          aria-hidden="true"
+  <ContextMenu>
+    <ContextMenuTrigger as-child>
+      <div
+        role="button"
+        tabindex="0"
+        :aria-current="selected ? 'page' : undefined"
+        :title="names.detail(tab)"
+        class="group/tab relative flex min-w-0 items-center gap-2 rounded-md text-[13px] outline-none transition-[background-color,color,box-shadow] duration-100 focus-visible:ring-2 focus-visible:ring-ring"
+        :class="[
+          compact ? 'h-7 flex-1 px-1.5' : 'h-8 px-2',
+          selected ? 'bg-row-selected text-foreground shadow-row' : 'hover:bg-row-hover',
+          asleep && !selected ? 'text-muted-foreground' : '',
+        ]"
+        @click="workbench.activate(tab.id)"
+        @dblclick.stop="ui.renaming = tab.id"
+        @keydown.enter.prevent="workbench.activate(tab.id)"
+        @keydown.f2.prevent="ui.renaming = tab.id"
+      >
+        <TabIcon :target="tab.target" :state="state" />
+        <InlineRename
+          v-if="ui.renaming === tab.id"
+          :value="label"
+          label="Nom de l’onglet"
+          @commit="(value) => (actions.rename(tab.id, value), (ui.renaming = null))"
+          @cancel="ui.renaming = null"
         />
-      </span>
-      <InlineRenameInput
-        v-if="editing"
-        ref="input"
-        v-model="draft"
-        label="Nom de l’onglet"
-        @click.stop
-        @keydown.enter.prevent="commitRename"
-        @keydown.esc.prevent="editing = false"
-        @blur="commitRename"
-      />
-      <span v-else class="truncate" @dblclick.stop="beginRename">{{ label }}</span>
-    </SidebarMenuButton>
-
-    <SidebarMenuAction
-      data-tab-action
-      show-on-hover
-      :aria-label="`${running() ? 'Arrêter' : 'Supprimer'} ${label}`"
-      @click.stop="runTrailingAction"
-    >
-      <Square v-if="running()" :stroke-width="1.5" />
-      <X v-else :stroke-width="1.5" />
-    </SidebarMenuAction>
-    <DropdownMenu :open="menuOpen" @update:open="menuOpen = $event">
-      <DropdownMenuTrigger as-child>
+        <span v-else class="min-w-0 flex-1 truncate">{{ label }}</span>
         <button
-          data-tab-action
-          class="pointer-events-none absolute inset-0 opacity-0"
-          tabindex="-1"
-          aria-hidden="true"
-          @contextmenu.prevent
-        />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="right" align="start" class="w-56">
-        <DropdownMenuItem v-if="pinned" @select="store.unpinTab(id)">
-          <PinOff :stroke-width="1.5" />Détacher
-        </DropdownMenuItem>
-        <DropdownMenuItem v-else @select="store.pinTab(id)">
-          <Pin :stroke-width="1.5" />Épingler
-        </DropdownMenuItem>
-        <DropdownMenuItem @select="beginRename">
-          <Pencil :stroke-width="1.5" />Renommer
-        </DropdownMenuItem>
-        <DropdownMenuItem v-if="isGrouped()" @select="store.detachFromSplit(id)">
-          <Unlink :stroke-width="1.5" />
-          Détacher du split
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          v-for="workspace in store.workspaces.filter(
-            (item) => item.id !== store.activeWorkspaceId,
-          )"
-          :key="workspace.id"
-          @select="store.transferTab(id, workspace.id, false)"
+          v-if="ui.renaming !== tab.id"
+          type="button"
+          class="-me-1 grid size-6 shrink-0 place-items-center rounded-sm text-muted-foreground opacity-0 transition-opacity duration-100 group-hover/tab:opacity-100 group-focus-within/tab:opacity-100 hover:bg-row-hover hover:text-foreground focus-visible:opacity-100"
+          :aria-label="`Fermer ${label}`"
+          @click.stop="closing.close(tab.id)"
         >
-          <FolderInput :stroke-width="1.5" />
-          Transférer cet onglet vers {{ workspace.name }}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          v-for="workspace in isGrouped()
-            ? store.workspaces.filter((item) => item.id !== store.activeWorkspaceId)
-            : []"
-          :key="`group-${workspace.id}`"
-          @select="store.transferTab(id, workspace.id, true)"
-        >
-          <FolderInput :stroke-width="1.5" />
-          Transférer le groupe vers {{ workspace.name }}
-        </DropdownMenuItem>
-        <DropdownMenuItem variant="destructive" @select="runTrailingAction">
-          <Square v-if="running()" :stroke-width="1.5" />
-          <X v-else :stroke-width="1.5" />
-          {{ running() ? 'Arrêter' : 'Supprimer' }}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  </SidebarMenuItem>
+          <X :size="14" :stroke-width="1.5" />
+        </button>
+      </div>
+    </ContextMenuTrigger>
+    <RowMenu :tab-id="tab.id" />
+  </ContextMenu>
 </template>
-
-<style scoped>
-.grouped-tab:has(+ .grouped-tab) {
-  padding-bottom: 0.125rem;
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-.grouped-tab + .grouped-tab {
-  margin-top: -0.25rem;
-  padding-top: 0.125rem;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-}
-</style>

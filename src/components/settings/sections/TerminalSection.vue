@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -8,126 +7,79 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
+import { useSettings } from '@/stores/settings'
 import SettingRow from '../SettingRow.vue'
-import SettingsSection from '../SettingsSection.vue'
-import { platformDefaultShell, shellLabel } from '@/lib/shells'
-import { useAppStore } from '@/stores/app'
+import SettingSlider from '../SettingSlider.vue'
 
-const store = useAppStore()
+const store = useSettings()
 
-const currentShell = computed(() => store.settings.defaultShell || platformDefaultShell())
+const presets = [1_000, 5_000, 10_000, 50_000, 100_000]
+const number = new Intl.NumberFormat('fr-FR')
 
-const shellChoices = computed(() => {
-  const current = currentShell.value
-  const detected = store.detectedShells
-  const list = detected.includes(current) ? detected : [current, ...detected]
-  return list.length ? list : [current]
+/** A value saved by an older build still shows up rather than going blank. */
+const scrollbackOptions = computed(() => {
+  const current = store.settings.scrollback
+  const values = presets.includes(current) ? presets : [...presets, current].sort((a, b) => a - b)
+  return values.map((value) => ({ value: String(value), label: `${number.format(value)} lignes` }))
 })
+
+function onScrollback(value: unknown) {
+  const lines = Number(value)
+  if (Number.isFinite(lines) && lines > 0) store.update({ scrollback: lines })
+}
 </script>
 
 <template>
-  <SettingsSection
-    title="Terminal"
-    description="Typographie, shell par défaut et rendu des sessions."
-  >
+  <section aria-label="Terminal">
     <SettingRow
-      label="Terminal par défaut"
-      description="Shell proposé pour les nouveaux onglets de type Terminal local."
-      for-id="default-shell"
+      v-slot="{ id, descriptionId }"
+      label="Historique"
+      description="Lignes gardées en mémoire pour remonter dans la sortie."
     >
-      <Select
-        :model-value="currentShell"
-        @update:model-value="store.updateSettings({ defaultShell: String($event) })"
-      >
-        <SelectTrigger id="default-shell" class="w-56"><SelectValue /></SelectTrigger>
+      <Select :model-value="String(store.settings.scrollback)" @update:model-value="onScrollback">
+        <SelectTrigger
+          :id="id"
+          size="sm"
+          class="w-40 text-[13px]"
+          :aria-describedby="descriptionId"
+        >
+          <SelectValue />
+        </SelectTrigger>
         <SelectContent>
-          <SelectItem v-for="shell in shellChoices" :key="shell" :value="shell">
-            {{ shellLabel(shell) }}
+          <SelectItem v-for="option in scrollbackOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
           </SelectItem>
         </SelectContent>
       </Select>
     </SettingRow>
 
-    <SettingRow label="Police" description="Une police à chasse fixe donne le meilleur résultat.">
-      <Input
-        id="font-family"
-        class="w-56"
-        placeholder="Cascadia Mono"
-        :model-value="store.settings.fontFamily"
-        @update:model-value="store.updateSettings({ fontFamily: String($event) })"
-      />
-    </SettingRow>
-
     <SettingRow
-      :label="`Taille de police — ${store.settings.fontSize} px`"
-      description="Chaque session est remesurée immédiatement."
-      for-id="font-size"
-      stacked
+      label="Hauteur de ligne"
+      description="Espace vertical entre les lignes du terminal."
     >
-      <Slider
-        id="font-size"
-        :model-value="[store.settings.fontSize]"
-        :min="10"
-        :max="24"
-        :step="1"
-        @update:model-value="store.updateSettings({ fontSize: ($event ?? [14])[0] })"
-      />
-    </SettingRow>
-
-    <SettingRow label="Curseur" description="Forme du curseur dans le terminal." for-id="cursor">
-      <Select
-        :model-value="store.preferences.cursorStyle"
-        @update:model-value="
-          store.updatePreferences({ cursorStyle: $event as 'block' | 'bar' | 'underline' })
-        "
-      >
-        <SelectTrigger id="cursor" class="w-44"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="bar">Barre</SelectItem>
-          <SelectItem value="block">Bloc</SelectItem>
-          <SelectItem value="underline">Souligné</SelectItem>
-        </SelectContent>
-      </Select>
-    </SettingRow>
-
-    <SettingRow label="Curseur clignotant" for-id="cursor-blink">
-      <Switch
-        id="cursor-blink"
-        :model-value="store.preferences.cursorBlink"
-        @update:model-value="store.updatePreferences({ cursorBlink: $event })"
+      <SettingSlider
+        label="Hauteur de ligne"
+        :min="1"
+        :max="1.6"
+        :step="0.05"
+        :format="(value) => value.toFixed(2)"
+        :model-value="store.settings.lineHeight"
+        @update:model-value="(value) => store.update({ lineHeight: value })"
       />
     </SettingRow>
 
     <SettingRow
-      label="Historique"
-      description="Nombre de lignes conservées par session. Une valeur élevée augmente la mémoire utilisée."
-      for-id="scrollback"
-    >
-      <Input
-        id="scrollback"
-        class="w-28 text-end tabular-nums"
-        inputmode="numeric"
-        :model-value="store.preferences.scrollback"
-        @update:model-value="
-          store.updatePreferences({
-            scrollback: Math.min(Math.max(Number($event) || 0, 100), 100000),
-          })
-        "
-      />
-    </SettingRow>
-
-    <SettingRow
-      label="Mode lecteur d’écran"
-      description="Expose le contenu du terminal à NVDA. Réduit le débit sur les sorties très volumineuses."
-      for-id="screen-reader"
+      v-slot="{ id, descriptionId }"
+      label="Copier la sélection automatiquement"
+      description="Le texte sélectionné à la souris part dans le presse-papiers."
     >
       <Switch
-        id="screen-reader"
-        :model-value="store.preferences.screenReaderMode"
-        @update:model-value="store.updatePreferences({ screenReaderMode: $event })"
+        :id="id"
+        :aria-describedby="descriptionId"
+        :model-value="store.settings.copyOnSelect"
+        @update:model-value="(on: boolean) => store.update({ copyOnSelect: on })"
       />
     </SettingRow>
-  </SettingsSection>
+  </section>
 </template>

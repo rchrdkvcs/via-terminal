@@ -1,39 +1,35 @@
 # Privacy and local data
 
-via terminal is local-first and requires no account.
+Via is local-first: no account, no telemetry, no cloud. The application only opens network connections to the SSH servers the user connects to, and to links the user opens with Ctrl+click.
 
 ## Stored locally
 
-- Workspace names and organization
-- Resource addresses and non-secret identity metadata
-- Default shell setting and non-secret environment values
-- Favorites, tab/pane layouts, window state, and preferences
-- Redacted rotating diagnostics
+In `via.sqlite`, in the application data directory:
 
-This metadata is not encrypted in V1. Anyone with access to the user's OS account and the application data directory on that platform may be able to read it.
+- Spaces, pinned tabs, folders and split layouts.
+- Settings.
+- The vault: host labels, addresses, ports, usernames, tags, notes, groups, identities, public keys and accepted server fingerprints.
+- Secrets (passwords, passphrases, private keys), **encrypted** with ChaCha20-Poly1305. The 256-bit key lives in the operating system keychain (Windows Credential Manager, macOS Keychain, Secret Service), under the service `dev.viaterminal.desktop`.
 
-## Never stored by via terminal
+Everything except secrets is stored unencrypted. Anyone with access to the user's OS account can read hosts and addresses.
 
-- SSH passwords or passphrases
-- Private key contents
-- Terminal scrollback or command output
-- Shell command history
-- Clipboard contents
+If no keychain is available, Via does not remember any secret. It asks for each password every time.
 
-Private keys and agents remain managed by OpenSSH and the operating system.
+## Never stored
 
-## Network activity
+- Terminal contents, scrollback and command history.
+- Temporary tabs.
+- Answers to keyboard-interactive challenges (one-time codes).
+- Secrets in clear, in logs or in process arguments.
 
-via terminal makes network connections when the user starts SSH or explicitly opens a terminal link. The app does not check for updates by itself in this release; users download new versions from GitHub Releases. V1 has no product analytics. Crash or diagnostics submission is voluntary and never automatic.
+Via never reads or writes `~/.ssh/config`, the system `known_hosts` or the user's key files. A key file chosen for import is read once and copied, encrypted, into the vault.
 
-## Export and deletion
+## Data location
 
-Versioned export contains workspace organization and settings but excludes secrets and terminal contents. Users should inspect it before sharing because resource names and addresses may still be sensitive. Uninstall does not always delete local metadata.
+Durable data lives under the bundle identifier `dev.viaterminal.desktop`:
 
-The **Via** application is installed as `Via.app` / `Via` / the `via` Debian package. Durable data lives under the bundle identifier `dev.viaterminal.desktop`, not the install directory:
+- Windows: `%APPDATA%\dev.viaterminal.desktop\via.sqlite`
+- macOS: `~/Library/Application Support/dev.viaterminal.desktop/via.sqlite`
+- Linux: `$XDG_DATA_HOME/dev.viaterminal.desktop/via.sqlite`
 
-- Windows: `%APPDATA%\dev.viaterminal.desktop\via-terminal.sqlite`
-- macOS: `~/Library/Application Support/dev.viaterminal.desktop/via-terminal.sqlite`
-- Linux: `$XDG_DATA_HOME/dev.viaterminal.desktop/via-terminal.sqlite` (typically `~/.local/share/…`)
-
-Remove that directory deliberately for a clean slate.
+Uninstalling does not always remove it. To start from a clean slate, delete that directory and the `vault-master-key` keychain entry.

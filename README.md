@@ -1,53 +1,22 @@
 # via terminal
 
-via terminal is an open-source native terminal workspace for IT technicians. It combines fast local terminals, organized SSH resources, tabs, split panes, and Arc/Zen-style workspaces in one native application for Windows, macOS, and Linux. The shipped app, installers, and install directory are named **Via**.
+Via is an open-source terminal for Windows, macOS and Linux. Its sidebar works like Arc or Zen: spaces, pinned and temporary tabs, folders and split views. Its vault keeps servers the way Termius does: hosts, groups with inherited settings, identities, keys and known fingerprints. It runs entirely locally, with no account or cloud. The shipped app is named **Via**.
 
 > [!WARNING]
-> via terminal is pre-release software. Do not rely on it as the only way to access production systems.
+> Via is pre-release software. Do not rely on it as your only way to reach production systems.
 
-## V1 goals
+## What it does
 
-- Local shells through a native PTY: PowerShell, CMD, WSL, and Git Bash on Windows; zsh and bash on macOS; bash, sh, and other detected shells on Linux.
-- Strictly isolated workspaces with their own resources and identities.
-- System OpenSSH integration, including existing SSH config, keys, and agent.
-- Zen-inspired favorites, one-level folders, runtime-only temporary tabs, linked split panes, and command palette.
-- A single application instance with multiple native windows.
-- Local-first storage, explicit export/import, and no terminal-content persistence.
+- Local shells in a native PTY: PowerShell, CMD, WSL and Git Bash on Windows, and the installed shells on macOS and Linux.
+- An embedded SSH client. Via verifies server keys in the interface, can remember passwords and passphrases (encrypted, with the key held by the OS keychain), asks for 2FA codes, and reconnects in place.
+- A command bar (Ctrl+Shift+T, or ⌘T on macOS) to open a shell or a saved host, or to connect straight to `user@host:port`. Hosts you connect to this way join the vault.
+- Spaces tinted by their color, pinned tabs that come back asleep after a restart, split views of up to four tabs, and drag and drop.
 
-SFTP, port forwarding, bastions, cloud sync, plugins, AI, monitoring, and multi-host execution are intentionally outside V1. See [the product specification](docs/PRODUCT.md).
-
-## Technology
-
-- [Tauri 2](https://v2.tauri.app/) and Rust
-- Vue 3 and strict TypeScript
-- [xterm.js](https://xtermjs.org/)
-- SQLite
-- The operating system's OpenSSH client
-
-The sidebar contract lives in [docs/SIDEBAR.md](docs/SIDEBAR.md). Architecture and security boundaries are documented in [docs/TECHNICAL.md](docs/TECHNICAL.md). Canonical product terms live in [CONTEXT.md](CONTEXT.md).
+The full behavior is in [docs/PRODUCT.md](docs/PRODUCT.md), the vocabulary in [CONTEXT.md](CONTEXT.md), the structure in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and the decisions in [docs/adr](docs/adr). Via never reads your `~/.ssh` directory; see [docs/PRIVACY.md](docs/PRIVACY.md).
 
 ## Development
 
-### Prerequisites (Windows)
-
-- Node.js 22 LTS and pnpm 10
-- Stable Rust toolchain with `rustfmt` and `clippy`
-- Tauri's Windows prerequisites, including Microsoft C++ Build Tools and WebView2
-- OpenSSH Client for remote sessions
-
-### Prerequisites (macOS)
-
-- Node.js 22 LTS and pnpm 10
-- Stable Rust toolchain with `rustfmt` and `clippy`
-- Tauri's macOS prerequisites, including Xcode Command Line Tools
-- OpenSSH for remote sessions
-
-### Prerequisites (Linux)
-
-- Node.js 22 LTS and pnpm 10
-- Stable Rust toolchain with `rustfmt` and `clippy`
-- Tauri's Linux prerequisites, including WebKitGTK
-- OpenSSH client for remote sessions
+Prerequisites: Node.js 22, pnpm 10, stable Rust with `rustfmt` and `clippy`, and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your OS (WebView2 on Windows, Xcode Command Line Tools on macOS, WebKitGTK on Linux).
 
 ```bash
 pnpm install --frozen-lockfile
@@ -57,32 +26,8 @@ pnpm tauri dev
 Run the same checks as CI before opening a pull request:
 
 ```bash
-pnpm format:check
-pnpm lint
-pnpm test
-pnpm build
+pnpm format:check && pnpm lint && pnpm test && pnpm build
 cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
 cargo test --manifest-path src-tauri/Cargo.toml --all-features
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
 ```
-
-The authoritative commands are in [.github/workflows/ci.yml](.github/workflows/ci.yml).
-
-## Releases
-
-Creating a GitHub Release for tag `vX.Y.Z` builds the installers and attaches them to that release. Commits on `main` do not produce installers. See [docs/RELEASING.md](docs/RELEASING.md).
-
-## Documentation
-
-- [Product scope](docs/PRODUCT.md)
-- [Sidebar specification](docs/SIDEBAR.md)
-- [Technical architecture](docs/TECHNICAL.md)
-- [Acceptance scenarios](docs/ACCEPTANCE.md)
-- [Privacy and local data](docs/PRIVACY.md)
-- [Release checklist](docs/RELEASING.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security policy](SECURITY.md)
-
-## License
-
-Licensed under the [Apache License 2.0](LICENSE).

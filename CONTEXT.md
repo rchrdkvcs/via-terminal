@@ -1,75 +1,89 @@
-# Domain glossary
+# via terminal
 
-The words below are canonical. This file describes the product domain, not its implementation.
+A native terminal where **spaces** organize **tabs**, and a **vault** remembers where tabs can connect. The product is **via terminal**; the shipped application is **Via**.
 
-## Product and application
+## Organization
 
-The product and repository are **via terminal**. The shipped native application is **Via**: executable, installers, Start Menu / Applications entry, window title, and install directory. Bundle identifier `dev.viaterminal.desktop` and source package names stay on via terminal so the OS identity stays unique.
+**Space**:
+A named context of tabs with its own icon, color and optional default shell. Spaces never own hosts or credentials.
+_Avoid_: Workspace, project, profile
 
-## Workspace
+**Tab**:
+One terminal bound to one target, living in exactly one place in one space.
+_Avoid_: Session (the live part), pane, window
 
-A named and ordered work context. A workspace owns its tabs, folders, resources, identities, default terminal profile, icon, and sidebar organization. Workspaces are isolated and never share ownership implicitly. Names do not need to be unique.
+**Row**:
+What the sidebar lists: a tab or a split view.
+_Avoid_: Node, item, entry
 
-## Resource
+**Split view**:
+Two to four tabs shown side by side as a single row. Each member keeps its own session.
+_Avoid_: Split group, pane tree, layout
 
-A machine or network destination known inside exactly one workspace. Two resources may have the same address and remain fully independent.
+**Pinned tab**:
+A tab kept across restarts in the pinned area of its space.
+_Avoid_: Favorite, bookmark
 
-## Identity
+**Temporary tab**:
+A tab below New tab that is never restored after exit.
+_Avoid_: Unpinned tab, open tab
 
-The non-secret authentication context used to access resources, such as a username and key reference. An identity belongs to exactly one workspace and cannot be reused by another.
+**Folder**:
+A named, one-level container of pinned rows.
+_Avoid_: Group (that word belongs to the vault)
 
-## Tab
+**Asleep**:
+The state of a tab without a session. Only an explicit activation wakes it.
+_Avoid_: Stopped, restorable, closed
 
-A named unit of work representing exactly one session inside exactly one workspace and exactly one window at a time. A tab is the only work item represented by a sidebar row. Each tab is a unique instance in exactly one sidebar location. Pinning, unpinning, moving, splitting, or transferring a tab never creates another instance.
+## Connecting
 
-## Session
+**Target**:
+What a tab connects to: a local shell or a host.
+_Avoid_: Resource, destination, profile
 
-A live or ended interaction with a local shell or remote resource. A session belongs to exactly one tab, and a tab represents exactly one session. A session is runtime state, not the resource or profile that created it.
+**Local shell**:
+A shell executable detected on this machine, with an optional working directory.
+_Avoid_: Local profile
 
-## Pane
+**Session**:
+The live process or SSH channel behind a tab. A tab has at most one session at a time; reconnecting replaces it.
+_Avoid_: Connection (too vague), terminal
 
-The visible region that presents one tab's session.
+**Command bar**:
+The single place to open a target, search the vault or run an action.
+_Avoid_: Palette, picker, new-tab dialog
 
-## Split group
+**Quick connect**:
+Connecting to an address typed by hand. A successful authentication saves it as a host.
+_Avoid_: Ad-hoc connection
 
-An ordered composition of two to four distinct tabs whose panes are linked in a horizontal or vertical split tree. The group owns only their spatial relationship: every member keeps its identity, session, and sidebar row. Members remain contiguous in the same sidebar location, folder, workspace, and window. Existing split groups cannot merge. A group with fewer than two tabs ceases to exist.
+## Vault
 
-## Window
+**Vault**:
+The application-wide library of hosts, groups, identities, keys and known hosts, shared by every space. It never reads the system SSH configuration.
+_Avoid_: Keychain (that is the OS store), resources
 
-A native view onto workspaces and their tabs. A tab belongs to exactly one window at a time and may transfer between windows without restarting its session.
+**Host**:
+A saved SSH destination: an address with optional port, username, credential, tags and notes.
+_Avoid_: Server, resource, connection
 
-## Favorite
+**Group**:
+A nested folder of hosts whose defaults (username, port, identity) are inherited unless overridden.
+_Avoid_: Folder (that word belongs to spaces), tag
 
-A tab pinned in its workspace. A favorite keeps its identity, name, configuration, and split relationship across application restarts, but its previous session never restarts silently. Pinning moves the same tab into the pinned area; it does not create another tab or row.
+**Identity**:
+A reusable username with its credential, referenced by hosts and groups.
+_Avoid_: Account, user, profile
 
-## Folder
+**Key**:
+A private key held by the vault, imported or generated.
+_Avoid_: Identity file, certificate
 
-A named, non-nestable container used only to organize favorites inside one workspace. Moving a temporary tab into a folder pins that same tab. A folder may remain empty.
+**Known host**:
+A server key fingerprint the user accepted.
+_Avoid_: Trusted host, fingerprint (the value, not the record)
 
-## Pinned area
-
-The ordered, hierarchical area above the sidebar divider. It contains favorites and folders. The workspace header can collapse it without affecting sessions or the temporary area.
-
-## Temporary area
-
-The ordered, flat area below New Tab. It contains unpinned tabs and is never hidden by collapsing the pinned area.
-
-## Temporary tab
-
-An unpinned tab in the temporary area. Temporary tabs are runtime-only and are never restored after application exit or crash.
-
-## Running tab
-
-A tab whose session is live. Stopping a running favorite preserves the tab as stopped. A temporary tab that exits successfully is removed.
-
-## Stopped tab
-
-A tab with no live session. Explicitly activating a stopped favorite starts its configured terminal or connection immediately unless manual connection is enabled. Explicitly closing a stopped tab removes it.
-
-## Focused tab
-
-The tab whose pane currently receives keyboard input. In a visible split group, exactly one member is focused.
-
-## New Tab
-
-The primary action for choosing a session type and destination before creating a temporary tab at the end of the current workspace's temporary area. Local terminals use local profiles and SSH sessions use saved resources; cancelling the choice creates neither a tab nor a session.
+**Secret**:
+A password, passphrase or private key. Secrets are only readable through the OS keychain.
+_Avoid_: Credential (covers non-secret usernames too)

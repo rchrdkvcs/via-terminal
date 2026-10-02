@@ -1,84 +1,85 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  InputGroupText,
-} from '@/components/ui/input-group'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { useSettings } from '@/stores/settings'
 import SettingRow from '../SettingRow.vue'
-import SettingsSection from '../SettingsSection.vue'
-import { useAppStore } from '@/stores/app'
 
-const store = useAppStore()
+const store = useSettings()
+
+/** Select items cannot hold null, so "follow the system" gets a sentinel. */
+const SYSTEM = '__system__'
+
+const systemLabel = computed(() => `Shell du système (${store.shellName(store.systemShell)})`)
+
+const defaultShell = computed({
+  get: () => {
+    const path = store.settings.defaultShell
+    return path && store.shells.some((shell) => shell.path === path) ? path : SYSTEM
+  },
+  set: (value: string) => store.update({ defaultShell: value === SYSTEM ? null : value }),
+})
+
+function onShell(value: unknown) {
+  if (typeof value === 'string') defaultShell.value = value
+}
 </script>
 
 <template>
-  <SettingsSection title="Général" description="Comportement de la fenêtre et des sessions.">
+  <section aria-label="Général">
     <SettingRow
-      label="Délai de réapparition de la barre latérale"
-      description="Temps que le pointeur doit rester sur le bord gauche avant l’ouverture. En millisecondes."
-      for-id="reveal-delay"
+      v-slot="{ id, descriptionId }"
+      label="Shell par défaut"
+      description="Ouvert dans les nouveaux onglets locaux, sauf si l'espace en choisit un autre."
     >
-      <InputGroup class="w-28">
-        <InputGroupInput
-          id="reveal-delay"
-          class="w-24 text-end tabular-nums"
-          inputmode="numeric"
-          :model-value="store.preferences.sidebarRevealDelay"
-          @update:model-value="
-            store.updatePreferences({
-              sidebarRevealDelay: Math.min(Math.max(Number($event) || 0, 0), 2000),
-            })
-          "
-        />
-        <InputGroupAddon align="inline-end"><InputGroupText>ms</InputGroupText></InputGroupAddon>
-      </InputGroup>
+      <Select :model-value="defaultShell" @update:model-value="onShell">
+        <SelectTrigger
+          :id="id"
+          size="sm"
+          class="w-64 text-[13px]"
+          :aria-describedby="descriptionId"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem :value="SYSTEM">{{ systemLabel }}</SelectItem>
+          <SelectItem v-for="shell in store.shells" :key="shell.path" :value="shell.path">
+            {{ shell.name }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
     </SettingRow>
 
     <SettingRow
-      label="Délai de disparition"
-      description="Temps avant que la barre latérale se referme une fois le pointeur parti. En millisecondes."
-      for-id="hide-delay"
-    >
-      <InputGroup class="w-28">
-        <InputGroupInput
-          id="hide-delay"
-          class="w-24 text-end tabular-nums"
-          inputmode="numeric"
-          :model-value="store.preferences.sidebarHideDelay"
-          @update:model-value="
-            store.updatePreferences({
-              sidebarHideDelay: Math.min(Math.max(Number($event) || 0, 0), 3000),
-            })
-          "
-        />
-        <InputGroupAddon align="inline-end"><InputGroupText>ms</InputGroupText></InputGroupAddon>
-      </InputGroup>
-    </SettingRow>
-
-    <SettingRow
-      label="Confirmer la fermeture"
-      description="Demander avant de fermer un onglet qui contient encore une session active."
-      for-id="confirm-close"
+      v-slot="{ id, descriptionId }"
+      label="Enregistrer les connexions rapides"
+      description="Un hôte tapé dans la barre de commande rejoint le coffre une fois connecté."
     >
       <Switch
-        id="confirm-close"
-        :model-value="store.preferences.confirmOnClose"
-        @update:model-value="store.updatePreferences({ confirmOnClose: $event })"
+        :id="id"
+        :aria-describedby="descriptionId"
+        :model-value="store.settings.saveQuickConnect"
+        @update:model-value="(on: boolean) => store.update({ saveQuickConnect: on })"
       />
     </SettingRow>
 
     <SettingRow
-      label="Connexion manuelle des favoris"
-      description="Sélectionner un favori arrêté sans démarrer immédiatement son terminal ou sa connexion."
-      for-id="manual-favorites"
+      v-slot="{ id, descriptionId }"
+      label="Confirmer avant de fermer un onglet actif"
+      description="Demande une confirmation quand un processus tourne encore dans l'onglet."
     >
       <Switch
-        id="manual-favorites"
-        :model-value="store.preferences.startFavoritesManually"
-        @update:model-value="store.updatePreferences({ startFavoritesManually: $event })"
+        :id="id"
+        :aria-describedby="descriptionId"
+        :model-value="store.settings.confirmCloseRunning"
+        @update:model-value="(on: boolean) => store.update({ confirmCloseRunning: on })"
       />
     </SettingRow>
-  </SettingsSection>
+  </section>
 </template>

@@ -1,0 +1,34 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { Search } from '@lucide/vue'
+import { useTabLabel } from '@/composables/useTabLabel'
+import { useUi } from '@/stores/ui'
+import { useWorkbench } from '@/stores/workbench'
+
+/**
+ * Arc's address field: says where the current tab is connected, and opens
+ * the command bar to change it (Ctrl+L), or to open something new.
+ */
+const ui = useUi()
+const workbench = useWorkbench()
+const names = useTabLabel()
+
+const tab = computed(() => workbench.activeTab)
+const text = computed(() => (tab.value ? names.detail(tab.value) : 'Rechercher ou se connecter'))
+
+function open() {
+  ui.openCommand(tab.value ? { kind: 'replace', tabId: tab.value.id } : { kind: 'new' })
+}
+</script>
+
+<template>
+  <button
+    type="button"
+    class="flex h-8 w-full items-center gap-2 rounded-md bg-row-hover px-2.5 text-start text-[13px] text-muted-foreground transition-colors duration-100 hover:bg-row-selected hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+    :aria-label="tab ? `Changer la cible : ${text}` : 'Ouvrir la barre de commande'"
+    @click="open"
+  >
+    <Search v-if="!tab" :size="14" :stroke-width="1.5" class="shrink-0" />
+    <span class="min-w-0 flex-1 truncate" :class="tab ? 'text-foreground/80' : ''">{{ text }}</span>
+  </button>
+</template>

@@ -1,72 +1,77 @@
 import type { ITheme } from '@xterm/xterm'
+import { oklchToHex } from '@/lib/oklch'
 
-/**
- * xterm paints on a canvas, so it cannot read CSS custom properties. The
- * surfaces below mirror the stock shadcn neutral tokens in `styles.css`
- * (`--background` and `--foreground`) expressed in sRGB.
- *
- * The ANSI ramp stays in colour on purpose: it belongs to the shell's output,
- * not to the application chrome.
- */
+export interface Presentation {
+  fontFamily: string
+  fontSize: number
+  lineHeight: number
+  cursorStyle: 'block' | 'bar' | 'underline'
+  cursorBlink: boolean
+  scrollback: number
+  appearance: 'dark' | 'light'
+  /** Hue of the active space; the terminal surface carries a trace of it. */
+  hue: number
+}
+
+/** The ANSI ramp belongs to the shell's output, so it stays in full color. */
 const ansiDark = {
-  black: '#404040',
-  red: '#f2707f',
-  green: '#5fd58a',
-  yellow: '#e5b567',
-  blue: '#7aa5ef',
-  magenta: '#c48ff0',
-  cyan: '#5fc6d4',
-  white: '#d4d4d4',
-  brightBlack: '#737373',
-  brightRed: '#ff8b98',
-  brightGreen: '#7ce5a5',
-  brightYellow: '#f2ca7d',
-  brightBlue: '#9bbcf7',
-  brightMagenta: '#d6a9f7',
-  brightCyan: '#7fdcea',
-  brightWhite: '#fafafa',
+  black: '#3b4048',
+  red: '#f07178',
+  green: '#a6d189',
+  yellow: '#e5c07b',
+  blue: '#82aaff',
+  magenta: '#c792ea',
+  cyan: '#89ddff',
+  white: '#d0d4dc',
+  brightBlack: '#6b7280',
+  brightRed: '#ff8b92',
+  brightGreen: '#bde3a2',
+  brightYellow: '#f2d49b',
+  brightBlue: '#a3c0ff',
+  brightMagenta: '#dab1f5',
+  brightCyan: '#a8e8ff',
+  brightWhite: '#f5f7fa',
 }
 
 const ansiLight = {
-  black: '#262626',
-  red: '#c03a4c',
-  green: '#237a48',
-  yellow: '#8a6300',
-  blue: '#2c5bb8',
-  magenta: '#7a3fb0',
-  cyan: '#0f6d7c',
-  white: '#737373',
-  brightBlack: '#525252',
-  brightRed: '#d4485a',
-  brightGreen: '#2b8f55',
-  brightYellow: '#9c7100',
-  brightBlue: '#356ad0',
-  brightMagenta: '#8c4cc7',
-  brightCyan: '#137e90',
-  brightWhite: '#171717',
+  black: '#2b2f36',
+  red: '#c0392b',
+  green: '#2f7d32',
+  yellow: '#8a6500',
+  blue: '#1f5fbf',
+  magenta: '#8a3ab9',
+  cyan: '#0b7285',
+  white: '#6b7280',
+  brightBlack: '#4b5563',
+  brightRed: '#d64535',
+  brightGreen: '#38913c',
+  brightYellow: '#9c7400',
+  brightBlue: '#2a6fd6',
+  brightMagenta: '#9b4bcc',
+  brightCyan: '#0f8299',
+  brightWhite: '#111318',
 }
 
-/** neutral-900 elevated terminal surface, neutral-50 text. */
-const darkTheme: ITheme = {
-  ...ansiDark,
-  background: '#171717',
-  foreground: '#fafafa',
-  cursor: '#a3a3a3',
-  cursorAccent: '#171717',
-  selectionBackground: '#ffffff2e',
-  selectionForeground: '#ffffff',
-}
-
-const lightTheme: ITheme = {
-  ...ansiLight,
-  background: '#ffffff',
-  foreground: '#171717',
-  cursor: '#525252',
-  cursorAccent: '#ffffff',
-  selectionBackground: '#0a0a0a24',
-  selectionForeground: '#0a0a0a',
-}
-
-export function terminalTheme(appearance: 'dark' | 'light'): ITheme {
-  return appearance === 'light' ? lightTheme : darkTheme
+/** Must match `--surface` and `--surface-ink` in `styles/tokens.css`. */
+export function terminalTheme({ appearance, hue }: Presentation): ITheme {
+  if (appearance === 'light') {
+    const background = oklchToHex(0.995, 0.003, hue)
+    return {
+      ...ansiLight,
+      background,
+      foreground: oklchToHex(0.24, 0.012, hue),
+      cursor: oklchToHex(0.45, 0.08, hue),
+      cursorAccent: background,
+      selectionBackground: oklchToHex(0.88, 0.04, hue),
+    }
+  }
+  const background = oklchToHex(0.185, 0.012, hue)
+  return {
+    ...ansiDark,
+    background,
+    foreground: oklchToHex(0.93, 0.008, hue),
+    cursor: oklchToHex(0.8, 0.09, hue),
+    cursorAccent: background,
+    selectionBackground: oklchToHex(0.36, 0.04, hue),
+  }
 }

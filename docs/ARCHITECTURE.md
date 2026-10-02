@@ -1,62 +1,67 @@
 # Architecture
 
-Via suit une organisation par responsabilité, avec des dépendances orientées vers le domaine.
+Via is a Tauri 2 application: a Rust process owns persistence, secrets and sessions; a Vue 3 interface owns organization and presentation. Terms follow [CONTEXT.md](../CONTEXT.md); decisions are in [adr/](adr/).
+
+## Rust (`src-tauri/src`)
 
 ```text
-src/
-├── domain/       règles pures liées aux concepts de Via
-├── stores/       orchestration réactive des cas d’usage
-├── ipc/          adaptateur vers le processus natif Tauri
-├── terminal/     adaptateur vers xterm
-├── components/   présentation Vue
-├── composables/  comportements de présentation réutilisables
-└── lib/          utilitaires techniques sans responsabilité métier
+lib.rs              composition root: builds every module once
+commands/           Tauri commands, thin adapters (app, vault, sessions, emitter)
+storage/            SQLite: named JSON documents and opaque blobs
+secrets/            ChaCha20-Poly1305 sealing; the key comes from the OS keychain
+vault/              hosts, groups, identities, keys, known hosts
+  resolve.rs        inheritance of username, port, identity, key
+  connect.rs        host or typed address → connection plan
+  trust.rs          the vault as the SSH client's store
+layout/             persisted spaces and pinned rows, structurally validated
+settings.rs         preferences
+sessions/           live sessions behind tabs
+  local.rs          shells in a native PTY (portable-pty)
+  shells.rs         detected shells; only these may be launched
+  ssh/              embedded SSH client (russh)
+  prompts.rs        questions to the user, answered from the pane
+  events.rs         output, state, prompts → `EventSink`
 ```
 
-## Modules et seams
+**Seams.**
 
-### Disposition des panes et des split groups
+- `secrets::KeySource` has the OS keychain adapter and a fixed key for tests.
+- `sessions::events::EventSink` has the Tauri emitter and a recorder for tests.
+- `sessions::ssh::ConnectionStore` is implemented by the vault, with a fake in the SSH tests.
+- `SessionIo` covers both local and SSH sessions, so the hub never knows which one it drives.
 
-`src/domain/layout.ts` est le module qui porte les transformations des arbres de panes et de split groups. Son interface accepte des valeurs et retourne de nouvelles valeurs, sans Vue, Pinia, Tauri ni xterm.
+**Rules.**
 
-Ce seam concentre les invariants structurels : suppression d’une feuille avec réduction de l’arbre, remplacement d’une session, conversion vers les types persistés et limitation des ratios. Les appelants obtiennent ainsi plus de leverage avec une interface réduite, tandis que les règles bénéficient d’une meilleure locality.
+- Every vault mutation goes through `Vault::commit`, which validates a copy, persists it, then publishes it.
+- Secrets never enter a document, a snapshot sent to the interface, a log or a process argument.
+- The interface can only launch a detected shell, by its path, never an arbitrary executable.
 
-### Store d’application
-
-`src/stores/app.ts` orchestre l’état réactif et les effets. Il coordonne les modules du domaine et les adaptateurs, mais ne réimplémente plus les transformations d’arbres.
-
-### Adaptateurs
-
-- `src/ipc/` adapte les commandes et événements du processus Tauri.
-- `src/terminal/` adapte le cycle de vie et le rendu des sessions xterm.
-- `src/lib/preferences.ts` et `src/lib/sidebar-state.ts` adaptent la persistance locale du navigateur.
-
-La règle de dépendance est simple : la présentation peut dépendre du store, le store peut dépendre du domaine et des adaptateurs, mais le domaine ne dépend d’aucun détail d’infrastructure ou de présentation.
-
-## Processus natif Rust
+## Interface (`src`)
 
 ```text
-src-tauri/src/
-├── lib.rs                    composition Tauri et enregistrement des commandes
-├── commands/
-│   └── terminal.rs           adaptateur IPC des sessions locales et SSH
-├── domain/
-│   ├── mod.rs                modèle sérialisé et valeurs par défaut
-│   └── validation.rs         invariants globaux de AppData
-├── service/
-│   ├── mod.rs                seam transactionnel et transformations partagées
-│   ├── workspaces.rs         Workspace, Identity et Resource
-│   ├── organization.rs       Tab, Folder, Favorite et Split group
-│   └── lifecycle.rs          état, fenêtres, import et export
-├── repository.rs             adaptateur SQLite
-├── pty.rs                    gestionnaire des processus terminaux
-└── ssh.rs                    configuration et résolution OpenSSH
+ipc/                typed commands and events, mirrors of the Rust wire types
+domain/             pure logic, no Vue: organize (intents), split, drop, search, quick-connect, palette
+stores/             spaces, sessions, workbench, vault, settings, ui (Pinia)
+terminal/           xterm instances keyed by tab, outside the Vue tree
+composables/        bootstrap, shortcuts, drag and drop, labels, sidebar actions
+components/
+  shell/            window frame, dialogs, sidebar frame and resizer
+  sidebar/          address pill, rows, folders, space header and switcher
+  command/          command bar
+  workbench/        panes, split view, connection panel and prompts
+  vault/            vault page
+  settings/         settings page
+  ui/               shadcn-vue primitives
 ```
 
-`DomainService` reste l’unique interface transactionnelle. Son implémentation est répartie par concepts sans multiplier les interfaces : toutes les mutations passent toujours par le même verrou, puis par la séquence chargement, mutation, validation et sauvegarde.
+**Organization.** `domain/organize.ts` applies one closed set of intents (open, move, remove, split, detach, resize, folders, rename) to a copy of a space. It returns `null` when an intent is invalid, so nothing changes. `stores/spaces` saves the pinned part as one layout document (ADR-0008).
 
-Les commandes terminal sont des adaptateurs fins autour de `DomainService`, `SessionManager` et OpenSSH. La composition root conserve seule la connaissance de l’ensemble des modules. Le domaine ne dépend ni de Tauri, ni de SQLite, ni du runtime PTY.
+**Sessions.** `stores/sessions` maps session ids to tabs and buffers events that arrive before `open` returns. Renderers are keyed by tab in `terminal/registry`. Reconnecting therefore replaces the session without clearing the scrollback.
 
-## Surface de test
+**Shortcuts.** `lib/shortcuts.ts` is the only list of shortcuts. Outside macOS they use Ctrl+Shift, so the shell's own Ctrl shortcuts keep working.
 
-Les tests existants conservent le store et la disposition rendue comme seams publics. Comme cette refonte ne change aucun comportement, ils servent de tests de caractérisation : les mêmes scénarios doivent réussir avant et après le déplacement de l’implémentation.
+## Testing
+
+- **Rust**: unit tests per module, plus an end-to-end SSH test against an in-process russh server (`sessions/ssh/tests.rs`).
+- **Interface**: Vitest on `domain/`, `lib/` and the pure helpers of `vault/` and `settings/`.
+- **Real application**: `.ai/cdp-smoke.mjs` drives the running window over CDP. See `.ai/lessons.md`.

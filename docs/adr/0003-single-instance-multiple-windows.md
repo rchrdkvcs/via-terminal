@@ -1,6 +1,6 @@
 # ADR 0003: One instance with multiple windows
 
-- Status: accepted
+- Status: superseded by ADR-0007
 - Date: 2026-08-28
 
 ## Context

@@ -1,48 +1,51 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { isNative } from './client'
-import type { SessionExitedEvent, SshStateChangedEvent, TerminalOutputEvent } from './types'
+import type {
+  SessionPromptEvent,
+  SessionStateEvent,
+  TerminalOutputEvent,
+  VaultChangedEvent,
+} from './types'
 
 interface EventMap {
   'terminal-output': TerminalOutputEvent
-  'ssh-state-changed': SshStateChangedEvent
-  'session-exited': SessionExitedEvent
+  'session-state': SessionStateEvent
+  'session-prompt': SessionPromptEvent
+  'vault-changed': VaultChangedEvent
 }
 
-type AnyHandler = (payload: never) => void
+type Handler<K extends keyof EventMap> = (payload: EventMap[K]) => void
 
 /**
- * One native listener per event name, fanned out to local subscribers.
- *
- * Registering `listen()` inside each component multiplies the per-message cost
- * by the number of mounted components. `terminal-output` fires continuously
- * while a shell streams, so the fan-out has to happen in JavaScript.
+ * One native listener per event name, fanned out in JavaScript.
+ * `terminal-output` fires continuously while a shell streams, so registering
+ * a native listener per pane would multiply the cost of every chunk.
  */
-const subscribers = new Map<keyof EventMap, Set<AnyHandler>>()
+const subscribers = new Map<keyof EventMap, Set<Handler<never>>>()
 const natives = new Map<keyof EventMap, Promise<UnlistenFn>>()
 
-export function on<K extends keyof EventMap>(
-  name: K,
-  handler: (payload: EventMap[K]) => void,
-): () => void {
-  let handlers = subscribers.get(name)
+export function on<K extends keyof EventMap>(name: K, handler: Handler<K>): () => void {
+  let handlers = subscribers.get(name) as Set<Handler<K>> | undefined
   if (!handlers) {
     handlers = new Set()
-    subscribers.set(name, handlers)
+    subscribers.set(name, handlers as Set<Handler<never>>)
   }
-  handlers.add(handler as AnyHandler)
+  handlers.add(handler)
 
   if (isNative() && !natives.has(name)) {
     natives.set(
       name,
       listen<EventMap[K]>(name, ({ payload }) => {
-        const current = subscribers.get(name)
-        if (!current) return
-        for (const subscriber of current) (subscriber as (value: EventMap[K]) => void)(payload)
+        for (const subscriber of (subscribers.get(name) ?? []) as Set<Handler<K>>) {
+          subscriber(payload)
+        }
       }),
     )
   }
+  return () => handlers.delete(handler)
+}
 
-  return () => {
-    subscribers.get(name)?.delete(handler as AnyHandler)
-  }
+/** Test seam: deliver an event as if Rust had emitted it. */
+export function emitLocally<K extends keyof EventMap>(name: K, payload: EventMap[K]): void {
+  for (const subscriber of (subscribers.get(name) ?? []) as Set<Handler<K>>) subscriber(payload)
 }

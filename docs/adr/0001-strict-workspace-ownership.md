@@ -1,6 +1,6 @@
 # ADR 0001: Strict workspace ownership
 
-- Status: accepted
+- Status: superseded by ADR-0006
 - Date: 2026-08-28
 
 ## Context
