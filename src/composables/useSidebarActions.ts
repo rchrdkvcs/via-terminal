@@ -1,14 +1,16 @@
 import type { Id } from '@/ipc/types'
 import { placeFor, type DropPosition } from '@/domain/drop'
 import type { Edge } from '@/domain/split'
-import { rowOfTab } from '@/domain/space'
+import { findTab, rowOfTab } from '@/domain/space'
 import { useSpaces } from '@/stores/spaces'
+import { useVault } from '@/stores/vault'
 import { useWorkbench } from '@/stores/workbench'
 
 /** What sidebar gestures and menus mean, as organize intents. */
 export function useSidebarActions() {
   const spaces = useSpaces()
   const workbench = useWorkbench()
+  const vault = useVault()
 
   function dropOnRow(sourceId: Id, targetId: Id, position: DropPosition) {
     const place = placeFor(spaces.active, targetId, position)
@@ -57,8 +59,18 @@ export function useSidebarActions() {
     return id
   }
 
+  /**
+   * Naming the tab of a host that only has an address names the host: there
+   * is one name, shown in the sidebar, the command bar and the vault alike.
+   */
   function rename(tabId: Id, title: string) {
     const value = title.trim()
+    const target = findTab(spaces.active, tabId)?.target
+    if (value && target?.kind === 'host' && vault.isUnnamed(target.hostId)) {
+      spaces.dispatch({ type: 'updateTab', tabId, patch: { title: null } })
+      void vault.rename(target.hostId, value).catch(() => undefined)
+      return
+    }
     spaces.dispatch({ type: 'updateTab', tabId, patch: { title: value || null } })
   }
 

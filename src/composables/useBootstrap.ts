@@ -2,6 +2,8 @@ import { ref, watchEffect } from 'vue'
 import { api, describeError, isNative } from '@/ipc/client'
 import type { Bootstrap } from '@/ipc/types'
 import { terminals } from '@/terminal/registry'
+import { useCwdMemory } from './useCwdMemory'
+import { adoptTabNames } from './useNameAdoption'
 import { dragging, hint } from './useRowDnd'
 import { useSessions } from '@/stores/sessions'
 import { useSettings } from '@/stores/settings'
@@ -40,6 +42,7 @@ export function useBootstrap() {
   const sessions = useSessions()
   const vault = useVault()
   const workbench = useWorkbench()
+  const rememberCwd = useCwdMemory()
 
   terminals.configure({
     onData: (tabId, data) => {
@@ -54,6 +57,7 @@ export function useBootstrap() {
     onSelection: (_tabId, text) => {
       if (settings.settings.copyOnSelect && text) void navigator.clipboard.writeText(text)
     },
+    onCwd: (tabId, payload, osc) => rememberCwd(tabId, payload, osc),
   })
 
   async function load() {
@@ -63,6 +67,7 @@ export function useBootstrap() {
       vault.hydrate(bootstrap.vault)
       spaces.hydrate(bootstrap.layout)
       ready.value = true
+      if (isNative()) void adoptTabNames()
     } catch (cause) {
       failure.value = describeError(cause)
     }

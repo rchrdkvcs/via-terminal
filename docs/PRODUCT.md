@@ -47,7 +47,8 @@ Via is a terminal you enjoy living in: the sidebar of Arc and Zen for your sessi
 - New tabs appear at the top of the temporary area, like in Arc.
 - **Pin** (Ctrl+Shift+D, menu, or drag above the divider) keeps a tab across restarts. Unpinning drops it back to the temporary area.
 - At launch, pinned tabs are **asleep**: dimmed, no process running. Clicking one starts it. Nothing connects by itself.
-- A pinned tab remembers its target and its name; it can be reset to its original target from its menu.
+- A pinned tab remembers its target and its name. A local tab also remembers the folder its shell was last in, and reopens there (Git Bash, bash, zsh, PowerShell and cmd report it; other shells reopen in the home folder).
+- A host saved by quick connect is named after its address until named: naming its tab names the host, so the sidebar, the command bar and the vault show one name.
 - A temporary local shell that exits normally closes its tab. A failed launch or a dropped SSH connection keeps the tab with its output and offers Reconnect.
 - Ctrl+Shift+W closes the current tab; closing a pinned tab puts it to sleep, closing again removes it. Removing offers Undo.
 - Renaming: double-click a row or F2. A manual name stops following the terminal title until reset.

@@ -17,6 +17,8 @@ interface Callbacks {
   onResize(tabId: Id, cols: number, rows: number): void
   onTitle(tabId: Id, title: string): void
   onSelection(tabId: Id, text: string): void
+  /** A working directory report: the raw OSC payload and its number (7 or 9). */
+  onCwd(tabId: Id, payload: string, osc: 7 | 9): void
 }
 
 interface Entry extends Instance {
@@ -132,6 +134,16 @@ class Registry {
     })
     terminal.onTitleChange((title) => this.callbacks?.onTitle(tabId, title.trim()))
     terminal.onSelectionChange(() => this.callbacks?.onSelection(tabId, terminal.getSelection()))
+    terminal.parser.registerOscHandler(
+      7,
+      (payload) => (this.callbacks?.onCwd(tabId, payload, 7), true),
+    )
+    // OSC 9 also carries progress and notifications; only `9;path` is a directory.
+    terminal.parser.registerOscHandler(9, (payload) => {
+      if (!payload.startsWith('9;')) return false
+      this.callbacks?.onCwd(tabId, payload, 9)
+      return true
+    })
     // Cell metrics are wrong until the monospace face has loaded.
     void document.fonts?.ready.then(() => this.fit(entry))
     this.entries.set(tabId, entry)

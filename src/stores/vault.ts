@@ -70,6 +70,31 @@ export const useVault = defineStore('vault', () => {
     return result.id
   }
 
+  /** A host labelled only by its address has no name of its own yet. */
+  function isUnnamed(id: Id): boolean {
+    const found = host(id)
+    return Boolean(found && (!found.label || found.label === found.address))
+  }
+
+  /** Give a host its name, keeping everything else (password included) as is. */
+  async function rename(id: Id, label: string) {
+    const found = host(id)
+    if (!found) return
+    await mutate(() =>
+      api.vault.saveHost({
+        id: found.id,
+        groupId: found.groupId,
+        label,
+        address: found.address,
+        overrides: found.overrides,
+        keyId: found.keyId,
+        tags: found.tags,
+        notes: found.notes,
+        password: { action: 'keep' },
+      }),
+    )
+  }
+
   async function refresh() {
     view.value = await api.vault.get()
   }
@@ -88,6 +113,8 @@ export const useVault = defineStore('vault', () => {
     describe,
     recentHosts,
     hasPassword,
+    isUnnamed,
+    rename,
     mutate,
     refresh,
     hydrate,

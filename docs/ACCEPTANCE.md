@@ -27,6 +27,9 @@ Each scenario is run in the real application, not only through unit tests. The b
 - Restart Via: pinned tabs come back asleep and dimmed, temporary tabs are gone, and nothing connects until clicked.
 - Close a running pinned tab: it goes to sleep. Close it again: it is removed, and Undo restores it in place.
 - A temporary local shell that runs `exit` disappears; one that fails to start stays with Retry.
+- In Git Bash, PowerShell, cmd and zsh, `cd` somewhere, pin the tab, restart Via and wake it: the shell opens in that folder, with the user's prompt unchanged.
+- Rename the tab of a quick-connect host: the host takes that name in the vault and the command bar.
+- Open and close a folder: its rows slide in and out instead of appearing at once.
 - Drag a row onto the right edge of the content: a split view appears as one row. Add members up to four, and the fifth is refused.
 - Detach a member: it becomes the row right after the split, and its session keeps running.
 - Drag rows before and after others, and into and out of folders. Dropping on an invalid target changes nothing.
@@ -34,7 +37,7 @@ Each scenario is run in the real application, not only through unit tests. The b
 
 ## Spaces
 
-- Create a space with a name, icon, color and shell: the window tint glides to its hue, and new local tabs use its shell.
+- Create a space with a name, an icon and a shell: new local tabs use its shell.
 - Ctrl+1…9, the switcher and Ctrl+wheel all switch spaces, and sessions in other spaces keep running.
 - Delete a space with running tabs: a confirmation names how many will close. The last space cannot be deleted.
 - Move a tab to another space from its menu: it keeps its session.

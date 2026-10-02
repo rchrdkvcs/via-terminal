@@ -6,6 +6,7 @@
 //! ends, so a closed id simply stops accepting input.
 
 pub mod events;
+pub mod integration;
 mod local;
 pub mod prompts;
 pub mod shells;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,34 +14,44 @@ import { useUi } from '@/stores/ui'
 
 /** The one confirmation dialog, driven by `ui.confirm(...)`. */
 const ui = useUi()
+/**
+ * The action closes the dialog before its click handler runs, which clears
+ * `ui.confirmation`; keep the request being shown so confirming still runs it.
+ */
+const shown = shallowRef(ui.confirmation)
+watch(
+  () => ui.confirmation,
+  (request) => {
+    if (request) shown.value = request
+  },
+)
 const open = computed({
   get: () => ui.confirmation !== null,
   set: (value) => !value && (ui.confirmation = null),
 })
 
 function confirm() {
-  const request = ui.confirmation
+  const request = shown.value
   ui.confirmation = null
+  shown.value = null
   request?.run()
 }
 </script>
 
 <template>
   <AlertDialog v-model:open="open">
-    <AlertDialogContent v-if="ui.confirmation">
+    <AlertDialogContent v-if="shown">
       <AlertDialogHeader>
-        <AlertDialogTitle>{{ ui.confirmation.title }}</AlertDialogTitle>
-        <AlertDialogDescription>{{ ui.confirmation.description }}</AlertDialogDescription>
+        <AlertDialogTitle>{{ shown?.title }}</AlertDialogTitle>
+        <AlertDialogDescription>{{ shown?.description }}</AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel>Annuler</AlertDialogCancel>
         <AlertDialogAction
-          :class="
-            ui.confirmation.destructive ? 'bg-destructive text-white hover:bg-destructive/90' : ''
-          "
+          :class="shown?.destructive ? 'bg-destructive text-white hover:bg-destructive/90' : ''"
           @click="confirm"
         >
-          {{ ui.confirmation.confirm }}
+          {{ shown?.confirm }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

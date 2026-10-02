@@ -52,6 +52,7 @@ pub fn spawn(
         .map_err(failure)?;
     let mut command = CommandBuilder::new(&spec.shell.path);
     command.args(&spec.shell.args);
+    super::integration::apply(&spec.shell, &mut command);
     command.env("TERM", "xterm-256color");
     command.env("COLORTERM", "truecolor");
     command.env("TERM_PROGRAM", "Via");
