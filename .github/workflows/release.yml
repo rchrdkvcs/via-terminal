@@ -1,12 +1,12 @@
 name: Release
 
-# Installers are built only when a GitHub Release is created (draft or
-# published), then uploaded onto that same release. A tag push by itself does
-# not start this workflow. Recreate or re-run via workflow_dispatch with the
-# existing tag if assets need to be rebuilt.
+# Installers are built when a GitHub Release is published, then uploaded
+# onto that same release. Pushes and pull requests do not build packages.
+# Use workflow_dispatch with an existing release tag to rebuild its assets
+# or prepare a draft release before publication.
 on:
   release:
-    types: [created]
+    types: [published]
   workflow_dispatch:
     inputs:
       tag:
@@ -113,42 +113,17 @@ jobs:
           id="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" --jq .id)"
           echo "id=${id}" >> "$GITHUB_OUTPUT"
           echo "Uploading installers to ${GITHUB_REPOSITORY} ${RELEASE_TAG} (release ${id})"
-      - name: Check macOS signing credentials
-        if: runner.os == 'macOS'
-        shell: bash
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
-            if [[ -z "${!name}" ]]; then
-              echo "::error::Missing secret ${name}. See docs/RELEASING.md for macOS signing setup."
-              exit 1
-            fi
-          done
-          if [[ "$APPLE_SIGNING_IDENTITY" != "Developer ID Application: "* ]]; then
-            echo "::error::APPLE_SIGNING_IDENTITY must identify a Developer ID Application certificate."
-            exit 1
-          fi
-      - name: Build and notarize macOS installer
+      - name: Build macOS installer with ad-hoc signing
         if: runner.os == 'macOS'
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Ad-hoc signing requires no Apple certificate or notarization account.
+          APPLE_SIGNING_IDENTITY: '-'
         with:
           uploadUpdaterJson: false
           args: ${{ matrix.args }}
-      - name: Verify downloaded macOS app before upload
+      - name: Verify macOS app inside installer before upload
         if: runner.os == 'macOS'
         shell: bash
         run: bash .github/scripts/verify-macos-release.sh
