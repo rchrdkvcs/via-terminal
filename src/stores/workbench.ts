@@ -1,10 +1,14 @@
 import { defineStore } from 'pinia'
-import { computed, reactive } from 'vue'
-import type { Id, Target } from '@/ipc/types'
-import { type Space, findTab, locate, newTabRow, rowOfTab, rows, tabs } from '@/domain/space'
+import { computed, reactive, readonly } from 'vue'
+import type { Id } from '@/ipc/types'
+import { type Space, findTab, locate, rowOf, rowOfTab, tabs } from '@/domain/space'
 import { terminals } from '@/terminal/registry'
 import { useSessions } from './sessions'
 import { useSpaces } from './spaces'
+import { installSessionEffects } from './workbench-effects'
+import { createTabLifecycle } from './workbench-lifecycle'
+import { createTabOpening } from './workbench-opening'
+import type { WorkbenchParts } from './workbench-parts'
 
 /**
  * What the user works on: the focused tab of each space, and the tab
@@ -36,21 +40,13 @@ export const useWorkbench = defineStore('workbench', () => {
     focused[space.id] = tabId
     const state = sessions.runtime(tabId).state
     if (options.wake !== false && state === 'asleep') wake(space, tabId)
-    requestAnimationFrame(() => terminals.focus(tabId))
+    focusTerminal(tabId)
   }
 
-  /** Open `target` in a new temporary tab, or in place of `replace`. Returns the tab id. */
-  function open(target: Target, options: { replace?: Id } = {}): Id {
-    if (options.replace) {
-      sessions.stop(options.replace)
-      spaces.dispatch({ type: 'updateTab', tabId: options.replace, patch: { target, title: null } })
-      activate(options.replace)
-      return options.replace
-    }
-    const row = newTabRow({ id: crypto.randomUUID(), title: null, target })
-    spaces.dispatch({ type: 'open', row })
-    activate(row.id)
-    return row.id
+  function focusTerminal(tabId: Id) {
+    requestAnimationFrame(() => {
+      if (activeTab.value?.id === tabId) terminals.focus(tabId)
+    })
   }
 
   function reconnect(tabId: Id) {
@@ -58,11 +54,10 @@ export const useWorkbench = defineStore('workbench', () => {
     if (space) wake(space, tabId)
   }
 
-  function togglePin(rowId: Id) {
-    const space = spaces.spaceOf(rowId)
-    if (!space) return
-    const row = rowOfTab(space, rowId) ?? rows(space).find((candidate) => candidate.id === rowId)
-    if (!row) return
+  function togglePin(tabOrRowId: Id) {
+    const space = spaces.spaceOf(tabOrRowId)
+    const row = space && rowOf(space, tabOrRowId)
+    if (!space || !row) return
     const pinned = locate(space, row.id)?.area === 'pinned'
     spaces.dispatch(
       {
@@ -83,12 +78,18 @@ export const useWorkbench = defineStore('workbench', () => {
     activate(all[(index + direction + all.length) % all.length].id)
   }
 
+  const parts: WorkbenchParts = { spaces, sessions, focused, activeTab, activate, focusTerminal }
+  const opening = createTabOpening(parts)
+  const lifecycle = createTabLifecycle(parts)
+  installSessionEffects({ ...parts, removeTab: lifecycle.removeTab })
+
   return {
-    focused,
+    focused: readonly(focused),
     activeTab,
     activeRow,
     activate,
-    open,
+    ...opening,
+    ...lifecycle,
     reconnect,
     togglePin,
     cycle,

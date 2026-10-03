@@ -38,12 +38,11 @@ export function useShortcuts() {
       sidebar: () => spaces.setSidebar({ visible: !spaces.sidebar.visible }),
       search: () => tab && (ui.searching = true),
       copy: () => {
-        const selection = tab && terminals.get(tab.id)?.terminal.getSelection()
+        const selection = tab && terminals.selection(tab.id)
         if (selection) void navigator.clipboard.writeText(selection)
       },
       paste: () => {
-        const terminal = tab && terminals.get(tab.id)?.terminal
-        if (terminal) void navigator.clipboard.readText().then((text) => terminal.paste(text))
+        if (tab) void navigator.clipboard.readText().then((text) => terminals.paste(tab.id, text))
       },
       settings: () => (ui.route = ui.route === 'settings' ? 'workbench' : 'settings'),
       vault: () => (ui.route = ui.route === 'vault' ? 'workbench' : 'vault'),

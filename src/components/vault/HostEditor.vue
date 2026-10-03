@@ -24,6 +24,7 @@ const state = useVaultState()
 const actions = useVaultActions()
 
 const { draft, error, saving, commit, autosave } = useDraft({
+  kind: 'host',
   source: () => hostInput(props.hostId ? vault.host(props.hostId) : undefined, state.scope.value),
   save: (input) => vault.mutate(() => api.vault.saveHost(input)),
   validate: requireAddress,

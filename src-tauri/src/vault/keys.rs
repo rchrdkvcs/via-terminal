@@ -1,6 +1,6 @@
 use super::{
     input::KeyImport,
-    model::{now_ms, secret_id, Id, Key, SecretKind},
+    model::{now_ms, Id, Key, SecretKind},
     Vault,
 };
 use crate::error::{AppError, AppResult};
@@ -51,16 +51,13 @@ impl Vault {
             &decoded,
             encrypted,
         )?;
-        self.secrets
-            .put(&secret_id(SecretKind::PrivateKey, id), text.as_bytes())?;
-        if let (true, true, Some(passphrase)) = (encrypted, import.remember_passphrase, passphrase)
-        {
-            self.secrets.put(
-                &secret_id(SecretKind::Passphrase, id),
-                passphrase.as_bytes(),
-            )?;
-        }
-        self.commit(|data| {
+        self.commit_with_secrets(|data, secrets| {
+            secrets.put(SecretKind::PrivateKey, id, text.as_bytes())?;
+            if let (true, true, Some(passphrase)) =
+                (encrypted, import.remember_passphrase, passphrase)
+            {
+                secrets.put(SecretKind::Passphrase, id, passphrase.as_bytes())?;
+            }
             data.keys.push(key.clone());
             Ok(key)
         })
@@ -75,9 +72,8 @@ impl Vault {
             .map_err(|_| AppError::new("keys", "la clé n’a pas pu être encodée"))?;
         let id = Uuid::new_v4();
         let key = describe(id, label_or(label, "Clé Ed25519"), &private, false)?;
-        self.secrets
-            .put(&secret_id(SecretKind::PrivateKey, id), text.as_bytes())?;
-        self.commit(|data| {
+        self.commit_with_secrets(|data, secrets| {
+            secrets.put(SecretKind::PrivateKey, id, text.as_bytes())?;
             data.keys.push(key.clone());
             Ok(key)
         })
@@ -97,7 +93,7 @@ impl Vault {
 
     /// Hosts and identities using the key lose the reference.
     pub fn delete_key(&self, id: Id) -> AppResult<()> {
-        self.commit(|data| {
+        self.commit_with_secrets(|data, secrets| {
             let before = data.keys.len();
             data.keys.retain(|key| key.id != id);
             if data.keys.len() == before {
@@ -109,9 +105,9 @@ impl Vault {
             for identity in data.identities.iter_mut().filter(|i| i.key_id == Some(id)) {
                 identity.key_id = None;
             }
+            secrets.forget(id);
             Ok(())
-        })?;
-        self.forget_secrets(id)
+        })
     }
 
     pub fn delete_known_host(&self, id: Id) -> AppResult<()> {

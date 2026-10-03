@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/context-menu'
 import type { Id } from '@/ipc/types'
 import { findTab, isPinned, rowOfTab, splitOf } from '@/domain/space'
-import { useSidebarActions } from '@/composables/useSidebarActions'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
 import { useSessions } from '@/stores/sessions'
 import { useSpaces } from '@/stores/spaces'
@@ -39,7 +38,6 @@ const sessions = useSessions()
 const ui = useUi()
 const workbench = useWorkbench()
 const closing = useTabClosing()
-const actions = useSidebarActions()
 const kbd = useShortcutLabel()
 
 const tab = computed(() => findTab(spaces.active, props.tabId))
@@ -67,7 +65,7 @@ const otherSpaces = computed(() => spaces.spaces.filter((space) => space.id !== 
     <ContextMenuItem v-if="!inSplit" @select="ui.openCommand({ kind: 'split', tabId })">
       <Columns2 :stroke-width="1.5" /> Partager la vue avec…
     </ContextMenuItem>
-    <ContextMenuItem v-else @select="actions.detach(tabId)">
+    <ContextMenuItem v-else @select="workbench.detach(tabId)">
       <Unlink :stroke-width="1.5" /> Détacher de la vue partagée
     </ContextMenuItem>
     <ContextMenuSub v-if="otherSpaces.length">
@@ -78,7 +76,7 @@ const otherSpaces = computed(() => spaces.spaces.filter((space) => space.id !== 
         <ContextMenuItem
           v-for="space in otherSpaces"
           :key="space.id"
-          @select="actions.moveToSpace(tabId, space.id)"
+          @select="workbench.moveRow(tabId, space.id)"
         >
           {{ space.name }}
         </ContextMenuItem>

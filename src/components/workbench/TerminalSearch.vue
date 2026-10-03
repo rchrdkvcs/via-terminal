@@ -13,18 +13,14 @@ const input = ref<HTMLInputElement>()
 
 function find(direction: 1 | -1) {
   const id = workbench.activeTab?.id
-  const search = id ? terminals.get(id)?.search : undefined
-  if (!search || !query.value) return
-  const options = { incremental: direction === 1, caseSensitive: false }
-  if (direction === 1) search.findNext(query.value, options)
-  else search.findPrevious(query.value, options)
+  if (id) terminals.search(id, query.value, direction)
 }
 
 function close() {
   ui.searching = false
   const id = workbench.activeTab?.id
   if (id) {
-    terminals.get(id)?.search.clearDecorations()
+    terminals.clearSearch(id)
     terminals.focus(id)
   }
 }

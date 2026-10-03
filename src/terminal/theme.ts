@@ -10,6 +10,17 @@ export interface Presentation {
   appearance: 'dark' | 'light'
 }
 
+/** Used before settings hydrate the renderer. */
+export const defaultPresentation: Presentation = {
+  fontFamily: '',
+  fontSize: 14,
+  lineHeight: 1.2,
+  cursorStyle: 'bar',
+  cursorBlink: true,
+  scrollback: 10_000,
+  appearance: 'dark',
+}
+
 /** The ANSI ramp belongs to the shell's output, so it stays in full color. */
 const ansiDark = {
   black: '#3a3a3c',

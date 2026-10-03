@@ -1,5 +1,8 @@
 //! Vault behaviour through its public methods.
 
+mod atomic_auth;
+mod atomic_keys;
+mod atomic_records;
 mod connections;
 mod records;
 
@@ -28,4 +31,16 @@ pub(super) fn host(address: &str) -> HostInput {
         notes: String::new(),
         password: SecretUpdate::Keep,
     }
+}
+
+/// Inject SQLite failures, while exercising mutations only through Vault.
+pub(super) fn failing_vault(
+    sql: &str,
+    key: Option<[u8; 32]>,
+) -> (Vault, Arc<Storage>, Arc<Secrets>) {
+    let connection = rusqlite::Connection::open_in_memory().unwrap();
+    let storage = Arc::new(Storage::with_faults(connection, sql).unwrap());
+    let secrets = Arc::new(Secrets::new(storage.clone(), &FixedKey(key)));
+    let vault = Vault::load(storage.clone(), secrets.clone()).unwrap();
+    (vault, storage, secrets)
 }

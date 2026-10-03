@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { nextTick, ref } from 'vue'
+import { effectScope, nextTick, ref } from 'vue'
 import type { SecretUpdate } from '@/ipc/types'
 import { useDraft } from './useDraft'
 
@@ -12,7 +12,11 @@ interface Record {
 function setup(initial: Record, save = vi.fn(async (input: Record) => input.id ?? 'new')) {
   const stored = ref(initial)
   const validate = (input: Record) => (input.name ? null : 'Ajoutez un nom.')
-  return { stored, save, ...useDraft({ source: () => ({ ...stored.value }), save, validate }) }
+  return {
+    stored,
+    save,
+    ...useDraft({ kind: 'host', source: () => ({ ...stored.value }), save, validate }),
+  }
 }
 
 describe('useDraft', () => {
@@ -66,6 +70,26 @@ describe('useDraft', () => {
     draft.value.password = { action: 'set', value: 'secret' }
     await commit()
     expect(draft.value.password).toEqual({ action: 'keep' })
+  })
+
+  it('ignores a creation response after the editor is disposed', async () => {
+    let finish!: (id: string) => void
+    const save = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          finish = resolve
+        }),
+    )
+    const scope = effectScope()
+    const editor = scope.run(() =>
+      setup({ id: null, name: 'new', password: { action: 'keep' } }, save),
+    )!
+    const creating = editor.commit()
+    await Promise.resolve()
+    scope.stop()
+    finish('created')
+    expect(await creating).toBeNull()
+    expect(editor.draft.value.id).toBeNull()
   })
 
   it('follows outside changes unless the user is editing', async () => {

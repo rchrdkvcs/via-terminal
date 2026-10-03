@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Folder, Row } from '@/ipc/types'
-import { apply, type Intent } from './organize'
+import { apply, transfer, type Intent } from './organize'
 import { type Space, locate, rows, tabs } from './space'
 
 const tab = (id: string): Row => ({
@@ -129,5 +129,38 @@ describe('organize', () => {
     state = must(state, { type: 'updateTab', tabId: 'a', patch: { title: 'prod' } })
     expect(tabs(state)[0].title).toBe('prod')
     expect(apply(state, { type: 'renameFolder', id: 'f', name: '  ' })).toBeNull()
+  })
+
+  it('applies several intents together, or none of them', () => {
+    const state = space([], [tab('a'), tab('b')])
+    const both = apply(state, [
+      { type: 'updateTab', tabId: 'a', patch: { title: 'prod' } },
+      { type: 'split', source: 'b', target: 'a', edge: 'right' },
+    ])
+    expect(both && rows(both).map((row) => row.kind)).toEqual(['split'])
+    const rejected = apply(state, [
+      { type: 'updateTab', tabId: 'a', patch: { title: 'prod' } },
+      { type: 'remove', id: 'missing' },
+    ])
+    expect(rejected).toBeNull()
+    expect(tabs(state)[0].title).toBeNull()
+  })
+})
+
+describe('transfer', () => {
+  it('moves a row to another space, keeping it pinned or temporary', () => {
+    const from = space([tab('p')], [tab('t')])
+    const to = { ...space(), id: 'other' }
+    const [source, destination] = transfer(from, to, 'p')!
+    expect(rows(source).map((row) => row.id)).toEqual(['t'])
+    expect(locate(destination, 'p')?.area).toBe('pinned')
+    const [, again] = transfer(from, to, 't')!
+    expect(locate(again, 't')?.area).toBe('temporary')
+  })
+
+  it('refuses an unknown row or the same space', () => {
+    const from = space([], [tab('t')])
+    expect(transfer(from, { ...space(), id: 'other' }, 'missing')).toBeNull()
+    expect(transfer(from, from, 't')).toBeNull()
   })
 })

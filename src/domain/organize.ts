@@ -3,12 +3,13 @@
  *
  * `apply` returns the next space, or `null` when the intent is invalid. An
  * invalid intent never produces a partial change, so a drag that ends on a
- * bad target simply leaves the sidebar as it was.
+ * bad target simply leaves the sidebar as it was. Several intents apply as
+ * one: all of them, or none.
  */
 import type { Folder, Id, Row, Tab } from '@/ipc/types'
 import { clone } from '@/lib/clone'
 import { insertAt, listOf, take } from './lists'
-import { type Space, isFolder, tabs } from './space'
+import { type Space, isFolder, locate, rows, tabs } from './space'
 import { detach, dropTab, resize, splitWith, type Edge } from './split'
 
 export type Place =
@@ -29,9 +30,21 @@ export type Intent =
   | { type: 'toggleFolder'; id: Id; open?: boolean }
   | { type: 'deleteFolder'; id: Id }
 
-export function apply(space: Space, intent: Intent): Space | null {
+export function apply(space: Space, intent: Intent | readonly Intent[]): Space | null {
   const next = clone(space) as Space
-  return run(next, intent) ? next : null
+  const intents = 'type' in intent ? [intent] : intent
+  return intents.every((change) => run(next, change)) ? next : null
+}
+
+/** Move a row to another space, keeping it pinned or temporary. Returns both spaces. */
+export function transfer(from: Space, to: Space, rowId: Id): [Space, Space] | null {
+  const row = rows(from).find((candidate) => candidate.id === rowId)
+  if (!row || from.id === to.id) return null
+  const pinned = locate(from, rowId)?.area === 'pinned'
+  const place = pinned ? ({ area: 'pinned', folderId: null, before: null } as const) : undefined
+  const source = apply(from, { type: 'remove', id: rowId })
+  const destination = apply(to, { type: 'open', row: clone(row), to: place })
+  return source && destination ? [source, destination] : null
 }
 
 function run(space: Space, intent: Intent): boolean {

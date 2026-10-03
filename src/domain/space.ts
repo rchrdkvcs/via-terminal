@@ -39,6 +39,11 @@ export function rowOfTab(space: Space, tabId: Id): Row | undefined {
   return rows(space).find((row) => tabsOf(row).some((tab) => tab.id === tabId))
 }
 
+/** The row that is `id`, or that holds the tab `id`. */
+export function rowOf(space: Space, id: Id): Row | undefined {
+  return rows(space).find((row) => row.id === id) ?? rowOfTab(space, id)
+}
+
 export function findTab(space: Space, tabId: Id): Tab | undefined {
   return tabs(space).find((tab) => tab.id === tabId)
 }

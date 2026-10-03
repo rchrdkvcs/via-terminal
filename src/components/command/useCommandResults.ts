@@ -72,14 +72,8 @@ export function useCommandResults(query: Ref<string>) {
   }
 
   function splitWith(anchorTabId: Id, item: CommandItem) {
-    const anchor = rowOfTab(spaces.active, anchorTabId)
-    const source = item.tabId
-      ? rowOfTab(spaces.active, item.tabId)?.id
-      : item.target && workbench.open(item.target)
-    if (!anchor || !source) return
-    if (spaces.dispatch({ type: 'split', source, target: anchor.id, edge: 'right' })) {
-      workbench.activate(item.tabId ?? source)
-    }
+    if (item.tabId) workbench.splitWith(item.tabId, anchorTabId)
+    else if (item.target) workbench.openBeside(item.target, anchorTabId)
   }
 
   function choose(item: CommandItem) {

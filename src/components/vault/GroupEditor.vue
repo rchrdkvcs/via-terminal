@@ -25,6 +25,7 @@ const tree = useGroupTree()
 const options = useVaultOptions()
 
 const { draft, error, autosave } = useDraft({
+  kind: 'group',
   source: () => groupInput(vault.group(props.groupId)),
   save: (input) => vault.mutate(() => api.vault.saveGroup(input)),
   validate: (input) => (input.name.trim() ? null : 'Donnez un nom au groupe.'),

@@ -15,7 +15,7 @@ impl Vault {
             username: input::trimmed(input.overrides.username),
             ..input.overrides
         };
-        let host = self.commit(|data| {
+        self.commit_with_secrets(|data, secrets| {
             input::validate_group_ref(data, input.group_id)?;
             input::validate_defaults(data, &overrides)?;
             input::validate_key_ref(data, input.key_id)?;
@@ -47,22 +47,21 @@ impl Vault {
                 Some(index) => data.hosts[index] = host.clone(),
                 None => data.hosts.push(host.clone()),
             }
+            secrets.update(SecretKind::Password, host.id, &input.password)?;
             Ok(host)
-        })?;
-        self.update_secret(SecretKind::Password, host.id, &input.password)?;
-        Ok(host)
+        })
     }
 
     pub fn delete_host(&self, id: Id) -> AppResult<()> {
-        self.commit(|data| {
+        self.commit_with_secrets(|data, secrets| {
             let before = data.hosts.len();
             data.hosts.retain(|host| host.id != id);
             if data.hosts.len() == before {
                 return Err(AppError::not_found("hôte"));
             }
+            secrets.forget(id);
             Ok(())
-        })?;
-        self.forget_secrets(id)
+        })
     }
 
     /// A copy right after the original, without its remembered password.

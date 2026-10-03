@@ -3,12 +3,14 @@
  * change; new ones only when asked. A failed save keeps what the user typed
  * and exposes the backend's explanation.
  */
-import { ref, watch, type Ref } from 'vue'
+import { getCurrentScope, onScopeDispose, ref, watch, type Ref } from 'vue'
 import { describeError } from '@/ipc/client'
 import { clone } from '@/lib/clone'
 import type { Id } from '@/ipc/types'
+import { acknowledge, queueSave, type RecordKind } from './saveQueue'
 
 interface Options<T> {
+  kind: RecordKind
   /** The record as the vault knows it, rebuilt on every change. */
   source: () => T
   save: (input: T) => Promise<Id | null>
@@ -16,15 +18,32 @@ interface Options<T> {
   validate?: (input: T) => string | null
 }
 
-const KEEP = { action: 'keep' } as const
-
-export function useDraft<T extends { id: Id | null }>({ source, save, validate }: Options<T>) {
+export function useDraft<T extends { id: Id | null }>({
+  kind,
+  source,
+  save,
+  validate,
+}: Options<T>) {
   const draft = ref(clone(source())) as Ref<T>
   const error = ref<string | null>(null)
   const saving = ref(false)
   let baseline = JSON.stringify(draft.value)
+  // Replaced when the editor closes or shows another record: answers to
+  // earlier saves must not touch it. Also the owner of its queued saves.
+  let generation = {}
+  let inFlight = 0
+  let latest = 0
+
+  function invalidate() {
+    generation = {}
+    inFlight = 0
+    saving.value = false
+  }
+
+  if (getCurrentScope()) onScopeDispose(invalidate)
 
   function reset() {
+    invalidate()
     draft.value = clone(source())
     baseline = JSON.stringify(draft.value)
     error.value = null
@@ -34,30 +53,41 @@ export function useDraft<T extends { id: Id | null }>({ source, save, validate }
   // unsaved edits, which would otherwise be lost under their cursor.
   watch(
     () => JSON.stringify(source()),
-    (next, previous) => {
-      const otherRecord = JSON.parse(next).id !== JSON.parse(previous).id
-      if (otherRecord || JSON.stringify(draft.value) === baseline) reset()
+    (next) => {
+      const otherRecord = JSON.parse(next).id !== draft.value.id
+      if (otherRecord || (!saving.value && JSON.stringify(draft.value) === baseline)) reset()
     },
+    { flush: 'sync' },
   )
 
-  /** Save now, whether or not the record exists yet. Resolves to its id. */
+  /**
+   * Save the draft as it is now. Saves of one record run one at a time, in
+   * order, and a save waiting its turn takes this editor's latest draft. Only
+   * the latest request's outcome is shown as the draft's error.
+   */
   async function commit(): Promise<Id | null> {
-    const invalid = validate?.(draft.value) ?? null
+    const input = clone(draft.value)
+    const ticket = ++latest
+    const invalid = validate?.(input) ?? null
     error.value = invalid
     if (invalid) return null
+    const owner = generation
+    inFlight++
     saving.value = true
-    try {
-      const id = await save(clone(draft.value))
-      // Secrets are sent once; the next save must not resend them.
-      if ('password' in draft.value) Object.assign(draft.value, { password: KEEP })
-      baseline = JSON.stringify(draft.value)
-      return id
-    } catch (cause) {
-      error.value = describeError(cause)
-      return null
-    } finally {
-      saving.value = false
+    const outcome = await queueSave({ kind, owner, input, save })
+    if (owner !== generation) return null
+    saving.value = --inFlight > 0
+    if (outcome.id) {
+      acknowledge(draft.value, outcome.submitted, outcome.id)
+      baseline = JSON.stringify(
+        acknowledge(clone(outcome.submitted), outcome.submitted, outcome.id),
+      )
     }
+    if (ticket === latest) error.value = 'cause' in outcome ? describeError(outcome.cause) : null
+    if (!outcome.id) return null
+    // Creation selects a fresh editor. Save later edits before returning its id.
+    if (!input.id && JSON.stringify(draft.value) !== baseline) return commit()
+    return outcome.id
   }
 
   /** Save an existing record if something changed; drafts wait for "Enregistrer". */

@@ -26,6 +26,7 @@ const options = useVaultOptions()
 
 const identity = computed(() => vault.view.identities.find((item) => item.id === props.identityId))
 const { draft, error, saving, commit, autosave } = useDraft({
+  kind: 'identity',
   source: () => identityInput(identity.value),
   save: (input) => vault.mutate(() => api.vault.saveIdentity(input)),
   validate: requireUsername,
