@@ -2,7 +2,7 @@
 //! remembered after a successful authentication.
 
 use super::{
-    model::{now_ms, secret_id, Defaults, Host, Id, KnownHost, SecretKind},
+    model::{now_ms, Defaults, Host, Id, KnownHost, SecretKind},
     Vault,
 };
 use crate::{
@@ -54,48 +54,53 @@ impl ConnectionStore for Vault {
             return Ok(None);
         }
         let saved = plan.host_id.is_none();
-        let host_id = self.commit(|data| {
-            if let Some(host) = plan
+        self.commit_with_secrets(|data, secrets| {
+            // Authentication can finish after the user deleted its saved host.
+            // Only quick connect may create a host.
+            if plan
+                .host_id
+                .is_some_and(|id| !data.hosts.iter().any(|host| host.id == id))
+            {
+                return Ok(None);
+            }
+            let host_id = if let Some(host) = plan
                 .host_id
                 .and_then(|id| data.hosts.iter_mut().find(|h| h.id == id))
             {
                 host.last_connected_at = Some(now_ms());
-                return Ok(host.id);
-            }
-            let host = Host {
-                id: Uuid::new_v4(),
-                group_id: None,
-                label: plan.label.clone(),
-                address: plan.address.clone(),
-                overrides: Defaults {
-                    username: Some(username.to_string()),
-                    port: (plan.port != 22).then_some(plan.port),
-                    identity_id: None,
-                },
-                key_id: None,
-                tags: vec![],
-                notes: String::new(),
-                created_at: now_ms(),
-                last_connected_at: Some(now_ms()),
+                host.id
+            } else {
+                let host = Host {
+                    id: Uuid::new_v4(),
+                    group_id: None,
+                    label: plan.label.clone(),
+                    address: plan.address.clone(),
+                    overrides: Defaults {
+                        username: Some(username.to_string()),
+                        port: (plan.port != 22).then_some(plan.port),
+                        identity_id: None,
+                    },
+                    key_id: None,
+                    tags: vec![],
+                    notes: String::new(),
+                    created_at: now_ms(),
+                    last_connected_at: Some(now_ms()),
+                };
+                data.hosts.push(host.clone());
+                host.id
             };
-            data.hosts.push(host.clone());
-            Ok(host.id)
-        })?;
-        let mut changed = saved;
-        if let Some(password) = remembered.password {
-            self.secrets.put(
-                &secret_id(SecretKind::Password, host_id),
-                password.as_bytes(),
-            )?;
-            changed = true;
-        }
-        if let Some((key_id, passphrase)) = remembered.passphrase {
-            self.secrets.put(
-                &secret_id(SecretKind::Passphrase, key_id),
-                passphrase.as_bytes(),
-            )?;
-            changed = true;
-        }
-        Ok(changed.then_some(host_id))
+            let mut changed = saved;
+            if let Some(password) = remembered.password {
+                secrets.put(SecretKind::Password, host_id, password.as_bytes())?;
+                changed = true;
+            }
+            if let Some((key_id, passphrase)) = remembered.passphrase {
+                if data.keys.iter().any(|key| key.id == key_id) {
+                    secrets.put(SecretKind::Passphrase, key_id, passphrase.as_bytes())?;
+                    changed = true;
+                }
+            }
+            Ok(changed.then_some(host_id))
+        })
     }
 }

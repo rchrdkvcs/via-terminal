@@ -5,7 +5,7 @@
 
 use super::shells::Shell;
 use portable_pty::CommandBuilder;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 const BASH_HOOK: &str = r#"printf '\033]7;file://localhost%s\007' "$PWD""#;
 
@@ -29,9 +29,10 @@ precmd_functions+=(__via_cwd)
 "#;
 
 fn name(shell: &Shell) -> String {
-    Path::new(&shell.path)
-        .file_name()
-        .and_then(|name| name.to_str())
+    shell
+        .path
+        .rsplit(['/', '\\'])
+        .next()
         .unwrap_or_default()
         .trim_end_matches(".exe")
         .to_ascii_lowercase()

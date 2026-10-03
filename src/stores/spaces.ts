@@ -1,10 +1,9 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api, describeError } from '@/ipc/client'
-import type { Id, Layout, Row } from '@/ipc/types'
-import { apply, type Intent } from '@/domain/organize'
-import { type Space, fromPersisted, locate, rowOfTab, rows, toPersisted } from '@/domain/space'
-import { clone } from '@/lib/clone'
+import type { Id, Layout } from '@/ipc/types'
+import { apply, transfer as transferRow, type Intent } from '@/domain/organize'
+import { type Space, fromPersisted, locate, rowOfTab, toPersisted } from '@/domain/space'
 import { notify } from '@/lib/notify'
 
 export interface SpaceDraft {
@@ -37,7 +36,7 @@ export const useSpaces = defineStore('spaces', () => {
 
   function hydrate(layout: Layout) {
     spaces.value = layout.spaces.map(fromPersisted)
-    activeId.value = layout.activeSpaceId ?? layout.spaces[0].id
+    activeId.value = layout.activeSpaceId ?? layout.spaces[0]?.id ?? ''
     sidebar.value = { ...layout.sidebar }
   }
 
@@ -57,7 +56,10 @@ export const useSpaces = defineStore('spaces', () => {
   }
 
   /** Apply an intent to a space; `false` when it was invalid and nothing changed. */
-  function dispatch(intent: Intent, spaceId: Id = active.value.id): boolean {
+  function dispatch(
+    intent: Intent | readonly Intent[],
+    spaceId: Id | undefined = active.value?.id,
+  ): boolean {
     const index = spaces.value.findIndex((space) => space.id === spaceId)
     const next = index >= 0 ? apply(spaces.value[index], intent) : null
     if (!next) return false
@@ -93,13 +95,15 @@ export const useSpaces = defineStore('spaces', () => {
     persist()
   }
 
-  /** The caller stops the sessions first; the last space is never removed. */
+  /** Remove organization only; workbench owns runtime cleanup. Never removes the last space. */
   function remove(id: Id) {
-    if (spaces.value.length <= 1) return
+    if (spaces.value.length <= 1) return false
     const index = spaces.value.findIndex((space) => space.id === id)
+    if (index < 0) return false
     spaces.value.splice(index, 1)
     if (activeId.value === id) activeId.value = spaces.value[Math.max(0, index - 1)].id
     persist()
+    return true
   }
 
   function reorder(id: Id, beforeId: Id | null) {
@@ -114,12 +118,15 @@ export const useSpaces = defineStore('spaces', () => {
   /** Move a row to another space, keeping it pinned or temporary. */
   function transfer(rowId: Id, toSpaceId: Id): boolean {
     const from = spaceOf(rowId)
-    const row: Row | undefined = from && rows(from).find((candidate) => candidate.id === rowId)
-    if (!from || !row || from.id === toSpaceId) return false
-    const pinned = locate(from, rowId)?.area === 'pinned'
-    const to = pinned ? ({ area: 'pinned', folderId: null, before: null } as const) : undefined
-    if (!dispatch({ type: 'remove', id: rowId }, from.id)) return false
-    return dispatch({ type: 'open', row: clone(row), to }, toSpaceId)
+    const destination = byId(toSpaceId)
+    const moved = from && destination && transferRow(from, destination, rowId)
+    if (!moved) return false
+    const [source, target] = moved
+    spaces.value = spaces.value.map((space) =>
+      space.id === source.id ? source : space.id === target.id ? target : space,
+    )
+    persist()
+    return true
   }
 
   function setSidebar(patch: Partial<{ width: number; visible: boolean }>) {

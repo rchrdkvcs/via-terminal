@@ -76,7 +76,7 @@ impl Vault {
         }
         input::validate_username(&username)?;
         let label = input::trimmed(Some(input.label.clone())).unwrap_or_else(|| username.clone());
-        let identity = self.commit(|data| {
+        self.commit_with_secrets(|data, secrets| {
             input::validate_key_ref(data, input.key_id)?;
             let identity = Identity {
                 id: input.id.unwrap_or_else(Uuid::new_v4),
@@ -89,15 +89,14 @@ impl Vault {
                 None if input.id.is_some() => return Err(AppError::not_found("identité")),
                 None => data.identities.push(identity.clone()),
             }
+            secrets.update(SecretKind::Password, identity.id, &input.password)?;
             Ok(identity)
-        })?;
-        self.update_secret(SecretKind::Password, identity.id, &input.password)?;
-        Ok(identity)
+        })
     }
 
     /// References from hosts and groups are cleared, never left dangling.
     pub fn delete_identity(&self, id: Id) -> AppResult<()> {
-        self.commit(|data| {
+        self.commit_with_secrets(|data, secrets| {
             let before = data.identities.len();
             data.identities.retain(|identity| identity.id != id);
             if data.identities.len() == before {
@@ -111,8 +110,8 @@ impl Vault {
             for defaults in defaults.filter(|d| d.identity_id == Some(id)) {
                 defaults.identity_id = None;
             }
+            secrets.forget(id);
             Ok(())
-        })?;
-        self.forget_secrets(id)
+        })
     }
 }

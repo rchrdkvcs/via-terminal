@@ -10,16 +10,8 @@ import type { Id, Size } from '@/ipc/types'
 import { concatBytes } from '@/lib/base64'
 import { applyPresentation, createInstance, type Instance } from './create'
 import { fitNow, nextFrame } from './size'
-import type { Presentation } from './theme'
-
-interface Callbacks {
-  onData(tabId: Id, data: string): void
-  onResize(tabId: Id, cols: number, rows: number): void
-  onTitle(tabId: Id, title: string): void
-  onSelection(tabId: Id, text: string): void
-  /** A working directory report: the raw OSC payload and its number (7 or 9). */
-  onCwd(tabId: Id, payload: string, osc: 7 | 9): void
-}
+import { defaultPresentation, type Presentation } from './theme'
+import { listen, type Callbacks } from './listen'
 
 interface Entry extends Instance {
   queue: Uint8Array[]
@@ -32,15 +24,7 @@ class Registry {
   private frame: number | null = null
   private lastSize: Size = { cols: 100, rows: 30 }
   private callbacks: Callbacks | null = null
-  presentation: Presentation = {
-    fontFamily: '',
-    fontSize: 14,
-    lineHeight: 1.2,
-    cursorStyle: 'bar',
-    cursorBlink: true,
-    scrollback: 10_000,
-    appearance: 'dark',
-  }
+  private presentation: Presentation = defaultPresentation
 
   configure(callbacks: Callbacks) {
     this.callbacks = callbacks
@@ -98,8 +82,23 @@ class Registry {
     this.entries.get(tabId)?.terminal.focus()
   }
 
-  get(tabId: Id): Instance | undefined {
-    return this.entries.get(tabId)
+  search(tabId: Id, query: string, direction: 1 | -1 = 1): boolean {
+    const search = this.entries.get(tabId)?.search
+    if (!search || !query) return false
+    const options = { incremental: direction === 1, caseSensitive: false }
+    return direction === 1 ? search.findNext(query, options) : search.findPrevious(query, options)
+  }
+
+  clearSearch(tabId: Id) {
+    this.entries.get(tabId)?.search.clearDecorations()
+  }
+
+  selection(tabId: Id): string {
+    return this.entries.get(tabId)?.terminal.getSelection() ?? ''
+  }
+
+  paste(tabId: Id, text: string) {
+    this.entries.get(tabId)?.terminal.paste(text)
   }
 
   release(tabId: Id) {
@@ -127,25 +126,14 @@ class Registry {
     if (existing) return existing
     const entry: Entry = { ...createInstance(this.presentation), queue: [], frame: null }
     const { terminal } = entry
-    terminal.onData((data) => this.callbacks?.onData(tabId, data))
     terminal.onResize(({ cols, rows }) => {
       this.lastSize = { cols, rows }
-      this.callbacks?.onResize(tabId, cols, rows)
     })
-    terminal.onTitleChange((title) => this.callbacks?.onTitle(tabId, title.trim()))
-    terminal.onSelectionChange(() => this.callbacks?.onSelection(tabId, terminal.getSelection()))
-    terminal.parser.registerOscHandler(
-      7,
-      (payload) => (this.callbacks?.onCwd(tabId, payload, 7), true),
-    )
-    // OSC 9 also carries progress and notifications; only `9;path` is a directory.
-    terminal.parser.registerOscHandler(9, (payload) => {
-      if (!payload.startsWith('9;')) return false
-      this.callbacks?.onCwd(tabId, payload, 9)
-      return true
-    })
+    listen(terminal, tabId, () => this.callbacks)
     // Cell metrics are wrong until the monospace face has loaded.
-    void document.fonts?.ready.then(() => this.fit(entry))
+    void document.fonts?.ready.then(() => {
+      if (this.entries.get(tabId) === entry) this.fit(entry)
+    })
     this.entries.set(tabId, entry)
     return entry
   }

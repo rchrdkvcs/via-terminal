@@ -7,6 +7,7 @@
 //! [`crate::secrets`] and never appear in the persisted document.
 
 mod connect;
+mod mutation;
 pub use connect::QuickTarget;
 mod groups;
 mod hosts;
@@ -19,7 +20,6 @@ mod tests;
 mod trust;
 
 use crate::{error::AppResult, secrets::Secrets, storage::Storage};
-use input::SecretUpdate;
 use model::{secret_id, Id, SecretKind, VaultData, VaultSnapshot};
 use std::{
     collections::HashMap,
@@ -54,7 +54,7 @@ impl Vault {
     }
 
     pub fn view(&self) -> AppResult<VaultView> {
-        let data = self.data.lock().unwrap().clone();
+        let data = self.data.lock().unwrap();
         let has =
             |kind, id| -> AppResult<bool> { Ok(self.secrets.get(&secret_id(kind, id))?.is_some()) };
         let mut passwords = Vec::new();
@@ -81,7 +81,7 @@ impl Vault {
             .collect();
         Ok(VaultView {
             snapshot: VaultSnapshot {
-                data,
+                data: data.clone(),
                 passwords,
                 passphrases,
                 secrets_available: self.secrets.available(),
@@ -92,45 +92,5 @@ impl Vault {
 
     pub(crate) fn read<T>(&self, read: impl FnOnce(&VaultData) -> T) -> T {
         read(&self.data.lock().unwrap())
-    }
-
-    /// Apply `change` to a copy, persist it, then publish it.
-    pub(crate) fn commit<T>(
-        &self,
-        change: impl FnOnce(&mut VaultData) -> AppResult<T>,
-    ) -> AppResult<T> {
-        let mut data = self.data.lock().unwrap();
-        let mut next = data.clone();
-        let result = change(&mut next)?;
-        self.storage.save(DOCUMENT, &next)?;
-        *data = next;
-        Ok(result)
-    }
-
-    pub(crate) fn update_secret(
-        &self,
-        kind: SecretKind,
-        owner: Id,
-        update: &SecretUpdate,
-    ) -> AppResult<()> {
-        match update {
-            SecretUpdate::Keep => Ok(()),
-            SecretUpdate::Clear => self.secrets.delete(&secret_id(kind, owner)),
-            SecretUpdate::Set(value) if value.is_empty() => {
-                self.secrets.delete(&secret_id(kind, owner))
-            }
-            SecretUpdate::Set(value) => self.secrets.put(&secret_id(kind, owner), value.as_bytes()),
-        }
-    }
-
-    pub(crate) fn forget_secrets(&self, owner: Id) -> AppResult<()> {
-        for kind in [
-            SecretKind::Password,
-            SecretKind::Passphrase,
-            SecretKind::PrivateKey,
-        ] {
-            self.secrets.delete(&secret_id(kind, owner))?;
-        }
-        Ok(())
     }
 }

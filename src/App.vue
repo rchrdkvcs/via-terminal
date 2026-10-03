@@ -10,7 +10,6 @@ import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Workbench from '@/components/workbench/Workbench.vue'
 import { useBootstrap } from '@/composables/useBootstrap'
-import { useSessionEffects } from '@/composables/useSessionEffects'
 import { useWindowAppearance } from '@/composables/useWindowAppearance'
 import { useShortcuts } from '@/composables/useShortcuts'
 import { useSpaces } from '@/stores/spaces'
@@ -21,7 +20,6 @@ const SettingsPage = defineAsyncComponent(() => import('@/components/settings/Se
 
 const { ready, failure } = useBootstrap()
 useShortcuts()
-useSessionEffects()
 useWindowAppearance()
 const spaces = useSpaces()
 const ui = useUi()

@@ -3,8 +3,11 @@
 //! Callers never see SQL. A document is a whole value replaced atomically, which
 //! is enough for a single-window application whose data fits in memory.
 
+mod transaction;
+pub(crate) use transaction::BlobChange;
+
 use crate::error::AppResult;
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension};
 use serde::{de::DeserializeOwned, Serialize};
 use std::{path::Path, sync::Mutex};
 
@@ -19,14 +22,23 @@ pub struct Storage {
 
 impl Storage {
     pub fn open(path: impl AsRef<Path>) -> AppResult<Self> {
-        Self::from_connection(Connection::open(path)?)
+        Self::prepare(Connection::open(path)?)
     }
 
     pub fn memory() -> AppResult<Self> {
-        Self::from_connection(Connection::open_in_memory()?)
+        Self::prepare(Connection::open_in_memory()?)
     }
 
-    fn from_connection(connection: Connection) -> AppResult<Self> {
+    /// Storage over `connection` with `faults` (such as failing triggers)
+    /// installed on its schema, to test what callers do when SQLite refuses.
+    #[cfg(test)]
+    pub(crate) fn with_faults(connection: Connection, faults: &str) -> AppResult<Self> {
+        connection.execute_batch(SCHEMA)?;
+        connection.execute_batch(faults)?;
+        Self::prepare(connection)
+    }
+
+    fn prepare(connection: Connection) -> AppResult<Self> {
         connection.execute_batch(SCHEMA)?;
         Ok(Self {
             connection: Mutex::new(connection),
@@ -50,13 +62,7 @@ impl Storage {
     }
 
     pub fn save<T: Serialize>(&self, key: &str, value: &T) -> AppResult<()> {
-        let json = serde_json::to_string(value)?;
-        self.connection.lock().unwrap().execute(
-            "INSERT INTO documents(key,json) VALUES(?1,?2)
-             ON CONFLICT(key) DO UPDATE SET json=excluded.json",
-            params![key, json],
-        )?;
-        Ok(())
+        self.save_with_blobs(key, value, &[])
     }
 
     pub fn get_blob(&self, key: &str) -> AppResult<Option<Vec<u8>>> {
@@ -68,23 +74,6 @@ impl Storage {
                 row.get(0)
             })
             .optional()?)
-    }
-
-    pub fn put_blob(&self, key: &str, value: &[u8]) -> AppResult<()> {
-        self.connection.lock().unwrap().execute(
-            "INSERT INTO blobs(key,value) VALUES(?1,?2)
-             ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-            params![key, value],
-        )?;
-        Ok(())
-    }
-
-    pub fn delete_blob(&self, key: &str) -> AppResult<()> {
-        self.connection
-            .lock()
-            .unwrap()
-            .execute("DELETE FROM blobs WHERE key=?1", [key])?;
-        Ok(())
     }
 }
 
@@ -104,12 +93,18 @@ mod tests {
     #[test]
     fn blobs_round_trip_and_delete() {
         let storage = Storage::memory().unwrap();
-        storage.put_blob("a", b"secret").unwrap();
+        let put = BlobChange::Put {
+            key: "a".into(),
+            value: b"secret".to_vec(),
+        };
+        storage.save_with_blobs("doc", &1, &[put]).unwrap();
         assert_eq!(
             storage.get_blob("a").unwrap().as_deref(),
             Some(&b"secret"[..])
         );
-        storage.delete_blob("a").unwrap();
+        let delete = BlobChange::Delete { key: "a".into() };
+        storage.save_with_blobs("doc", &2, &[delete]).unwrap();
         assert_eq!(storage.get_blob("a").unwrap(), None);
+        assert_eq!(storage.load::<u8>("doc").unwrap(), Some(2));
     }
 }

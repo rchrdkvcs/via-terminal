@@ -21,4 +21,16 @@ describe('SessionRouting', () => {
     expect(seen).toEqual([])
     expect(routing.tabOf('s1')).toBe('t2')
   })
+
+  it('stops delivering queued events once one of them ends the session', () => {
+    const routing = new SessionRouting()
+    const seen: string[] = []
+    routing.route('s1', () => {
+      seen.push('exit')
+      routing.finish('s1')
+    })
+    routing.route('s1', () => seen.push('output'))
+    routing.bind('s1', 't1')
+    expect(seen).toEqual(['exit'])
+  })
 })
