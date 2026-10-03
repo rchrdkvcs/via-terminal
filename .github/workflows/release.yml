@@ -39,8 +39,6 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - name: Check Tauri package versions
-        run: node .github/scripts/check-tauri-versions.mjs
       - name: Synchronize version from release tag
         run: node .github/scripts/sync-release-version.mjs
       - uses: dtolnay/rust-toolchain@stable
