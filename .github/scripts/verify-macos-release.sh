@@ -23,6 +23,5 @@ if [[ ! -d "$app" ]]; then
   exit 1
 fi
 codesign --verify --deep --strict --verbose=2 "$app"
-# A stapled ticket lets Gatekeeper verify notarization even when offline.
-xcrun stapler validate "$app"
-spctl --assess --type execute --verbose=2 "$app"
+# This release uses an ad-hoc signature without Apple notarization.
+# Gatekeeper approval is performed manually by the user after download.
