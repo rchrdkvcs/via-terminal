@@ -26,6 +26,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: Check Tauri package versions
+        run: node .github/scripts/check-tauri-versions.mjs
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
