@@ -47,8 +47,8 @@ stores/             spaces, sessions, workbench, vault, settings, ui (Pinia), an
 terminal/           xterm instances keyed by tab, outside the Vue tree
 composables/        bootstrap, shortcuts, drag and drop, labels, sidebar actions
 components/
-  shell/            window frame, dialogs, sidebar frame and resizer
-  sidebar/          address pill, rows, folders, space header and switcher
+  shell/            title bar, address pill, dialogs, sidebar frame and resizer
+  sidebar/          rows, folders, space header and switcher
   command/          command bar
   workbench/        panes, split view, connection panel and prompts
   vault/            vault page

@@ -14,24 +14,21 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 
 ```
 ┌───────────────┬──────────────────────────────────────────┐
-│ ▯       – ▢ ✕ │                                          │
-│ ┌───────────┐ │                                          │
-│ │ prod-web  │ │                                          │
-│ └───────────┘ │            active tab or split           │
-│ Space name    │                                          │
-│ ▸ Clients     │                                          │
-│   pinned …    │                                          │
-│ ───────────── │                                          │
-│ + New tab     │                                          │
-│   temporary … │                                          │
-│               │                                          │
-│ ◉ ◯ ◯ +   ⚿ ⚙ │                                          │
+│ ▯             │        [ prod-web         ]   ⚿ ⚙  – ▢ ✕ │
+│ Space name    │ ┌──────────────────────────────────────┐ │
+│ ▸ Clients     │ │                                      │ │
+│   pinned …    │ │                                      │ │
+│ ───────────── │ │          active tab or split         │ │
+│ + New tab     │ │                                      │ │
+│   temporary … │ │                                      │ │
+│               │ │                                      │ │
+│    ◉ ◯ ◯    + │ └──────────────────────────────────────┘ │
 └───────────────┴──────────────────────────────────────────┘
 ```
 
-- **Sidebar**, from top to bottom: the sidebar toggle and window controls, the address pill of the current tab, the space name and its pinned area (pinned tabs, split views and folders), a divider, New tab, the temporary tabs, and the space switcher with vault and settings buttons.
-- **Content**: the active row, shown as a single terminal or a split view, on a rounded surface. Nothing else: no top bar, no tab strip.
-- The sidebar can be hidden and shown again with Ctrl+Shift+B or its button. The window controls stay top right, in a thin title bar above the content.
+- **Sidebar**, from top to bottom: the sidebar toggle, the space name and its pinned area (pinned tabs, split views and folders), a divider, New tab, the temporary tabs, and the space switcher: spaces centered, New space on the right.
+- **Content**: the active row, shown as a single terminal or a split view, on a rounded surface. No tab strip.
+- The sidebar can be hidden and shown again with Ctrl+Shift+B or its button. A thin title bar above the content holds the address pill of the current tab in the middle, and the vault, settings and window controls top right. It stays when the sidebar is hidden.
 
 ## Opening things
 
