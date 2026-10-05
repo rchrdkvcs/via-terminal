@@ -20,6 +20,8 @@ export const useSpaces = defineStore('spaces', () => {
   const spaces = ref<Space[]>([])
   const activeId = ref<Id>('')
   const sidebar = ref({ width: 264, visible: true })
+  /** Which way the last switch went, for the sidebar's slide. */
+  const switchDirection = ref<1 | -1>(1)
 
   const active = computed(
     () => spaces.value.find((s) => s.id === activeId.value) ?? spaces.value[0],
@@ -68,8 +70,10 @@ export const useSpaces = defineStore('spaces', () => {
     return true
   }
 
-  function activate(id: Id) {
+  function activate(id: Id, towards?: 1 | -1) {
     if (!byId(id) || id === activeId.value) return
+    const index = (spaceId: Id) => spaces.value.findIndex((space) => space.id === spaceId)
+    switchDirection.value = towards ?? (index(id) > index(activeId.value) ? 1 : -1)
     activeId.value = id
     persist()
   }
@@ -77,7 +81,7 @@ export const useSpaces = defineStore('spaces', () => {
   function cycle(direction: 1 | -1) {
     const index = spaces.value.findIndex((space) => space.id === active.value.id)
     const next = spaces.value[(index + direction + spaces.value.length) % spaces.value.length]
-    if (next) activate(next.id)
+    if (next) activate(next.id, direction)
   }
 
   function create(draft: SpaceDraft): Space {
@@ -137,6 +141,7 @@ export const useSpaces = defineStore('spaces', () => {
   return {
     spaces,
     activeId,
+    switchDirection,
     active,
     sidebar,
     byId,
