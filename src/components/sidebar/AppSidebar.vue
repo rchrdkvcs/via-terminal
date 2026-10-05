@@ -8,7 +8,6 @@ import { endTarget } from '@/composables/useDropGap'
 import { useSidebarActions } from '@/composables/useSidebarActions'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
-import AddressPill from './AddressPill.vue'
 import RowArea from './RowArea.vue'
 import SidebarTop from './SidebarTop.vue'
 import SpaceHeader from './SpaceHeader.vue'
@@ -16,8 +15,8 @@ import SpaceSwitcher from './SpaceSwitcher.vue'
 import { createSpaceSwipe } from './spaceSwipe'
 
 /**
- * Top to bottom: title bar, address, the space's pinned rows, New tab, the
- * temporary rows, and the space switcher.
+ * Top to bottom: title bar, the space's pinned rows, New tab, the temporary
+ * rows, and the space switcher.
  */
 const spaces = useSpaces()
 const ui = useUi()
@@ -39,9 +38,6 @@ const onWheel = createSpaceSwipe(spaces.cycle)
 <template>
   <aside class="flex h-full min-h-0 flex-col" aria-label="Barre latérale" @wheel="onWheel">
     <SidebarTop />
-    <div class="px-2 pb-2">
-      <AddressPill />
-    </div>
     <!-- Spaces sit on a carousel: the next one turns in from the side it lies on. -->
     <div class="carousel grid min-h-0 flex-1" :style="{ '--dir': spaces.switchDirection }">
       <Transition name="space">
