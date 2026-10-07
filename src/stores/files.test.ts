@@ -83,7 +83,7 @@ describe.each([
       files.reloadDocument('tab', document.id),
       files.startTransfer('tab', { direction: 'upload', sources: ['/a'], destination: '/' }),
     ]
-    const [shown] = files.state('tab').transfers
+    const [shown] = files.transfers('tab')
     interrupt()
     if (outcome === 'resolves') {
       replies[0].resolve({ owner: 'server-a', path: '/late', entries: [{ name: 'stale' }] })
@@ -136,7 +136,7 @@ it('retries a transfer interrupted by disconnection with its original owner and 
     sources: ['/local/a', '/local/b'],
     destination: '/',
   })
-  const [shown] = files.state('tab').transfers
+  const [shown] = files.transfers('tab')
   files.transferEvent({
     ...shown,
     state: 'running',

@@ -4,10 +4,10 @@ import { filesApi, type RemoteEntry, type RemoteOwner } from '@/ipc/files'
 import { describeError } from '@/ipc/client'
 import { useSessions } from './sessions'
 import { documentActions, isDirty, type RemoteDocument } from './file-documents'
-import { transferActions, type Transfer } from './file-transfers'
+import { transferActions } from './file-transfers'
 export type { RemoteDocument } from './file-documents'
-export type { Transfer, TransferState } from './file-transfers'
-export type { Preparation } from './file-preparation'
+export type { DroppedFile, Transfer, TransferState } from './file-transfers'
+export { isActive, isFinished, isProgressing } from './file-transfers'
 /** The remote explorer of one tab. */
 export interface FileState {
   owner: RemoteOwner | undefined
@@ -17,7 +17,6 @@ export interface FileState {
   documents: RemoteDocument[]
   busy: boolean
   error: string | null
-  transfers: Transfer[]
 }
 /**
  * A tab's ready session when a request began. Its replies apply only while `current()`:
@@ -35,7 +34,6 @@ const empty = (): FileState => ({
   documents: [],
   busy: false,
   error: null,
-  transfers: [],
 })
 const ABSENT: Readonly<FileState> = Object.freeze(empty())
 export const useFiles = defineStore('files', () => {
@@ -109,8 +107,7 @@ export const useFiles = defineStore('files', () => {
     if (!panels[tabId]) return
     links.delete(tabId)
     listings.delete(tabId)
-    transfers.interrupt(tabId)
-    transfers.forget(tabId)
+    transfers.release(tabId)
     delete panels[tabId]
   }
   function unsaved(tabId: string): RemoteDocument[] {

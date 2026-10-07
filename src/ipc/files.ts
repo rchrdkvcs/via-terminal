@@ -89,8 +89,15 @@ export const filesApi = {
     invoke<string[]>('files_pick', { directory, download }),
   stageBegin: () => invoke<string>('files_stage_begin'),
   stageDirectory: (id: string, path: string) => invoke<void>('files_stage_directory', { id, path }),
-  stageChunk: (id: string, path: string, data: number[]) =>
-    invoke<void>('files_stage_chunk', { id, path, data }),
+  /** Sent as raw bytes: the path's length (u32, big-endian), the UTF-8 path, then the data. */
+  stageChunk: (id: string, path: string, data: Uint8Array) => {
+    const name = new TextEncoder().encode(path)
+    const body = new Uint8Array(4 + name.length + data.length)
+    new DataView(body.buffer).setUint32(0, name.length)
+    body.set(name, 4)
+    body.set(data, 4 + name.length)
+    return invoke<void>('files_stage_chunk', body, { headers: { 'Via-Staging': id } })
+  },
   stageFinish: (id: string) => invoke<string[]>('files_stage_finish', { id }),
   stageDiscard: (id: string) => invoke<void>('files_stage_discard', { id }),
 }

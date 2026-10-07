@@ -119,7 +119,7 @@ function detach() {
       />
     </div>
     <TransferList
-      :transfers="panel.transfers"
+      :transfers="files.transfers(tab.id)"
       :connected="!!session"
       @cancel="transfers.cancel"
       @retry="transfers.retry"
