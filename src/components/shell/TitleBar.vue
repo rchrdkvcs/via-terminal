@@ -30,12 +30,12 @@ const tools = [
 </script>
 
 <template>
-  <div
-    data-tauri-drag-region
-    class="grid h-10 shrink-0 grid-cols-[1fr_minmax(0,28rem)_1fr] items-center gap-2 pe-1"
-    :class="!spaces.sidebar.visible && settings.platform === 'macos' ? 'ps-[76px]' : 'ps-1'"
-  >
-    <div data-tauri-drag-region class="flex h-full items-center">
+  <div data-tauri-drag-region class="grid h-10 shrink-0 grid-cols-3 items-center gap-2 px-1">
+    <div
+      data-tauri-drag-region
+      class="flex h-full min-w-0 items-center"
+      :class="!spaces.sidebar.visible && settings.platform === 'macos' ? 'ps-[72px]' : ''"
+    >
       <button
         v-if="!spaces.sidebar.visible"
         type="button"
@@ -47,7 +47,7 @@ const tools = [
         <PanelLeft :size="15" :stroke-width="1.5" />
       </button>
     </div>
-    <AddressPill />
+    <AddressPill class="min-w-0 max-w-md justify-self-center" />
     <div data-tauri-drag-region class="flex h-full items-center justify-end gap-0.5">
       <Tooltip v-for="tool in tools" :key="tool.route">
         <TooltipTrigger as-child>
