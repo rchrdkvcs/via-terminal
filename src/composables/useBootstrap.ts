@@ -15,8 +15,6 @@ import { useVault } from '@/stores/vault'
 import { useWorkbench } from '@/stores/workbench'
 import { useUpdates } from '@/stores/updates'
 
-const ENTER = String.fromCharCode(13)
-
 function previewBootstrap(): Bootstrap {
   const id = crypto.randomUUID()
   return {
@@ -46,12 +44,7 @@ export function useBootstrap() {
   const rememberCwd = useCwdMemory()
 
   terminals.configure({
-    onData: (tabId, data) => {
-      const state = sessions.runtime(tabId).state
-      if (data === ENTER && ['exited', 'disconnected', 'failed'].includes(state)) {
-        workbench.reconnect(tabId)
-      } else sessions.write(tabId, data)
-    },
+    onData: (tabId, data) => sessions.input(tabId, data),
     onResize: (tabId, cols, rows) => sessions.resize(tabId, cols, rows),
     onTitle: (tabId, title) => sessions.setAutoTitle(tabId, title),
     onSelection: (_tabId, text) => {
