@@ -23,7 +23,7 @@ function start(pinned: Row[], temporary: Row[]) {
     const target = findTab(spaces.byId('one')!, tabId)!.target
     return target.kind === 'local' ? target.cwd : null
   }
-  return { cd, cwd, workbench }
+  return { remember, cd, cwd, workbench }
 }
 
 it('a temporary tab follows the shell directory', async () => {
@@ -32,17 +32,11 @@ it('a temporary tab follows the shell directory', async () => {
   expect(cwd('tab')).toBe('/lab/dossier/src')
 })
 
-it('a pinned tab keeps the directory it was pinned with', async () => {
-  const { cd, cwd } = start([at('tab', '/lab/dossier')], [])
-  await cd('tab', '/lab/dossier/src')
-  expect(cwd('tab')).toBe('/lab/dossier')
-})
-
-it('pinning captures the directory at that moment', async () => {
-  const { cd, cwd, workbench } = start([], [row('tab')])
-  await cd('tab', '/lab/dossier')
+it('pinning right after a directory change keeps the new directory', () => {
+  const { remember, cwd, workbench } = start([], [row('tab')])
+  remember('tab', 'file://localhost/lab/dossier', 7)
   workbench.togglePin('tab')
-  await cd('tab', '/lab/dossier/src')
+  remember('tab', 'file://localhost/lab/dossier/src', 7)
   expect(cwd('tab')).toBe('/lab/dossier')
 })
 

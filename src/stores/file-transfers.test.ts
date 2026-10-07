@@ -50,7 +50,7 @@ it('stages dropped files and directories, then uploads them as the same transfer
   chunk.resolve()
   await done
   expect(disk.get('dir')).toBeNull()
-  expect(disk.get('dir/large')).toEqual(new Array(300 * 1024).fill(7))
+  expect(disk.get('dir/large')).toEqual(Array.from({ length: 300 * 1024 }, () => 7))
   expect(disk.get('empty')).toEqual([])
   expect(native.stageChunk.mock.calls.map(([, path, data]) => [path, data.length])).toEqual([
     ['dir/large', 256 * 1024],
@@ -144,7 +144,7 @@ it('an upload interrupted after staging retries from its staged copy, then disca
   await files.retryTransfer('tab', shown.id)
   const [retried] = files.transfers('tab')
   expect(retried.id).not.toBe(shown.id)
-  expect(uploads().at(-1)).toEqual([
+  expect(uploads()[1]).toEqual([
     'session-2',
     expect.objectContaining({ id: retried.id, sources: ['/staged/dir', '/staged/empty'] }),
   ])
