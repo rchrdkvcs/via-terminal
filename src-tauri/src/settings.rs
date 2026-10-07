@@ -115,7 +115,91 @@ impl SettingsStore {
 
 #[cfg(test)]
 mod tests {
-    use super::{CursorStyle, Settings, Theme};
+    use super::{CursorStyle, Settings, SettingsStore, Theme, DOCUMENT};
+    use crate::storage::Storage;
+    use std::sync::Arc;
+
+    fn changed() -> Settings {
+        Settings {
+            theme: Theme::Dark,
+            font_family: "Iosevka".into(),
+            font_size: 16,
+            cursor_style: CursorStyle::Block,
+            default_shell: Some("/bin/zsh".into()),
+            confirm_close_running: true,
+            ..Settings::default()
+        }
+    }
+
+    #[test]
+    fn saved_settings_survive_a_restart() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("via.sqlite");
+        let store = SettingsStore::load(Arc::new(Storage::open(&path).unwrap())).unwrap();
+        assert_eq!(store.get(), Settings::default());
+        assert_eq!(store.save(changed()).unwrap(), changed());
+        assert_eq!(store.get(), changed());
+        drop(store);
+
+        let reopened = SettingsStore::load(Arc::new(Storage::open(&path).unwrap())).unwrap();
+        assert_eq!(reopened.get(), changed());
+    }
+
+    #[test]
+    fn out_of_range_settings_are_refused_and_keep_the_current_ones() {
+        let storage = Arc::new(Storage::memory().unwrap());
+        let store = SettingsStore::load(storage.clone()).unwrap();
+        store.save(changed()).unwrap();
+        for invalid in [
+            Settings {
+                font_size: 7,
+                ..changed()
+            },
+            Settings {
+                line_height: 2.5,
+                ..changed()
+            },
+            Settings {
+                scrollback: 50,
+                ..changed()
+            },
+            Settings {
+                font_family: "x".repeat(201),
+                ..changed()
+            },
+        ] {
+            assert_eq!(store.save(invalid).unwrap_err().code, "invalid");
+        }
+        assert_eq!(store.get(), changed());
+        assert_eq!(SettingsStore::load(storage).unwrap().get(), changed());
+    }
+
+    #[test]
+    fn invalid_or_unreadable_stored_settings_load_as_defaults() {
+        for stored in [
+            serde_json::json!({ "fontSize": 99, "theme": "dark" }),
+            serde_json::json!({ "scrollback": "lots" }),
+            serde_json::json!("not settings"),
+        ] {
+            let storage = Arc::new(Storage::memory().unwrap());
+            storage.save(DOCUMENT, &stored).unwrap();
+            assert_eq!(
+                SettingsStore::load(storage).unwrap().get(),
+                Settings::default()
+            );
+        }
+        let storage = Arc::new(Storage::memory().unwrap());
+        storage
+            .save(DOCUMENT, &serde_json::json!({ "fontSize": 18 }))
+            .unwrap();
+        assert_eq!(
+            SettingsStore::load(storage).unwrap().get(),
+            Settings {
+                font_size: 18,
+                ..Settings::default()
+            }
+        );
+    }
 
     #[test]
     fn unknown_appearance_values_fall_back_to_defaults() {
