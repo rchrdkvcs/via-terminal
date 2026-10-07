@@ -122,3 +122,119 @@ impl SessionIo for LocalSession {
         let _ = self.killer.lock().unwrap().kill();
     }
 }
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::super::{
+        events::{recording::Recorder, Event, SessionState},
+        shells::Shell,
+        LocalSpec, SessionHub, Size,
+    };
+    use std::{
+        sync::Arc,
+        time::{Duration, Instant},
+    };
+    use uuid::Uuid;
+
+    fn output(recorder: &Recorder, id: Uuid) -> String {
+        let events = recorder.0.lock().unwrap();
+        let bytes: Vec<u8> = events
+            .iter()
+            .filter_map(|event| match event {
+                Event::Output { session_id, data } if *session_id == id => Some(data.clone()),
+                _ => None,
+            })
+            .flatten()
+            .collect();
+        String::from_utf8_lossy(&bytes).into_owned()
+    }
+
+    fn exit_code(recorder: &Recorder, id: Uuid) -> Option<Option<i32>> {
+        recorder
+            .0
+            .lock()
+            .unwrap()
+            .iter()
+            .find_map(|event| match event {
+                Event::State {
+                    session_id,
+                    state: SessionState::Exited,
+                    exit_code,
+                    ..
+                } if *session_id == id => Some(*exit_code),
+                _ => None,
+            })
+    }
+
+    fn eventually<T>(what: &str, mut check: impl FnMut() -> Option<T>) -> T {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            if let Some(value) = check() {
+                return value;
+            }
+            assert!(Instant::now() < deadline, "timed out waiting for {what}");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    #[test]
+    fn a_local_shell_runs_input_and_reports_its_exit() {
+        let recorder = Arc::new(Recorder::default());
+        let hub = SessionHub::new(recorder.clone());
+        let spec = LocalSpec {
+            shell: Shell {
+                path: "/bin/sh".into(),
+                name: "sh".into(),
+                args: Vec::new(),
+            },
+            cwd: Some(std::env::temp_dir().to_string_lossy().into_owned()),
+        };
+        let id = hub.open_local(spec, Size { cols: 80, rows: 24 }).unwrap();
+        assert_eq!(recorder.states(id), vec![SessionState::Ready]);
+
+        hub.resize(
+            id,
+            Size {
+                cols: 120,
+                rows: 40,
+            },
+        )
+        .unwrap();
+        hub.write(id, b"echo via-$((40 + 2))\n").unwrap();
+        eventually("the command output", || {
+            output(&recorder, id).contains("via-42").then_some(())
+        });
+
+        hub.write(id, b"exit 3\n").unwrap();
+        let code = eventually("the shell exit", || exit_code(&recorder, id));
+        assert_eq!(code, Some(3));
+        assert_eq!(
+            recorder.states(id),
+            vec![SessionState::Ready, SessionState::Exited]
+        );
+        assert_eq!(hub.write(id, b"echo\n").unwrap_err().code, "session_closed");
+    }
+
+    #[test]
+    fn closing_a_local_shell_ends_it() {
+        let recorder = Arc::new(Recorder::default());
+        let hub = SessionHub::new(recorder.clone());
+        let spec = LocalSpec {
+            shell: Shell {
+                path: "/bin/sh".into(),
+                name: "sh".into(),
+                args: Vec::new(),
+            },
+            cwd: None,
+        };
+        let id = hub.open_local(spec, Size { cols: 80, rows: 24 }).unwrap();
+        hub.close(id);
+        eventually("the shell exit", || exit_code(&recorder, id));
+        assert_eq!(
+            hub.resize(id, Size { cols: 80, rows: 24 })
+                .unwrap_err()
+                .code,
+            "session_closed"
+        );
+    }
+}
