@@ -136,3 +136,67 @@ async fn retries_into_the_directory_chosen_by_keep_both_in_both_directions() {
     }
     tokio::fs::remove_dir_all(root).await.unwrap();
 }
+#[tokio::test]
+async fn retry_refuses_a_remembered_directory_outside_the_destination_in_both_directions() {
+    let (client, server) = tokio::io::duplex(256 * 1024);
+    russh_sftp::server::run(server, Peer::new(true)).await;
+    let recorder = Arc::new(Recorder::default());
+    let files = Files::from_stream(client, Uuid::new_v4(), Default::default(), recorder.clone())
+        .await
+        .unwrap();
+    let root = std::env::temp_dir().join(format!("via-retry-escape-{}", Uuid::new_v4()));
+    let source = root.join("folder");
+    let output = root.join("output");
+    tokio::fs::create_dir_all(&source).await.unwrap();
+    tokio::fs::create_dir(&output).await.unwrap();
+    tokio::fs::write(source.join("item"), b"local")
+        .await
+        .unwrap();
+    let create = Request::Create {
+        parent: "/".into(),
+        name: "folder".into(),
+        directory: true,
+    };
+    files.json(create).await.unwrap();
+    let outside = root.join("outside").to_string_lossy().into_owned();
+    let upload = source.to_string_lossy().into_owned();
+    for (direction, source, destination, remembered) in [
+        (Direction::Upload, upload, "/folder".to_owned(), "/escaped"),
+        (
+            Direction::Download,
+            "/folder".to_owned(),
+            output.to_string_lossy().into_owned(),
+            outside.as_str(),
+        ),
+    ] {
+        let id = Uuid::new_v4();
+        files
+            .json(Request::Transfer(super::model::TransferPlan {
+                id,
+                direction,
+                sources: vec![source.clone()],
+                destination,
+                completed_sources: vec![],
+                directories: [(source, remembered.to_owned())].into(),
+                owner: Default::default(),
+            }))
+            .await
+            .unwrap();
+        wait(&recorder, id, super::model::TransferState::Failed).await;
+    }
+    assert!(files
+        .json(Request::List {
+            path: "/escaped".into()
+        })
+        .await
+        .is_err());
+    assert!(!root.join("outside").exists());
+    assert!(tokio::fs::read_dir(&output)
+        .await
+        .unwrap()
+        .next_entry()
+        .await
+        .unwrap()
+        .is_none());
+    tokio::fs::remove_dir_all(root).await.unwrap();
+}

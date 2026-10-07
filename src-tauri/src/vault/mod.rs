@@ -17,7 +17,10 @@ use crate::{error::AppResult, secrets::Secrets, storage::Storage};
 use model::{secret_id, Id, SecretKind, VaultData, VaultSnapshot};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex,
+    },
 };
 
 const DOCUMENT: &str = "vault";
@@ -26,6 +29,7 @@ pub struct Vault {
     storage: Arc<Storage>,
     secrets: Arc<Secrets>,
     data: Mutex<VaultData>,
+    revision: AtomicU64,
 }
 
 #[derive(serde::Serialize)]
@@ -35,6 +39,8 @@ pub struct VaultView {
     pub snapshot: VaultSnapshot,
 
     pub effective: HashMap<Id, resolve::Effective>,
+
+    pub revision: u64,
 }
 
 impl Vault {
@@ -44,6 +50,7 @@ impl Vault {
             storage,
             secrets,
             data: Mutex::new(data),
+            revision: AtomicU64::new(0),
         })
     }
 
@@ -81,6 +88,7 @@ impl Vault {
                 secrets_available: self.secrets.available(),
             },
             effective,
+            revision: self.revision.load(Ordering::Relaxed),
         })
     }
 

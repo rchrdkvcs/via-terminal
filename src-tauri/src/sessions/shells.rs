@@ -1,3 +1,4 @@
+use crate::error::{AppError, AppResult};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
@@ -20,7 +21,65 @@ const CANDIDATES: &[&str] = &[
 #[cfg(not(windows))]
 const CANDIDATES: &[&str] = &["zsh", "bash", "fish", "sh", "nu", "pwsh"];
 
-pub fn detect() -> Vec<Shell> {
+/// The only shells the interface may launch, plus the user's login shell.
+pub struct DetectedShells {
+    shells: Vec<Shell>,
+    login: Option<String>,
+}
+
+impl DetectedShells {
+    pub fn detect() -> Self {
+        let login = if cfg!(windows) {
+            None
+        } else {
+            std::env::var("SHELL").ok()
+        };
+        Self::new(detect(), login)
+    }
+
+    pub fn new(shells: Vec<Shell>, login: Option<String>) -> Self {
+        Self { shells, login }
+    }
+
+    pub fn list(&self) -> &[Shell] {
+        &self.shells
+    }
+
+    pub fn system_default(&self) -> Option<&Shell> {
+        self.login
+            .as_deref()
+            .and_then(|path| self.find(path))
+            .or_else(|| self.shells.first())
+    }
+
+    /// Picks the requested shell, else the configured default, else the system
+    /// default, and refuses any path that was not detected.
+    pub fn resolve(
+        &self,
+        requested: Option<String>,
+        configured: Option<String>,
+    ) -> AppResult<Shell> {
+        let wanted = match requested.or(configured) {
+            Some(path) => path,
+            None => self
+                .system_default()
+                .ok_or_else(|| {
+                    AppError::new("no_shell", "aucun shell n’a été trouvé sur cette machine")
+                })?
+                .path
+                .clone(),
+        };
+        self.find(&wanted)
+            .cloned()
+            .ok_or_else(|| AppError::new("no_shell", "ce shell n’est pas installé"))
+    }
+
+    fn find(&self, path: &str) -> Option<&Shell> {
+        self.shells.iter().find(|shell| shell.path == path)
+    }
+}
+
+fn detect() -> Vec<Shell> {
     let mut shells: Vec<Shell> = Vec::new();
     for candidate in CANDIDATES {
         let Some(path) = locate(candidate) else {
@@ -37,17 +96,6 @@ pub fn detect() -> Vec<Shell> {
         });
     }
     shells
-}
-
-pub fn default_path(shells: &[Shell]) -> Option<String> {
-    let preferred = if cfg!(windows) {
-        None
-    } else {
-        std::env::var("SHELL").ok()
-    };
-    preferred
-        .filter(|path| shells.iter().any(|shell| &shell.path == path))
-        .or_else(|| shells.first().map(|shell| shell.path.clone()))
 }
 
 fn locate(command: &str) -> Option<PathBuf> {
@@ -105,14 +153,74 @@ mod tests {
         assert_eq!(label("/usr/bin/zsh"), "Zsh");
     }
 
-    #[test]
-    fn default_falls_back_to_first_detected() {
-        let shells = vec![Shell {
-            path: "/bin/a".into(),
-            name: "a".into(),
+    fn shell(path: &str) -> Shell {
+        Shell {
+            path: path.into(),
+            name: label(path),
             args: vec![],
-        }];
-        assert_eq!(default_path(&shells).as_deref(), Some("/bin/a"));
-        assert_eq!(default_path(&[]), None);
+        }
+    }
+
+    fn detected(login: Option<&str>) -> DetectedShells {
+        DetectedShells::new(
+            vec![shell("/bin/zsh"), shell("/bin/bash"), shell("/bin/fish")],
+            login.map(String::from),
+        )
+    }
+
+    fn resolved(
+        shells: &DetectedShells,
+        requested: Option<&str>,
+        configured: Option<&str>,
+    ) -> String {
+        shells
+            .resolve(requested.map(String::from), configured.map(String::from))
+            .unwrap()
+            .path
+    }
+
+    #[test]
+    fn refuses_a_path_that_was_not_detected() {
+        let shells = detected(Some("/bin/bash"));
+        for (requested, configured) in [
+            (Some("/usr/bin/evil"), None),
+            (Some("/usr/bin/evil"), Some("/bin/bash")),
+            (None, Some("/usr/bin/evil")),
+        ] {
+            let error = shells
+                .resolve(requested.map(String::from), configured.map(String::from))
+                .unwrap_err();
+            assert_eq!(error.code, "no_shell");
+        }
+    }
+
+    #[test]
+    fn prefers_requested_then_configured_then_login_then_first() {
+        let shells = detected(Some("/bin/bash"));
+        assert_eq!(
+            resolved(&shells, Some("/bin/fish"), Some("/bin/zsh")),
+            "/bin/fish"
+        );
+        assert_eq!(resolved(&shells, None, Some("/bin/fish")), "/bin/fish");
+        assert_eq!(resolved(&shells, None, None), "/bin/bash");
+        assert_eq!(
+            resolved(&detected(Some("/opt/undetected")), None, None),
+            "/bin/zsh"
+        );
+        assert_eq!(resolved(&detected(None), None, None), "/bin/zsh");
+    }
+
+    #[test]
+    fn no_detected_shell_is_an_error() {
+        let shells = DetectedShells::new(vec![], Some("/bin/zsh".into()));
+        assert!(shells.system_default().is_none());
+        assert_eq!(shells.resolve(None, None).unwrap_err().code, "no_shell");
+        assert_eq!(
+            shells
+                .resolve(Some("/bin/zsh".into()), None)
+                .unwrap_err()
+                .code,
+            "no_shell"
+        );
     }
 }

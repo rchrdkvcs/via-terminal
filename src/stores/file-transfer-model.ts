@@ -4,6 +4,7 @@ import {
   type TransferEvent,
   type TransferPlan,
 } from '@/ipc/files'
+import type { Connection } from './files'
 /** `preparing` exists only here: a drop copied to local staging before its upload starts. */
 export type TransferState = TransferEvent['state'] | 'preparing'
 export interface Transfer {
@@ -23,7 +24,7 @@ export interface Transfer {
 /** Store-private record of a transfer, kept beyond its list item until settled. */
 export interface Tracked {
   tabId: string
-  sessionId: string
+  connection: Connection | null
   state: TransferState
   plan?: TransferPlan
   stagingId?: string

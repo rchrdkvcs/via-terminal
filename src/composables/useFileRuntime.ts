@@ -1,19 +1,19 @@
 import { onScopeDispose, watch } from 'vue'
 import { on } from '@/ipc/events'
-import { filesApi, type FileRequest, type TransferEvent } from '@/ipc/files'
+import type { TransferEvent } from '@/ipc/files'
 import { useFiles } from '@/stores/files'
 import { useFileDialogs } from '@/stores/file-dialogs'
 import { useSessions } from '@/stores/sessions'
 import { useSpaces } from '@/stores/spaces'
 import { findTab, isPinned } from '@/domain/space'
-/** Routes native transfer events, asks collision questions and follows session changes. */
+/** Routes native transfer events, asks collision questions and keeps tab directories. */
 export function useFileRuntime() {
   const files = useFiles(),
     sessions = useSessions(),
     spaces = useSpaces(),
     dialogs = useFileDialogs()
-  async function resolve(tabId: string, event: TransferEvent) {
-    const answer = await dialogs.ask({
+  async function resolve(event: TransferEvent) {
+    const { choice, all } = await dialogs.ask({
       title: 'Le fichier existe déjà',
       description:
         event.path +
@@ -25,44 +25,17 @@ export function useFileRuntime() {
         { label: 'Conserver les deux', value: 'keepBoth' },
       ],
     })
-    const runtime = sessions.runtime(tabId)
-    if (runtime.sessionId !== event.sessionId || runtime.state !== 'ready') return
-    const { choice, all } = answer
-    const request: FileRequest =
-      choice === 'cancel'
-        ? { operation: 'cancel', id: event.id }
-        : { operation: 'resolve', id: event.id, choice, all }
-    await filesApi.request(event.sessionId, request).catch(() => undefined)
+    await files.resolveTransfer(event.id, choice, all)
   }
   const stop = on('file-transfer', async (event) => {
     const tabId = sessions.tabOf(event.sessionId)
-    files.transferEvent(tabId, event)
+    files.transferEvent(event)
     if (!tabId) return
-    if (event.state === 'conflict') await resolve(tabId, event)
+    if (event.state === 'conflict') await resolve(event)
     const panel = files.panels[tabId]
-    if (
-      (event.state === 'completed' || event.state === 'cancelled') &&
-      panel?.sessionId === event.sessionId &&
-      sessions.runtime(tabId).state === 'ready'
-    )
-      void files.navigate(tabId, event.sessionId, panel.directory)
+    if (panel && (event.state === 'completed' || event.state === 'cancelled'))
+      void files.navigate(tabId, panel.directory)
   })
-  watch(
-    () =>
-      Object.entries(files.panels).map(
-        ([id, panel]) =>
-          [
-            id,
-            panel.sessionId,
-            sessions.runtime(id).sessionId,
-            sessions.runtime(id).state,
-          ] as const,
-      ),
-    (states) => {
-      for (const [id, previous, current, state] of states)
-        if (previous && (previous !== current || state !== 'ready')) files.disconnect(id)
-    },
-  )
   // Terminals and explorer tabs follow their directory until pinned, then keep the one they
   // were pinned at.
   watch(

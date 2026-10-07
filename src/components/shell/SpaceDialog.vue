@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { LAYOUT_LIMITS } from '@/domain/limits'
 import { spaceIcons } from '@/domain/space-icons'
 import { spaceIcon } from '@/components/sidebar/spaceIcons'
 import { useSettings } from '@/stores/settings'
@@ -75,6 +76,7 @@ function submit() {
           <Input
             v-model="draft.name"
             aria-label="Nom de l’espace"
+            :maxlength="LAYOUT_LIMITS.nameLength"
             placeholder="Client Dupont, Maison, Labo…"
             class="h-9 text-[14px]"
             autofocus

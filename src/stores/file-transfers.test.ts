@@ -4,7 +4,7 @@ import { useFiles } from './files'
 
 async function preparing() {
   await connect()
-  const job = useFiles().prepareTransfer('tab', 'session', '/', 10)!
+  const job = useFiles().prepareTransfer('tab', '/', 10)!
   native.stageBegin.mockResolvedValueOnce('staging')
   return job
 }
@@ -22,7 +22,7 @@ it('cancelling a preparation stops it and discards its staging', async () => {
   const files = useFiles()
   const job = await preparing()
   job.stage('staging')
-  await files.cancelTransfer('session', job.id)
+  await files.cancelTransfer(job.id)
   expect(job.active()).toBe(false)
   expect(native.stageDiscard).toHaveBeenCalledWith('staging')
   expect(files.state('tab').transfers[0].state).toBe('cancelled')
@@ -46,7 +46,7 @@ it('a preparation finished after its owner closed neither starts nor recreates t
 it('staging begun after cancellation is discarded immediately', async () => {
   const files = useFiles()
   const job = await preparing()
-  await files.cancelTransfer('session', job.id)
+  await files.cancelTransfer(job.id)
   expect(job.stage('late-staging')).toBe(false)
   expect(native.stageDiscard).toHaveBeenCalledWith('late-staging')
 })

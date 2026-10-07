@@ -11,6 +11,16 @@ fn a_host_only_needs_an_address() {
 }
 
 #[test]
+fn views_carry_a_revision_that_only_committed_changes_advance() {
+    let vault = vault();
+    let before = vault.view().unwrap().revision;
+    assert!(vault.save_host(host("")).is_err());
+    assert_eq!(vault.view().unwrap().revision, before);
+    vault.save_host(host("a")).unwrap();
+    assert_eq!(vault.view().unwrap().revision, before + 1);
+}
+
+#[test]
 fn hosts_inherit_from_groups_and_identities() {
     let vault = vault();
     let identity = vault

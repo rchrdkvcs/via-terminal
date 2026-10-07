@@ -31,6 +31,18 @@ impl Storage {
         Self::prepare(connection)
     }
 
+    #[cfg(test)]
+    pub(crate) fn documents_with_prefix<T: DeserializeOwned>(
+        &self,
+        prefix: &str,
+    ) -> AppResult<Vec<T>> {
+        let connection = self.connection.lock().unwrap();
+        let mut statement = connection
+            .prepare("SELECT json FROM documents WHERE key LIKE ?1 || '%' ORDER BY key")?;
+        let rows = statement.query_map([prefix], |row| row.get::<_, String>(0))?;
+        rows.map(|json| Ok(serde_json::from_str(&json?)?)).collect()
+    }
+
     fn prepare(connection: Connection) -> AppResult<Self> {
         connection.execute_batch(SCHEMA)?;
         Ok(Self {

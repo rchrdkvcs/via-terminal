@@ -3,6 +3,8 @@ export class SessionRouting<Id = string> {
   private early = new Map<Id, Array<(tabId: Id) => void>>()
   private finished = new Set<Id>()
 
+  constructor(private readonly remembered = 256) {}
+
   bind(sessionId: Id, tabId: Id) {
     this.tabs.set(sessionId, tabId)
     const early = this.early.get(sessionId) ?? []
@@ -13,7 +15,12 @@ export class SessionRouting<Id = string> {
   finish(sessionId: Id) {
     this.tabs.delete(sessionId)
     this.early.delete(sessionId)
+    this.finished.delete(sessionId)
     this.finished.add(sessionId)
+    for (const oldest of this.finished) {
+      if (this.finished.size <= this.remembered) break
+      this.finished.delete(oldest)
+    }
   }
 
   tabOf(sessionId: Id): Id | undefined {

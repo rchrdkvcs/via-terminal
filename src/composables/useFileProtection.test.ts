@@ -4,10 +4,6 @@ import { useFiles } from '@/stores/files'
 import { useFileDialogs } from '@/stores/file-dialogs'
 import { useFileProtection } from './useFileProtection'
 
-vi.mock('@/stores/sessions', () => ({
-  useSessions: () => ({ runtime: () => ({ state: 'asleep', sessionId: null }) }),
-}))
-
 /** Answers the next explorer question once it is shown, and returns it. */
 async function reply(choice: string) {
   const dialogs = useFileDialogs()
@@ -32,7 +28,7 @@ it('cancelling the transfer stop keeps discarded drafts and transfers', async ()
   const files = useFiles()
   const document = await draft()
   native.request.mockResolvedValueOnce(null)
-  await files.startTransfer('tab', 'session', {
+  await files.startTransfer('tab', {
     direction: 'upload',
     sources: ['/a'],
     destination: '/',
@@ -70,7 +66,7 @@ it('drafts are lost only when the closing succeeds, and later edits are asked ag
 it('never offers to save a draft through another endpoint or account', async () => {
   const files = useFiles()
   await draft()
-  files.state('tab').owner = 'server-b'
+  files.panels.tab.owner = 'server-b'
   const deciding = useFileProtection().protect(['tab'])
   const question = await reply('cancel')
   expect(question.actions.map((action) => action.value)).toEqual(['discard'])

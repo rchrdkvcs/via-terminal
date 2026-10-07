@@ -49,8 +49,7 @@ sessions/           live sessions behind tabs
 ipc/                typed commands and events, mirrors of the Rust wire types
 domain/             pure logic, no Vue: organize (intents), split, drop, search, quick-connect, palette
 stores/             spaces, sessions, workbench, vault, settings, ui, files (Pinia), and the
-                    store-private parts of sessions (session-events), workbench
-                    (workbench-opening, -lifecycle, -effects) and files (file-documents,
+                    store-private parts of workbench (workbench-opening, -lifecycle, -effects) and files (file-documents,
                     -transfers, -preparation, -transfer-model); file-dialogs queues
                     explorer questions
 terminal/           xterm instances keyed by tab, outside the Vue tree
@@ -63,7 +62,7 @@ components/
   command/          command bar
   workbench/        panes, split view, connection panel and prompts
   files/            explorer, CodeMirror documents and transfer controls; useFileOperations
-                    and useFileTransfers start operations from the explorer's scope
+                    and useFileTransfers start operations on the explorer's current connection
   vault/            vault page
   settings/         settings page
   ui/               shadcn-vue primitives
@@ -73,13 +72,13 @@ components/
 
 **Tab lifecycle.** `stores/workbench` owns complete operations for closing tabs, removing spaces, transferring rows and opening beside an existing tab. It commits organization before starting or releasing sessions, owns successor focus, and exposes focus as read-only state. Compound organization intents and transfers publish only when every step succeeds. Confirmations and undo notifications remain in the interface's presentation code; their callers do not orchestrate runtime cleanup.
 
-**Sessions.** `stores/sessions` maps session ids to tabs and buffers events that arrive before `open` returns. `lib/session-routing` delivers an event only while its session is still bound to the tab, so an early exit drops the events queued after it. Renderers are keyed by tab in `terminal/registry`. Reconnecting therefore replaces the session without clearing the scrollback.
+**Sessions.** `stores/sessions` subscribes to session events, maps session ids to tabs and buffers events that arrive before `open` returns. It also owns terminal input: keystrokes go to a ready session, and Enter in an exited, disconnected or failed tab reconnects it. `lib/session-routing` delivers an event only while its session is still bound to the tab, so an early exit drops the events queued after it. Renderers are keyed by tab in `terminal/registry`. Reconnecting therefore replaces the session without clearing the scrollback.
 
 An opening attempt belongs to its tab until it succeeds or is invalidated by stop or release. A late native result is closed instead of attached; its events and errors cannot affect a replacement attempt.
 
 The terminal registry exposes tab-level search, selection and paste operations. Its xterm instances and addons remain internal; paste still uses xterm's bracketed-paste handling.
 
-**Vault editing.** `useDraft` validates a draft when it is saved, so an invalid version is never queued. `components/vault/saveQueue` saves each record one request at a time, keyed by kind and id and shared by every editor: the vault page remounts its editor on each selection, and a reopened editor queues behind the saves of the closed one. Consecutive requests from one editor coalesce into its latest draft; a failed or unanswered save does not drop the requests queued behind it, and nothing is retried unless the user asked for it. A creation is queued by its editor until it has an id; later saves of that record then queue behind it, so it is never created twice. An editor acknowledges only the version that was submitted, keeps edits made while saving dirty, clears a password only when that submitted password is still current, and shows the outcome of its latest request only. Creation drains later edits before returning the new id. Queued snapshots are saved after their editor closes, but their responses no longer change any editor.
+**Vault editing.** `useDraft` validates a draft when it is saved, so an invalid version is never queued. `stores/vault-saves`, owned by the vault store (the only writer of hosts, groups and identities), saves each record one request at a time, keyed by kind and id and shared by every editor: the vault page remounts its editor on each selection, and a reopened editor queues behind the saves of the closed one. Consecutive requests from one editor coalesce into its latest draft; a failed or unanswered save does not drop the requests queued behind it, and nothing is retried unless the user asked for it. A creation is queued by its editor until it has an id; later saves of that record then queue behind it, so it is never created twice. An editor acknowledges only the version that was submitted, keeps edits made while saving dirty, clears a password only when that submitted password is still current, and shows the outcome of its latest request only. Creation drains later edits before returning the new id. Queued snapshots are saved after their editor closes, but their responses no longer change any editor. Renames from the sidebar or the group tree are patches applied to the record's latest queued version, deleting drops its waiting saves, and `vault.flush` is the single flush; replies carry the vault revision so an older one never replaces a newer view.
 
 **Shortcuts.** `lib/shortcuts.ts` is the only list of shortcuts. Outside macOS they use Ctrl+Shift, so the shell's own Ctrl shortcuts keep working. In text fields and the document editor only navigation and global actions apply (`appliesWhileEditing`); the terminal keeps every shortcut.
 
@@ -91,4 +90,4 @@ The terminal registry exposes tab-level search, selection and paste operations. 
 
 **Remote files.** Each SSH actor opens one lazy SFTP service on its authenticated handle (`ssh/sftp.rs`). Opening is polled beside the shell reader, so a shell filling its channel cannot stall it; calls arriving meanwhile wait for that single attempt. The `files::Files` service answers typed requests with typed replies; transfer progress travels through `EventSink`. Atomic document replacement requires the OpenSSH extension and verified metadata. Remote names follow POSIX; only local names are checked against the platform.
 
-The in-memory `stores/files` keeps per-tab drafts, generation guards against stale replies, and every transfer plan: retry, drop preparation and staging cleanup are store operations, so a released explorer is never recreated by a late reply. `useFileProtection` turns closing questions into a decision that loses nothing; `release` applies it only after the tab, space, target or application actually closed, and asks again if a draft or transfer changed meanwhile. Pinned tab layout retains only `remoteCwd`, never documents. See ADR-0009 and ADR-0010.
+The in-memory `stores/files` keeps per-tab drafts and every transfer plan. It reads each tab's ready session from `stores/sessions` itself and keeps one connection generation per explorer, renewed when the session changes or the explorer is released; every reply, success or failure, applies only while its generation is current. Reading an explorer never creates it. Retry, drop preparation and staging cleanup are store operations, so a released explorer is never recreated by a late reply. `useFileProtection` turns closing questions into a decision that loses nothing; `release` applies it only after the tab, space, target or application actually closed, and asks again if a draft or transfer changed meanwhile. Pinned tab layout retains only `remoteCwd`, never documents. See ADR-0009 and ADR-0010.

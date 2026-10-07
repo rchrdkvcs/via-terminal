@@ -13,6 +13,7 @@ import { useSidebarActions } from '@/composables/useSidebarActions'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import InlineRename from './InlineRename.vue'
+import { LAYOUT_LIMITS } from '@/domain/limits'
 import RowArea from './RowArea.vue'
 
 const props = defineProps<{ folder: FolderEntry }>()
@@ -66,6 +67,7 @@ const rename = (name: string) => {
             v-if="ui.renaming === folder.id"
             :value="folder.name"
             label="Nom du dossier"
+            :maxlength="LAYOUT_LIMITS.nameLength"
             @commit="rename"
             @cancel="ui.renaming = null"
           />
