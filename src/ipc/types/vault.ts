@@ -14,14 +14,19 @@ export interface Group {
   defaults: Defaults
 }
 
+export type HostCredential =
+  | { kind: 'inherit'; username: string | null; key: Id | null }
+  | { kind: 'identity'; id: Id }
+  | { kind: 'key'; id: Id; username: string | null }
+  | { kind: 'password'; username: string | null }
+
 export interface Host {
-  ownCredentials?: boolean
   id: Id
   groupId: Id | null
   label: string
   address: string
-  overrides: Defaults
-  keyId: Id | null
+  port: number | null
+  credential: HostCredential
   tags: string[]
   notes: string
   createdAt: number
@@ -93,13 +98,12 @@ export type SecretUpdate =
   | { action: 'set'; value: string }
 
 export interface HostInput {
-  ownCredentials?: boolean
   id: Id | null
   groupId: Id | null
   label: string
   address: string
-  overrides: Defaults
-  keyId: Id | null
+  port: number | null
+  credential: HostCredential
   tags: string[]
   notes: string
   password: SecretUpdate

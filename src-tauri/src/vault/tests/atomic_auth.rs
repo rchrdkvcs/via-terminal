@@ -4,7 +4,7 @@ use crate::{
     vault::{
         input::{HostInput, SecretUpdate},
         model::{secret_id, SecretKind},
-        Vault,
+        HostCredential, Vault,
     },
 };
 use zeroize::Zeroizing;
@@ -18,7 +18,10 @@ fn failure_on_second_secret_rolls_back_first_secret_and_connection_timestamp() {
     let key = vault.generate_key("key").unwrap();
     let saved = vault
         .save_host(HostInput {
-            key_id: Some(key.id),
+            credential: HostCredential::Key {
+                id: key.id,
+                username: None,
+            },
             password: SecretUpdate::Set("old".into()),
             ..host("a")
         })
@@ -81,7 +84,10 @@ fn completed_authentication_does_not_remember_a_deleted_keys_passphrase() {
     let key = vault.generate_key("key").unwrap();
     let saved = vault
         .save_host(HostInput {
-            key_id: Some(key.id),
+            credential: HostCredential::Key {
+                id: key.id,
+                username: None,
+            },
             ..host("a")
         })
         .unwrap();

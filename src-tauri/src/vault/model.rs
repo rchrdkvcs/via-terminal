@@ -1,3 +1,4 @@
+use super::credential::HostCredential;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -24,25 +25,65 @@ pub struct Defaults {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", from = "StoredHost")]
 pub struct Host {
-    #[serde(default)]
-    pub own_credentials: bool,
     pub id: Id,
     pub group_id: Option<Id>,
     pub label: String,
     pub address: String,
-    #[serde(default)]
-    pub overrides: Defaults,
-    pub key_id: Option<Id>,
-    #[serde(default)]
+    pub port: Option<u16>,
+    pub credential: HostCredential,
     pub tags: Vec<String>,
-    #[serde(default)]
     pub notes: String,
-    #[serde(default)]
     pub created_at: i64,
-    #[serde(default)]
     pub last_connected_at: Option<i64>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredHost {
+    id: Id,
+    group_id: Option<Id>,
+    label: String,
+    address: String,
+    port: Option<u16>,
+    credential: Option<HostCredential>,
+    #[serde(default)]
+    own_credentials: bool,
+    #[serde(default)]
+    overrides: Defaults,
+    key_id: Option<Id>,
+    #[serde(default)]
+    tags: Vec<String>,
+    #[serde(default)]
+    notes: String,
+    #[serde(default)]
+    created_at: i64,
+    #[serde(default)]
+    last_connected_at: Option<i64>,
+}
+
+impl From<StoredHost> for Host {
+    fn from(stored: StoredHost) -> Self {
+        Self {
+            id: stored.id,
+            group_id: stored.group_id,
+            label: stored.label,
+            address: stored.address,
+            port: stored.port.or(stored.overrides.port),
+            credential: stored.credential.unwrap_or_else(|| {
+                HostCredential::from_legacy(
+                    stored.own_credentials,
+                    &stored.overrides,
+                    stored.key_id,
+                )
+            }),
+            tags: stored.tags,
+            notes: stored.notes,
+            created_at: stored.created_at,
+            last_connected_at: stored.last_connected_at,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

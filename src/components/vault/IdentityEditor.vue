@@ -31,7 +31,9 @@ const { draft, error, saving, commit, autosave } = useDraft({
 
 const usage = computed(() => {
   const id = props.identityId
-  const hosts = vault.view.hosts.filter((host) => host.overrides.identityId === id).length
+  const hosts = vault.view.hosts.filter(
+    ({ credential }) => credential.kind === 'identity' && credential.id === id,
+  ).length
   const groups = vault.view.groups.filter((group) => group.defaults.identityId === id).length
   if (!hosts && !groups) return 'Utilisée par aucun hôte ni groupe'
   const parts = [

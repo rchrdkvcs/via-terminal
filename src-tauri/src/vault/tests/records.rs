@@ -1,5 +1,5 @@
 use super::{host, vault};
-use crate::vault::{input::*, model::*};
+use crate::vault::{input::*, model::*, HostCredential};
 
 #[test]
 fn a_host_only_needs_an_address() {
@@ -104,7 +104,10 @@ fn generated_keys_are_usable_by_plans() {
     assert!(key.public_key.starts_with("ssh-ed25519 "));
     let saved = vault
         .save_host(HostInput {
-            key_id: Some(key.id),
+            credential: HostCredential::Key {
+                id: key.id,
+                username: None,
+            },
             ..host("a")
         })
         .unwrap();

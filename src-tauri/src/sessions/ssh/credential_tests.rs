@@ -9,7 +9,7 @@ use crate::{
     storage::Storage,
     vault::{
         input::{IdentityInput, SecretUpdate},
-        QuickTarget, Vault,
+        HostCredential, QuickTarget, Vault,
     },
 };
 use std::sync::Arc;
@@ -117,8 +117,10 @@ async fn refused_password_can_switch_to_an_identity_with_a_different_username() 
     harness.state(id, SessionState::Ready).await;
     let view = vault.view().unwrap();
     let host = &view.snapshot.data.hosts[0];
-    assert_eq!(host.overrides.identity_id, Some(identity.id));
-    assert!(host.overrides.username.is_none());
+    assert_eq!(
+        host.credential,
+        HostCredential::Identity { id: identity.id }
+    );
     let plan = vault.plan(host.id).unwrap();
     assert_eq!(plan.username.as_deref(), Some("via-key"));
     assert_eq!(plan.key.unwrap().id, key.id);

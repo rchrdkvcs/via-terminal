@@ -2,6 +2,7 @@
 import { Copy, Plug, Trash2 } from '@lucide/vue'
 import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
+import { effective } from '@/domain/credentials'
 import type { Id } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
 import { relativeTime } from './format'
@@ -9,7 +10,6 @@ import HostAddressFields from './HostAddressFields.vue'
 import HostCredentials from './HostCredentials.vue'
 import HostDetails from './HostDetails.vue'
 import IconAction from './IconAction.vue'
-import { inherited } from './inherit'
 import { hostInput, requireAddress } from './inputs'
 import InspectorLayout from './InspectorLayout.vue'
 import { useDraft } from './useDraft'
@@ -28,9 +28,7 @@ const { draft, error, saving, commit, autosave } = useDraft({
 })
 
 const host = computed(() => (props.hostId ? vault.host(props.hostId) : undefined))
-const resolved = computed(() =>
-  inherited(vault.view, draft.value.groupId, draft.value.overrides.identityId),
-)
+const resolved = computed(() => effective(vault.view, draft.value))
 const title = computed(() => draft.value.label || draft.value.address || 'Nouvel hôte')
 const subtitle = computed(() => {
   if (!host.value) return 'Seule l’adresse est nécessaire.'

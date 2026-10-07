@@ -95,18 +95,20 @@ impl Vault {
 
     pub fn delete_identity(&self, id: Id) -> AppResult<()> {
         self.commit_with_secrets(|data, secrets| {
-            let before = data.identities.len();
+            let identity = data
+                .identities
+                .iter()
+                .find(|identity| identity.id == id)
+                .cloned()
+                .ok_or_else(|| AppError::not_found("identité"))?;
             data.identities.retain(|identity| identity.id != id);
-            if data.identities.len() == before {
-                return Err(AppError::not_found("identité"));
+            for host in &mut data.hosts {
+                host.credential.identity_removed(&identity);
             }
-            let defaults = data
-                .hosts
-                .iter_mut()
-                .map(|host| &mut host.overrides)
-                .chain(data.groups.iter_mut().map(|group| &mut group.defaults));
-            for defaults in defaults.filter(|d| d.identity_id == Some(id)) {
-                defaults.identity_id = None;
+            for group in data.groups.iter_mut() {
+                if group.defaults.identity_id == Some(id) {
+                    group.defaults.identity_id = None;
+                }
             }
             secrets.forget(id);
             Ok(())

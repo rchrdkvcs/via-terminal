@@ -2,11 +2,12 @@
 import { FolderPlus, Trash2 } from '@lucide/vue'
 import { computed } from 'vue'
 import { Input } from '@/components/ui/input'
+import { inherited } from '@/domain/credentials'
 import type { Id } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
 import IconAction from './IconAction.vue'
 import IdSelect from './IdSelect.vue'
-import { hint, identityHint, inherited } from './inherit'
+import { hint, identityHint } from './inherit'
 import { groupInput } from './inputs'
 import InspectorLayout from './InspectorLayout.vue'
 import PortField from './PortField.vue'
@@ -28,15 +29,11 @@ const { draft, error, autosave } = useDraft({
   validate: (input) => (input.name.trim() ? null : 'Donnez un nom au groupe.'),
 })
 
-const resolved = computed(() =>
-  inherited(vault.view, draft.value.parentId, draft.value.defaults.identityId),
-)
+const resolved = computed(() => inherited(vault.view, draft.value.parentId))
 const count = computed(
   () => flatten(options.tree.value).find((node) => node.group.id === props.groupId)?.count ?? 0,
 )
-const identityNone = computed(() =>
-  identityHint(vault.view, inherited(vault.view, draft.value.parentId).identityId),
-)
+const identityNone = computed(() => identityHint(vault.view, resolved.value.identityId))
 
 function setIdentity(id: Id | null) {
   draft.value.defaults.identityId = id
