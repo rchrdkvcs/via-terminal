@@ -74,3 +74,22 @@ with the editor tools, and build control characters with
 `sessions/ssh/tests.rs` runs the client against an in-process russh server.
 For the interface, a throwaway `ssh2` server in Node on 127.0.0.1:2222 is
 enough to see the host key, password and shell panes.
+
+## A swipe lock that waits for silence never lifts on a touchpad
+
+**2026-10-07 — space swipe.** "Works once, then nothing until a click" was not
+Blink latching the wheel target on a removed node: in headless Chromium a
+latched target that leaves the DOM is dropped and the next event goes to the
+node under the pointer. The cause was `spaceSwipe.ts` locking a gesture until
+160 ms without events. Touchpad inertia trails on for about a second, and the
+next swipe lands while it still runs, so the events never pause and the lock
+holds; the click only helped because it made the user stop. `node
+.ai/space-swipe-repro.mjs` showed it: `FAIL swipe while the last one's inertia
+still runs 2/4: switches [], expected ["a"]`, while every swipe with a pause
+before it passed.
+
+- Read the end of a touchpad gesture from the deltas (inertia shrinks
+  steadily, fresh fingers jump back up or turn around), not from silence alone.
+- CDP `Input.dispatchMouseEvent` wheels carry no phases and never latch;
+  `Input.synthesizeScrollGesture` with `gestureSourceType: 'mouse'` does. Use
+  the second when a check depends on latching.
