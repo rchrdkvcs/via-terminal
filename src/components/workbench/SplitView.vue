@@ -26,13 +26,14 @@ function onLayout(sizes: number[]) {
   <ResizablePanelGroup
     :key="split.tabs.map((tab) => tab.id).join()"
     :direction="split.direction"
-    class="gap-0 p-1.5"
+    class="min-h-0 min-w-0"
     @layout="onLayout"
   >
     <template v-for="(tab, index) in split.tabs" :key="tab.id">
       <ResizableHandle
         v-if="index > 0"
-        class="mx-0.5 w-1 bg-transparent data-[orientation=vertical]:my-0.5 data-[orientation=vertical]:h-1"
+        class="w-2 shrink-0 data-[orientation=vertical]:h-2"
+        aria-label="Redimensionner les terminaux"
       />
       <ResizablePanel :default-size="percent(index)" :min-size="12">
         <TabPane :tab="tab" in-split />
