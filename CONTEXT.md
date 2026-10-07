@@ -21,7 +21,7 @@ Two to four tabs shown side by side as a single row. Each member keeps its own s
 _Avoid_: Split group, pane tree, layout
 
 **Pinned tab**:
-A tab kept across restarts in the pinned area of its space. It always reopens in the directory it was pinned with, and a pinned remote explorer or remote document at its pinned path; navigating inside it never moves the pin.
+A tab kept across restarts in the pinned area of its space. It always reopens where it was pinned: a local shell in its directory, the docked remote explorer of an SSH terminal in its remote directory, a remote explorer or remote document tab at its path. Navigating inside it never moves the pin.
 _Avoid_: Favorite, bookmark
 
 **Temporary tab**:
@@ -47,7 +47,7 @@ A shell executable detected on this machine, with an optional working directory.
 _Avoid_: Local profile
 
 **Session**:
-The live process or SSH channel behind a tab. A tab has at most one session at a time; reconnecting replaces it.
+The live process or SSH connection behind a tab; a remote explorer or remote document tab has one without a shell. A tab has at most one session at a time; reconnecting replaces it.
 _Avoid_: Connection (too vague), terminal
 
 **Command bar**:
@@ -73,7 +73,7 @@ An upload or download of files and directories started from a remote explorer. A
 _Avoid_: Job, copy, sync
 
 **Remote document**:
-A remote text file opened from a remote explorer, shown in its own tab in place of a terminal. Its unsaved changes belong to that document until saved or explicitly discarded.
+A remote text file opened from a remote explorer, shown in its own tab in place of a terminal; a tab holds exactly one. Its unsaved changes belong to that document until saved or explicitly discarded.
 _Avoid_: Buffer, local file
 
 ## Vault

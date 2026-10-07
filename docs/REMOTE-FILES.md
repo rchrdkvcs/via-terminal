@@ -2,15 +2,17 @@
 
 Status: accepted and implemented. Platform acceptance scenarios below remain a manual release gate.
 
+Explorer and document tabs ([ADR-0011](adr/0011-remote-explorers-and-documents-in-their-own-tabs.md)) replaced the expanded explorer and the several documents per explorer; the interview record and the dated implementation verification below describe the design before them.
+
 ## Explorer and entry points
 
 - Browse remote files only; upload and download connect the remote explorer to local file selection without a local browsing panel.
-- Attach a resizable remote explorer to the SSH terminal tab.
-- Allow the remote explorer to fill Via's content area, temporarily hiding the terminal. Returning restores the shared layout; the terminal keeps running while hidden.
+- Dock a resizable remote explorer beside the SSH terminal tab; hiding it leaves the terminal running.
+- Detach the docked explorer into its own explorer tab at its current directory. Explorer and document tabs open their own connection to the same target (ADR-0011).
 - Navigate independently from the terminal's working directory.
-- Open the explorer for the active SSH tab through a file-tree icon at the top right or an action in the command bar.
+- Open the docked explorer for the active SSH tab through a file-tree icon at the top right or an action in the command bar.
 - First navigation starts at the remote account's home directory; each tab retains its last visited directory.
-- In split views, the explorer follows the selected terminal, with separate directory and document state per tab. Expanded mode clearly identifies the remote target.
+- In split views, the docked explorer follows the selected terminal, with separate directory state per tab. An explorer tab identifies its remote target.
 - Apply Via's existing keyboard-access requirement to the explorer, document editing and file operations. The command bar provides opening without a new global shortcut.
 
 ## File operations and transfers
@@ -22,7 +24,7 @@ Status: accepted and implemented. Platform acceptance scenarios below remain a m
 - Keep-both naming must produce a free destination name without overwriting another entry. Cancellation never rolls back already completed files.
 - Deletion is permanent, including non-empty directories, and requires confirmation identifying the path and the permanent nature of the operation.
 - Identify symbolic links and allow navigation to their targets. Deleting a link removes only the link; recursive transfers do not automatically follow symbolic links.
-- Skip symbolic links during recursive transfers and list skipped links in the transfer report.
+- Skip symbolic links and special files during recursive transfers. The transfer report lists skipped source paths: these entries and those skipped through a collision answer.
 - A dropped upload shows a cancellable preparation, with progress, while its files are copied to local staging; it then continues as the upload. Cancelling or closing its tab discards the staging.
 - Replacing a directory with a file, or a file or link with a directory, is refused with a message suggesting Skip or Keep both.
 - Remote names follow POSIX: entries containing a backslash are listed, transferred and deleted like any other. Downloads still refuse names the local platform cannot represent.
@@ -32,9 +34,9 @@ Status: accepted and implemented. Platform acceptance scenarios below remain a m
 ## Documents and saving
 
 - Read and edit text with syntax highlighting and explicit saving.
-- Keep multiple documents open, with an indicator for unsaved changes.
+- Open each document in its own document tab, which holds exactly one document, with an indicator for unsaved changes. Opening a path already shown in the space activates its tab.
 - Edit UTF-8 text files up to 5 MB (5,000,000 bytes). Binary, unsupported-encoding and larger files remain downloadable, with an explanation when editing is unavailable. Preserve existing line endings and any UTF-8 BOM; limit actual bytes read, not just the initial reported size.
-- On closing a modified document or its terminal tab, offer Save / Discard / Cancel. Hiding the panel or changing tabs preserves documents and unsaved edits.
+- On closing a modified document's tab, offer Save / Discard / Cancel. Changing tabs preserves documents and unsaved edits.
 - Failed or canceled saving does not complete an attempted close. Choosing Discard loses nothing until every later question (another document, stopping transfers, closing a running session) is confirmed and the closing succeeds; edits made meanwhile are asked about again. If disconnected, saving requires reconnection; the user can still explicitly discard or cancel closing.
 - Detect remote changes before saving and require an explicit decision to reload or overwrite rather than silently replacing a changed file.
 - Save through an exclusive temporary file in the destination directory, then safe replacement. Preserve Unix permissions, owner and group; refuse saving if these guarantees or safe replacement cannot be met, and keep the edits.
@@ -45,16 +47,17 @@ Status: accepted and implemented. Platform acceptance scenarios below remain a m
 
 ## SSH lifecycle and persistence
 
-- Open SFTP lazily on the authenticated SSH connection, without a second login. If the subsystem is unavailable, explain the failure while keeping the terminal usable.
+- The docked explorer opens SFTP lazily on the terminal tab's authenticated SSH connection, without a second login. If the subsystem is unavailable, explain the failure while keeping the terminal usable.
+- Explorer and document tabs open their own file-only connection: no shell, authentication through the vault, and their own lifecycle. Closing the terminal they came from does not affect them.
 - Transfers continue while the explorer is hidden or another tab is selected. Closing their owning tab requires confirmation and cancels its transfers.
-- Ending the remote shell also ends SFTP and stops transfers. Keep unsaved documents in memory so they can be retried after reconnection and remote-file verification.
+- Ending a tab's connection, or the remote shell of a terminal, also ends SFTP and stops its transfers. Keep unsaved documents in memory so they can be retried after reconnection. A document keeps the owner of the read that produced it; after reconnecting its tab reads the file again, and saving is allowed only while the new connection's owner matches.
 - On interrupted transfers, report failure and allow retry after reconnection. Retry restarts the interrupted file from the beginning; there is no byte-offset resumption in the first version.
-- Across application restarts, retain the last remote directory of pinned tabs but no file contents on disk. Quitting with unsaved edits or active transfers requires confirmation. No remote connection starts automatically at launch.
+- Across application restarts, pinned explorer and document tabs reopen at their pinned path and a pinned terminal keeps its docked explorer's directory; no file contents are stored on disk. Quitting with unsaved edits or active transfers requires confirmation. No remote connection starts automatically at launch.
 - Changing an existing tab's target or deleting its space must apply the same protections as closing it. Never offer to save an old target's document through a new target's connection.
 
 ## Existing constraints
 
-- Tabs currently represent terminals; this scope keeps the explorer attached to a terminal tab.
+- A tab shows a terminal, a remote explorer or a remote document; the docked explorer remains attached to its terminal tab.
 - Via owns SSH authentication, host-key verification and credentials through its embedded SSH client and global vault.
 - At the start of this feature, Via had no SFTP subsystem or file editor.
 - The product specification now includes this remote explorer.
@@ -75,29 +78,31 @@ Round 6: recommendations Q26–Q27 accepted: preserve Unix mode, owner and group
 
 ## Verified implementation constraints
 
-- The current authenticated `russh` handle can open an additional session channel for the SFTP subsystem. It is currently owned by the terminal session actor, which must expose file operations while keeping SFTP errors separate from shell failures.
+- The authenticated `russh` handle can open an additional session channel for the SFTP subsystem. It is owned by the SSH session actor, which exposes file operations while keeping SFTP errors separate from shell failures; a session opened without a terminal size has no shell and only serves files.
 - Standard SFTP v3 rename cannot safely overwrite an existing destination. Safe replacement requires a supported mechanism such as `posix-rename@openssh.com`; deleting the original before renaming is not a safe fallback. See the [SFTP v3 specification](https://www.openssh.org/txt/draft-ietf-secsh-filexfer-02.txt) and [OpenSSH extensions](https://raw.githubusercontent.com/openssh/openssh-portable/master/PROTOCOL).
 - Temporary replacement does not automatically preserve ownership or Unix mode. Apply and verify the original mode, owner and group before replacing the original. Replacing also requires write access to its directory, even when in-place writing would be allowed.
 - Replacing a symbolic-link path replaces the link itself; use the verified resolved target for document saves.
 - A lost response after replacement leaves the save outcome uncertain. Keep the draft and verify remote contents after reconnection before retrying.
 - Comparing remote contents before replacement improves conflict detection but cannot prevent another writer racing the replacement.
+- Uploads and downloads share one recursive walk (`src-tauri/src/files/walk.rs`): completed sources, remembered directories, link skipping, collision answers and keep-both names. Retry state comes back from the interface, so a remembered directory is accepted only as a direct child of the directory receiving it and can never leave the transfer destination.
+- The interface keeps one record per transfer (`stores/file-transfers.ts`). A dropped upload is staged locally as raw byte chunks, not JSON, before the upload starts; staging is cleared at launch and exit.
 
 ## Acceptance scenarios
 
 Run these scenarios in the real application on supported platforms, using controlled SFTP servers and fault injection for network failures.
 
 - Open the explorer through the top-right icon and command bar on an authenticated SSH tab: no second authentication; terminal remains usable. On a server without SFTP, show an explorer error while the shell still works.
-- Resize, expand and restore the explorer while the terminal produces output: preserve the terminal session and layout. In a split view, switch the focused terminal and verify the displayed server, directory and documents all match.
+- Resize, hide and detach the docked explorer while the terminal produces output: preserve the terminal session and layout. In a split view, switch the focused terminal and verify the displayed server and directory match. Open an explorer and a document tab, close the originating terminal: both keep their own connection.
 - Navigate away from home, run a different `cd` in the terminal, hide the panel and return: explorer navigation remains independent. Restart with a pinned tab: recover its directory only after explicit connection, with no restored document contents.
 - Create a file and directory, rename and move entries, change Unix permissions, then delete a non-empty directory: verify remote results and confirmation of permanent deletion. Repeat an operation without sufficient rights: display the error without sudo.
 - Upload and download multiple files and a nested directory. Exercise replace, skip and keep both, including applying a collision answer to the transfer. Skipped symbolic links appear in the report; a keep-both choice never overwrites an existing name.
 - Cancel a transfer, then repeat with a network cut: clean up incomplete temporary files when possible, report unresolved leftovers, retain completed files and retry the interrupted file from the beginning.
-- Open multiple UTF-8 documents, edit and save: preserve line endings, BOM, Unix mode, owner and group. Test a binary file, invalid UTF-8 and a file exceeding 5,000,000 bytes, including one that grows during reading: editing is refused with a reason, download remains available.
-- Close a dirty document, close its tab, change the tab's target, delete its space and quit Via: each path protects edits; Cancel leaves them available; a failed Save does not close the document. Hiding the panel and changing tabs require no discard.
+- Open several UTF-8 documents in their tabs, edit and save: preserve line endings, BOM, Unix mode, owner and group. Test a binary file, invalid UTF-8 and a file exceeding 5,000,000 bytes, including one that grows during reading: editing is refused with a reason, download remains available.
+- Close a dirty document's tab, change the tab's target, delete its space and quit Via: each path protects edits; Cancel leaves them available; a failed Save does not close the document. Hiding the panel and changing tabs require no discard.
 - Modify a document externally before saving: block silent overwrite and offer reload or explicit overwrite. Open a symbolic link, change its target externally, and attempt saving: refuse; with the original target unchanged, save the target and preserve the link.
 - Attempt saving where safe replacement or metadata preservation is unavailable: keep the original intact and edits available, and explain the failure. Inject failures during temporary writing and after replacement but before its response: do not claim success without verification.
 - Start transfers and change tabs: transfers continue. Confirm closing their owner or run `exit`: transfers stop. Network interruption retains dirty documents; reconnection checks the remote file before retrying.
-- Perform opening, navigation, file operations, document editing, expansion and transfer cancellation with the keyboard; ensure focus is visible and terminal shortcuts remain available when the terminal has focus.
+- Perform opening, navigation, file operations, document editing, detaching and transfer cancellation with the keyboard; ensure focus is visible and terminal shortcuts remain available when the terminal has focus.
 
 ## Implementation verification (2026-10-07)
 
