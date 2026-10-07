@@ -1,4 +1,5 @@
 use super::{test_harness::Harness, HostKeyStatus};
+use crate::files::model::Reply;
 use crate::sessions::{
     events::SessionState,
     prompts::{Prompt, PromptAnswer},
@@ -116,4 +117,38 @@ async fn a_changed_key_shows_the_previous_fingerprint() {
     assert_eq!(harness.store.trusted.lock().unwrap().len(), 1);
     harness.hub.close(id);
     harness.state(id, SessionState::Exited).await;
+}
+
+#[tokio::test]
+async fn sftp_reuses_the_authenticated_session_and_shell_exit_ends_file_access() {
+    let harness = Harness::new(HostKeyStatus::Trusted).await;
+    let id = harness.open(Some("pw"));
+    harness.state(id, SessionState::Ready).await;
+    let file = harness
+        .hub
+        .files(
+            id,
+            crate::files::model::Request::Read {
+                path: "/config".into(),
+            },
+        )
+        .await
+        .unwrap();
+    assert!(matches!(file, Reply::Document(ref d) if d.content == "old\n"));
+    assert_eq!(harness.store.authenticated.lock().unwrap().len(), 1);
+    harness.hub.write(id, b"still running").unwrap();
+    harness.output(id, "still running").await;
+    harness.hub.write(id, b"exit\n").unwrap();
+    harness.state(id, SessionState::Exited).await;
+    let error = harness
+        .hub
+        .files(
+            id,
+            crate::files::model::Request::Read {
+                path: "/config".into(),
+            },
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(error.code, "session_closed");
 }

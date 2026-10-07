@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { KeyRound, PanelLeft, Settings } from '@lucide/vue'
+import { computed } from 'vue'
+import { FolderTree, KeyRound, PanelLeft, Settings } from '@lucide/vue'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
+import { useFiles } from '@/stores/files'
+import { useWorkbench } from '@/stores/workbench'
 import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
 import { useUi, type Route } from '@/stores/ui'
@@ -9,6 +12,19 @@ import AddressPill from './AddressPill.vue'
 import WindowControls from './WindowControls.vue'
 import UpdateButton from './UpdateButton.vue'
 
+const files = useFiles()
+const workbench = useWorkbench()
+const remote = computed(() =>
+  workbench.activeTab && workbench.activeTab.target.kind !== 'local' ? workbench.activeTab : null,
+)
+const filesShown = computed(
+  () => !!remote.value && ui.route === 'workbench' && files.state(remote.value.id).visible,
+)
+function toggleFiles() {
+  if (!remote.value) return
+  files.setVisible(remote.value.id, !filesShown.value)
+  ui.route = 'workbench'
+}
 const settings = useSettings()
 const spaces = useSpaces()
 const ui = useUi()
@@ -46,6 +62,26 @@ const tools = [
     </div>
     <AddressPill class="min-w-0 max-w-md justify-self-center" />
     <div data-tauri-drag-region class="flex h-full items-center justify-end gap-0.5">
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button
+            type="button"
+            :class="[
+              button,
+              'aria-disabled:opacity-40 aria-disabled:hover:bg-transparent aria-expanded:bg-control aria-expanded:text-foreground aria-expanded:shadow-[var(--shadow-control)]',
+            ]"
+            aria-label="Explorateur distant"
+            :aria-disabled="!remote || undefined"
+            :aria-expanded="remote ? filesShown : undefined"
+            @click="toggleFiles"
+          >
+            <FolderTree :size="15" :stroke-width="1.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{{
+          remote ? 'Explorateur distant' : 'Explorateur distant : onglets SSH uniquement'
+        }}</TooltipContent>
+      </Tooltip>
       <UpdateButton />
       <Tooltip v-for="tool in tools" :key="tool.route">
         <TooltipTrigger as-child>

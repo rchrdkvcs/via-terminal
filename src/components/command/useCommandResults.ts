@@ -5,6 +5,7 @@ import { useSpaces } from '@/stores/spaces'
 import { useUi, type CommandMode } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
 import type { CommandItem } from './types'
+import { useFileProtection } from '@/composables/useFileProtection'
 import { useCommandActions } from './useCommandActions'
 import { useCommandTargets } from './useCommandTargets'
 
@@ -73,7 +74,8 @@ export function useCommandResults(query: Ref<string>) {
     else if (item.target) workbench.openBeside(item.target, anchorTabId)
   }
 
-  function choose(item: CommandItem) {
+  const protection = useFileProtection()
+  async function choose(item: CommandItem) {
     const current = mode.value
     ui.closeCommand()
     if (item.run) return item.run()
@@ -81,9 +83,15 @@ export function useCommandResults(query: Ref<string>) {
     ui.route = 'workbench'
     if (current.kind === 'split') splitWith(current.tabId, item)
     else if (item.tabId) workbench.activate(item.tabId)
-    else if (item.target && current.kind === 'replace')
-      workbench.open(item.target, { replace: current.tabId })
-    else if (item.target) workbench.open(item.target)
+    else if (item.target && current.kind === 'replace') {
+      const target = item.target
+      const decision = await protection.protect([current.tabId])
+      if (decision)
+        await protection.release(
+          decision,
+          () => !!workbench.open(target, { replace: current.tabId }),
+        )
+    } else if (item.target) workbench.open(item.target)
   }
 
   return { mode, placeholder, items, choose }

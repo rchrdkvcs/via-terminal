@@ -8,7 +8,7 @@ Update requests disclose the client IP address and standard HTTP metadata to Git
 
 In `via.sqlite`, in the application data directory:
 
-- Spaces, pinned tabs, folders and split layouts.
+- Spaces, pinned tabs, their last remote explorer directory, folders and split layouts.
 - Settings.
 - The vault: host labels, addresses, ports, usernames, tags, notes, groups, identities, public keys and accepted server fingerprints.
 - Secrets (passwords, passphrases, private keys), **encrypted** with ChaCha20-Poly1305. The 256-bit key lives in the operating system keychain (Windows Credential Manager, macOS Keychain, Secret Service), under the service `dev.viaterminal.desktop`.
@@ -20,7 +20,7 @@ If no keychain is available, Via does not remember any secret. It asks for each 
 ## Never stored
 
 - Terminal contents, scrollback and command history.
-- Temporary tabs.
+- Temporary tabs and remote document contents or drafts.
 - Answers to keyboard-interactive challenges (one-time codes).
 - Secrets in clear, in logs or in process arguments.
 
@@ -35,3 +35,9 @@ Durable data lives under the bundle identifier `dev.viaterminal.desktop`:
 - Linux: `$XDG_DATA_HOME/dev.viaterminal.desktop/via.sqlite`
 
 Uninstalling does not always remove it. To start from a clean slate, delete that directory and the `vault-master-key` keychain entry.
+
+## File transfers
+
+SFTP reuses the SSH connection and its verified server key. No file paths or contents are logged. Browser-originated drops are staged temporarily under the application cache (`file-drops`), with private directory permissions on Unix, then removed after completion, cancellation or closing of their tab. Failed transfers retain staging for explicit retry while their tab stays open. Via removes all staging explicitly on normal exit and before installing an update, and clears leftovers at the next launch; a failed cleanup never prevents Via from starting. Uploads and downloads use temporary files beside the destination; interrupted cleanup can leave temporary files and is reported when detectable.
+
+Uploaded files that replace an existing file keep its permission bits, without setuid, setgid or sticky; new uploaded files keep the local permission bits without group or other write. Ownership of uploaded files is the connected account's. Downloaded files use the local default permissions. Document saves preserve Unix mode, owner and group. ACLs, extended attributes and hard-link relationships are not guaranteed; files depending on those properties are outside the editor’s supported scope.

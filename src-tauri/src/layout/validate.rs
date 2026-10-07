@@ -63,6 +63,13 @@ impl Ids {
 
 fn check_tab(tab: &Tab, ids: &mut Ids) -> AppResult<()> {
     ids.claim(tab.id)?;
+    if tab
+        .remote_cwd
+        .as_ref()
+        .is_some_and(|path| path.len() > 32768 || path.contains('\0'))
+    {
+        return Err(AppError::invalid("invalid remote directory"));
+    }
     match &tab.title {
         Some(title) => name(title, MAX_TITLE),
         None => Ok(()),
@@ -110,6 +117,7 @@ mod tests {
         Tab {
             id: Uuid::new_v4(),
             title: None,
+            remote_cwd: None,
             target: Target::Local {
                 shell: None,
                 cwd: None,

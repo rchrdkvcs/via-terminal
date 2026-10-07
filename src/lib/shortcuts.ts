@@ -112,3 +112,25 @@ export function match(
   }
   return null
 }
+
+/**
+ * Inside a text field or the document editor only navigation and global actions apply;
+ * tab, terminal and clipboard actions are left to the field (Cmd+S saves a document).
+ */
+const whileEditing = new Set<ActionId>([
+  'newTab',
+  'actions',
+  'closeTab',
+  'split',
+  'nextTab',
+  'previousTab',
+  'space',
+  'settings',
+  'vault',
+])
+export function appliesWhileEditing(id: ActionId): boolean {
+  return whileEditing.has(id)
+}
+
+// This binding applies only while the remote document editor has focus.
+export const documentSaveKey = 'Mod-s'

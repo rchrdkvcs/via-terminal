@@ -1,5 +1,5 @@
 import { onBeforeUnmount, onMounted } from 'vue'
-import { match, type ActionId } from '@/lib/shortcuts'
+import { appliesWhileEditing, match, type ActionId } from '@/lib/shortcuts'
 import { rowOfTab } from '@/domain/space'
 import { terminals } from '@/terminal/registry'
 import { useSettings } from '@/stores/settings'
@@ -47,8 +47,13 @@ export function useShortcuts() {
   }
 
   function onKeydown(event: KeyboardEvent) {
+    const target = event.target instanceof Element ? event.target : null
     const found = match(event, settings.platform)
     if (!found) return
+    const editing =
+      !target?.closest('.xterm') &&
+      !!target?.closest('.cm-editor, input, textarea, [contenteditable="true"]')
+    if (editing && !appliesWhileEditing(found.id)) return
     if (document.querySelector('[data-update-dialog]')) {
       event.preventDefault()
       event.stopPropagation()

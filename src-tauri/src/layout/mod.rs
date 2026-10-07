@@ -61,6 +61,8 @@ pub enum Row {
 pub struct Tab {
     pub id: Uuid,
     pub title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remote_cwd: Option<String>,
     pub target: Target,
 }
 

@@ -14,11 +14,18 @@ vault/              hosts, groups, identities, keys, known hosts
   connect.rs        host or typed address → connection plan
   trust.rs          the vault as the SSH client's store
 layout/             persisted spaces and pinned rows, structurally validated
+files/              remote explorer service of an SSH tab
+  model.rs          wire types mirrored by `src/ipc/files.ts`
+  owner.rs          endpoint/account identity checked on saves and transfers
+  paths.rs          POSIX remote names versus platform-safe local names
+  documents.rs      safe document replacement; reading.rs bounded UTF-8 reads
+  upload*, download*, jobs.rs  streamed transfers, collisions, cancellation
+  staging.rs        local copies of interface drops, cleared at launch and exit
 settings.rs         preferences
 sessions/           live sessions behind tabs
   local.rs          shells in a native PTY (portable-pty)
   shells.rs         detected shells; only these may be launched
-  ssh/              embedded SSH client (russh)
+  ssh/              embedded SSH client (russh); sftp.rs opens the lazy SFTP service
   prompts.rs        questions to the user, answered from the pane
   events.rs         output, state, prompts → `EventSink`
 ```
@@ -41,16 +48,22 @@ sessions/           live sessions behind tabs
 ```text
 ipc/                typed commands and events, mirrors of the Rust wire types
 domain/             pure logic, no Vue: organize (intents), split, drop, search, quick-connect, palette
-stores/             spaces, sessions, workbench, vault, settings, ui (Pinia), and the
-                    store-private parts of sessions (session-events) and workbench
-                    (workbench-opening, -lifecycle, -effects)
+stores/             spaces, sessions, workbench, vault, settings, ui, files (Pinia), and the
+                    store-private parts of sessions (session-events), workbench
+                    (workbench-opening, -lifecycle, -effects) and files (file-documents,
+                    -transfers, -preparation, -transfer-model); file-dialogs queues
+                    explorer questions
 terminal/           xterm instances keyed by tab, outside the Vue tree
-composables/        bootstrap, shortcuts, drag and drop, labels, sidebar actions
+composables/        bootstrap, shortcuts, drag and drop, labels, sidebar actions, and file
+                    protection (useFileProtection), transfer events (useFileRuntime) and
+                    quit protection (useFileExit)
 components/
   shell/            title bar, address pill, dialogs, sidebar frame and resizer
   sidebar/          rows, folders, space header and switcher
   command/          command bar
   workbench/        panes, split view, connection panel and prompts
+  files/            explorer, CodeMirror documents and transfer controls; useFileOperations
+                    and useFileTransfers start operations from the explorer's scope
   vault/            vault page
   settings/         settings page
   ui/               shadcn-vue primitives
@@ -68,10 +81,14 @@ The terminal registry exposes tab-level search, selection and paste operations. 
 
 **Vault editing.** `useDraft` validates a draft when it is saved, so an invalid version is never queued. `components/vault/saveQueue` saves each record one request at a time, keyed by kind and id and shared by every editor: the vault page remounts its editor on each selection, and a reopened editor queues behind the saves of the closed one. Consecutive requests from one editor coalesce into its latest draft; a failed or unanswered save does not drop the requests queued behind it, and nothing is retried unless the user asked for it. A creation is queued by its editor until it has an id; later saves of that record then queue behind it, so it is never created twice. An editor acknowledges only the version that was submitted, keeps edits made while saving dirty, clears a password only when that submitted password is still current, and shows the outcome of its latest request only. Creation drains later edits before returning the new id. Queued snapshots are saved after their editor closes, but their responses no longer change any editor.
 
-**Shortcuts.** `lib/shortcuts.ts` is the only list of shortcuts. Outside macOS they use Ctrl+Shift, so the shell's own Ctrl shortcuts keep working.
+**Shortcuts.** `lib/shortcuts.ts` is the only list of shortcuts. Outside macOS they use Ctrl+Shift, so the shell's own Ctrl shortcuts keep working. In text fields and the document editor only navigation and global actions apply (`appliesWhileEditing`); the terminal keeps every shortcut.
 
 ## Testing
 
 - **Rust**: unit tests per module, plus an end-to-end SSH test against an in-process russh server (`sessions/ssh/tests.rs`).
-- **Interface**: Vitest on `domain/`, `lib/`, store lifecycle operations, asynchronous vault drafts and the terminal registry. Deferred native replies exercise opening/closing races; mocked renderer construction is an internal seam for registry tests. Store tests share their mocks through `stores/*.fixture.ts`; draft tests hold saves in `test/vaultSaves.ts`.
+- **Interface**: Vitest on `domain/`, `lib/`, store lifecycle operations, asynchronous vault drafts and the terminal registry. Deferred native replies exercise opening/closing races; mocked renderer construction is an internal seam for registry tests. Store tests share their mocks through `stores/*.fixture.ts` (`files.fixture.ts` for the explorer); draft tests hold saves in `test/vaultSaves.ts`.
 - **Real application**: `.ai/cdp-smoke.mjs` drives the running window over CDP. See `.ai/lessons.md`.
+
+**Remote files.** Each SSH actor opens one lazy SFTP service on its authenticated handle (`ssh/sftp.rs`). Opening is polled beside the shell reader, so a shell filling its channel cannot stall it; calls arriving meanwhile wait for that single attempt. The `files::Files` service answers typed requests with typed replies; transfer progress travels through `EventSink`. Atomic document replacement requires the OpenSSH extension and verified metadata. Remote names follow POSIX; only local names are checked against the platform.
+
+The in-memory `stores/files` keeps per-tab drafts, generation guards against stale replies, and every transfer plan: retry, drop preparation and staging cleanup are store operations, so a released explorer is never recreated by a late reply. `useFileProtection` turns closing questions into a decision that loses nothing; `release` applies it only after the tab, space, target or application actually closed, and asks again if a draft or transfer changed meanwhile. Pinned tab layout retains only `remoteCwd`, never documents. See ADR-0009 and ADR-0010.

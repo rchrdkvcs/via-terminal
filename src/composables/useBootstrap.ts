@@ -2,6 +2,9 @@ import { ref, watchEffect } from 'vue'
 import { api, describeError, isNative } from '@/ipc/client'
 import type { Bootstrap } from '@/ipc/types'
 import { terminals } from '@/terminal/registry'
+import { useFileRuntime } from './useFileRuntime'
+import { useFileExit } from './useFileExit'
+import { useFiles } from '@/stores/files'
 import { useCwdMemory } from './useCwdMemory'
 import { adoptTabNames } from './useNameAdoption'
 import { dragging, hint } from './useRowDnd'
@@ -31,6 +34,8 @@ function previewBootstrap(): Bootstrap {
 }
 
 export function useBootstrap() {
+  useFileRuntime()
+  useFileExit()
   const ready = ref(false)
   const failure = ref<string | null>(null)
   const settings = useSettings()
@@ -88,7 +93,7 @@ export function useBootstrap() {
 
   if (import.meta.env.DEV) {
     Object.assign(window, {
-      __via: { spaces, sessions, workbench, settings, dnd: { dragging, hint } },
+      __via: { spaces, sessions, workbench, settings, files: useFiles(), dnd: { dragging, hint } },
     })
   }
   return { ready, failure }

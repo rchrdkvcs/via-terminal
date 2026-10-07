@@ -1,5 +1,6 @@
 mod commands;
 pub mod error;
+pub mod files;
 pub mod layout;
 pub mod secrets;
 pub mod sessions;
@@ -10,7 +11,7 @@ pub mod vault;
 
 use commands::{emitter::TauriSink, App};
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 fn build(app: &tauri::AppHandle) -> Result<App, Box<dyn std::error::Error>> {
     let data_dir = app.path().app_data_dir()?;
@@ -23,6 +24,7 @@ fn build(app: &tauri::AppHandle) -> Result<App, Box<dyn std::error::Error>> {
         vault: Arc::new(vault::Vault::load(storage, secrets)?),
         sessions: sessions::SessionHub::new(Arc::new(TauriSink(app.clone()))),
         shells: sessions::shells::detect(),
+        staging: files::Staging::new(app.path().app_cache_dir()?.join("file-drops")),
     })
 }
 
@@ -36,6 +38,7 @@ pub fn run() {
             }
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
@@ -49,8 +52,19 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building Via");
     app.run(|handle, event| {
+        if let tauri::RunEvent::ExitRequested {
+            code: None,
+            ref api,
+            ..
+        } = event
+        {
+            api.prevent_exit();
+            let _ = handle.emit("app-exit-requested", ());
+        }
         if matches!(event, tauri::RunEvent::Exit) {
-            handle.state::<App>().sessions.close_all();
+            let app = handle.state::<App>();
+            app.sessions.close_all();
+            app.staging.clear();
         }
     });
 }

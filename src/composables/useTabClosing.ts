@@ -6,6 +6,7 @@ import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
+import { useFileProtection, type Abandonment } from './useFileProtection'
 import { useTabLabel } from './useTabLabel'
 
 export function useTabClosing() {
@@ -16,26 +17,34 @@ export function useTabClosing() {
   const workbench = useWorkbench()
   const names = useTabLabel()
 
-  function close(tabId: Id, confirmed = false) {
+  const protection = useFileProtection()
+  async function close(tabId: Id) {
+    const decision = await protection.protect([tabId])
+    if (!decision) return
     const space = spaces.spaceOf(tabId)
     const tab = space && findTab(space, tabId)
     if (!tab) return
     const name = names.label(tab)
-    if (!confirmed && sessions.isLive(tabId) && settings.settings.confirmCloseRunning) {
+    if (sessions.isLive(tabId) && settings.settings.confirmCloseRunning) {
       ui.confirm({
         title: `Fermer « ${name} » ?`,
         description: 'Sa session est encore active et sera arrêtée.',
         confirm: 'Fermer l’onglet',
         destructive: true,
-        run: () => close(tabId, true),
+        run: () => {
+          void finish(tabId, name, decision)
+        },
       })
       return
     }
-    const result = workbench.closeTab(tabId)
-    if (result?.undo) {
-      const undo = result.undo
-      notify.info(`« ${name} » retiré des épinglés`, { label: 'Annuler', run: undo })
-    }
+    await finish(tabId, name, decision)
+  }
+  // Drafts and transfers are abandoned only here, after every confirmation.
+  async function finish(tabId: Id, name: string, decision: Abandonment) {
+    let result: ReturnType<typeof workbench.closeTab>
+    if (!(await protection.release(decision, () => !!(result = workbench.closeTab(tabId))))) return
+    const undo = result?.undo
+    if (undo) notify.info(`« ${name} » retiré des épinglés`, { label: 'Annuler', run: undo })
   }
 
   return { close }

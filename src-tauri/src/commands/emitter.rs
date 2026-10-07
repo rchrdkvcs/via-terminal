@@ -43,6 +43,7 @@ struct VaultChanged {
 impl EventSink for TauriSink {
     fn emit(&self, event: Event) {
         let _ = match event {
+            Event::Files(progress) => self.0.emit("file-transfer", progress),
             Event::Output { session_id, data } => self.0.emit(
                 "terminal-output",
                 Output {

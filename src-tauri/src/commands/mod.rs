@@ -1,5 +1,6 @@
 pub mod app;
 pub mod emitter;
+pub mod files;
 pub mod sessions;
 pub mod vault;
 
@@ -15,12 +16,14 @@ pub struct App {
     pub vault: Arc<Vault>,
     pub sessions: SessionHub,
     pub shells: Vec<Shell>,
+    pub staging: crate::files::Staging,
 }
 
 pub fn handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
     tauri::generate_handler![
         app::app_bootstrap,
         app::app_prepare_update,
+        app::app_exit,
         app::layout_save,
         app::settings_save,
         vault::vault_get,
@@ -43,6 +46,13 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static 
         sessions::session_resize,
         sessions::session_close,
         sessions::session_answer,
+        files::session_files,
+        files::files_pick,
+        files::files_stage_begin,
+        files::files_stage_chunk,
+        files::files_stage_directory,
+        files::files_stage_finish,
+        files::files_stage_discard,
         crate::swipe::swipe_region,
         crate::swipe::swipe_haptic,
     ]

@@ -1,5 +1,6 @@
 pub mod events;
 pub mod integration;
+mod io;
 mod local;
 pub mod prompts;
 pub mod shells;
@@ -14,30 +15,8 @@ use std::{
 };
 use uuid::Uuid;
 
+pub use io::{SessionIo, Size};
 pub use local::LocalSpec;
-
-pub trait SessionIo: Send + Sync {
-    fn write(&self, data: &[u8]) -> AppResult<()>;
-    fn resize(&self, size: Size) -> AppResult<()>;
-
-    fn close(&self);
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
-pub struct Size {
-    pub cols: u16,
-    pub rows: u16,
-}
-
-impl Size {
-    pub fn validated(self) -> AppResult<Self> {
-        if (1..=1000).contains(&self.cols) && (1..=1000).contains(&self.rows) {
-            Ok(self)
-        } else {
-            Err(AppError::invalid("taille de terminal invalide"))
-        }
-    }
-}
 
 type Registry = Arc<Mutex<HashMap<Uuid, Arc<dyn SessionIo>>>>;
 
@@ -100,6 +79,18 @@ impl SessionHub {
 
     pub fn write(&self, id: Uuid, data: &[u8]) -> AppResult<()> {
         self.get(id)?.write(data)
+    }
+
+    pub async fn files(
+        &self,
+        id: Uuid,
+        request: crate::files::model::Request,
+    ) -> AppResult<crate::files::model::Reply> {
+        let (reply, receive) = tokio::sync::oneshot::channel();
+        self.get(id)?.files(crate::files::Call { request, reply })?;
+        receive
+            .await
+            .map_err(|_| AppError::new("session_closed", "La session SFTP est terminée"))?
     }
 
     pub fn resize(&self, id: Uuid, size: Size) -> AppResult<()> {

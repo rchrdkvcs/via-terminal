@@ -58,6 +58,24 @@ _Avoid_: Palette, picker, new-tab dialog
 Connecting to an address typed by hand. A successful authentication saves it as a host.
 _Avoid_: Ad-hoc connection
 
+## Remote files
+
+**Remote explorer**:
+The file panel attached to an SSH tab, showing files on that tab's remote target. It can sit beside the terminal or expand within Via.
+_Avoid_: File tab, local explorer, file workspace
+
+**Owner**:
+The endpoint and account behind a remote explorer. Documents and transfers keep the owner that produced them and are never saved or retried through another one.
+_Avoid_: Identity (that word belongs to the vault), server, connection
+
+**Transfer**:
+An upload or download of files and directories started from a remote explorer. A dropped upload first appears as a preparation while its files are staged locally. A failed transfer can be retried after reconnecting.
+_Avoid_: Job, copy, sync
+
+**Remote document**:
+A remote text file opened for reading or editing in a tab's remote explorer. Its unsaved changes belong to that document until saved or explicitly discarded.
+_Avoid_: Editor tab, buffer, local file
+
 ## Vault
 
 **Vault**:

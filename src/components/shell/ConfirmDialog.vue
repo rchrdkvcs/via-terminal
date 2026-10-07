@@ -44,7 +44,11 @@ function confirm() {
       <AlertDialogFooter>
         <AlertDialogCancel>Annuler</AlertDialogCancel>
         <AlertDialogAction
-          :class="shown?.destructive ? 'bg-destructive text-white hover:bg-destructive/90' : ''"
+          :class="
+            shown?.destructive
+              ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+              : ''
+          "
           @click="confirm"
         >
           {{ shown?.confirm }}

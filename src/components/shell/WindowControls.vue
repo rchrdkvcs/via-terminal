@@ -46,7 +46,7 @@ const button =
     </button>
     <button
       type="button"
-      :class="[button, 'hover:!bg-destructive hover:!text-white']"
+      :class="[button, 'hover:!bg-destructive hover:!text-destructive-foreground']"
       aria-label="Fermer"
       @click="act('close')"
     >
