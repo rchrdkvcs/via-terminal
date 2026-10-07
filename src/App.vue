@@ -27,22 +27,27 @@ const ui = useUi()
 
 <template>
   <TooltipProvider :delay-duration="500">
-    <div class="relative flex h-full bg-chrome text-foreground">
+    <div class="relative flex h-full flex-col bg-chrome text-foreground">
       <template v-if="ready">
-        <SidebarFrame />
-        <div
-          class="flex min-w-0 flex-1 flex-col pb-2"
-          :class="spaces.sidebar.visible ? 'pe-2' : 'px-2'"
-        >
-          <TitleBar />
-          <!-- The terminal surface stays mounted under the vault and settings. -->
-          <main
-            class="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-surface text-surface-ink shadow-surface"
+        <TitleBar />
+        <div class="flex min-h-0 flex-1">
+          <SidebarFrame />
+          <div
+            class="flex min-w-0 flex-1 flex-col pb-2"
+            :class="spaces.sidebar.visible ? 'pe-2' : 'px-2'"
           >
-            <Workbench v-show="ui.route === 'workbench'" />
-            <VaultPage v-if="ui.route === 'vault'" class="absolute inset-0 bg-surface" />
-            <SettingsPage v-else-if="ui.route === 'settings'" class="absolute inset-0 bg-surface" />
-          </main>
+            <!-- The terminal surface stays mounted under the vault and settings. -->
+            <main
+              class="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-surface text-surface-ink shadow-surface"
+            >
+              <Workbench v-show="ui.route === 'workbench'" />
+              <VaultPage v-if="ui.route === 'vault'" class="absolute inset-0 bg-surface" />
+              <SettingsPage
+                v-else-if="ui.route === 'settings'"
+                class="absolute inset-0 bg-surface"
+              />
+            </main>
+          </div>
         </div>
         <CommandBar />
         <SpaceDialog />
