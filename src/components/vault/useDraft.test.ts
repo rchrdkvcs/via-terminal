@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, ref } from 'vue'
 import type { SecretUpdate } from '@/ipc/types'
+import { hostBackend } from '@/test/vaultSaves'
 import { useDraft } from './useDraft'
+
+beforeEach(() => setActivePinia(createPinia()))
 
 interface Record {
   id: string | null
@@ -10,12 +14,13 @@ interface Record {
 }
 
 function setup(initial: Record, save = vi.fn(async (input: Record) => input.id ?? 'new')) {
+  hostBackend(save)
   const stored = ref(initial)
   const validate = (input: Record) => (input.name ? null : 'Ajoutez un nom.')
   return {
     stored,
     save,
-    ...useDraft({ kind: 'host', source: () => ({ ...stored.value }), save, validate }),
+    ...useDraft({ kind: 'host', source: () => ({ ...stored.value }), validate }),
   }
 }
 

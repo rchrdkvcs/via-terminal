@@ -1,7 +1,5 @@
-import { api } from '@/ipc/client'
 import type { Id } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
-import { groupInput } from './inputs'
 import { useVaultActions } from './useVaultActions'
 import { useVaultState } from './useVaultState'
 
@@ -30,9 +28,7 @@ export function useGroupTree() {
 
   async function rename(id: Id, name: string | null) {
     state.renaming.value = null
-    const group = vault.group(id)
-    if (!name || !group) return
-    await actions.run(() => api.vault.saveGroup({ ...groupInput(group), name }))
+    if (name) await actions.attempt(() => vault.renameGroup(id, name))
   }
 
   return { choose, toggle, add, rename, remove: actions.deleteGroup }

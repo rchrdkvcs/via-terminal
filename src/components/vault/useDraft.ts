@@ -2,24 +2,22 @@ import { getCurrentScope, onScopeDispose, ref, watch, type Ref } from 'vue'
 import { describeError } from '@/ipc/client'
 import { clone } from '@/lib/clone'
 import type { Id } from '@/ipc/types'
-import { acknowledge, queueSave, type RecordKind } from './saveQueue'
+import { useVault } from '@/stores/vault'
+import { acknowledge, type RecordKind } from '@/stores/vault-saves'
 import { registerDraftPreparation } from '@/updates/drafts'
 
 interface Options<T> {
   kind: RecordKind
 
   source: () => T
-  save: (input: T) => Promise<Id | null>
 
   validate?: (input: T) => string | null
 }
 
-export function useDraft<T extends { id: Id | null }>({
-  kind,
-  source,
-  save,
-  validate,
-}: Options<T>) {
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+
+export function useDraft<T extends { id: Id | null }>({ kind, source, validate }: Options<T>) {
+  const vault = useVault()
   const draft = ref(clone(source())) as Ref<T>
   const error = ref<string | null>(null)
   const saving = ref(false)
@@ -47,11 +45,30 @@ export function useDraft<T extends { id: Id | null }>({
   watch(
     () => JSON.stringify(source()),
     (next) => {
-      const otherRecord = JSON.parse(next).id !== draft.value.id
+      const incoming = JSON.parse(next) as T
+      const otherRecord = incoming.id !== draft.value.id
       if (otherRecord || (!saving.value && JSON.stringify(draft.value) === baseline)) reset()
+      else if (!saving.value) merge(incoming)
     },
     { flush: 'sync' },
   )
+
+  /** Takes outside changes into the fields the user has not edited. */
+  function merge(incoming: T) {
+    const base = JSON.parse(baseline) as T
+    adopt(base, incoming)
+    baseline = JSON.stringify(base)
+  }
+
+  function adopt(base: T, incoming: T) {
+    const fields = draft.value as Record<string, unknown>
+    const before = base as Record<string, unknown>
+    for (const [field, value] of Object.entries(incoming)) {
+      if (same(value, before[field]) || !same(fields[field], before[field])) continue
+      fields[field] = clone(value)
+      before[field] = clone(value)
+    }
+  }
 
   async function commit(): Promise<Id | null> {
     const input = clone(draft.value)
@@ -62,10 +79,11 @@ export function useDraft<T extends { id: Id | null }>({
     const owner = generation
     inFlight++
     saving.value = true
-    const outcome = await queueSave({ kind, owner, input, save })
+    const outcome = await vault.save(kind, owner, input)
     if (owner !== generation) return null
     saving.value = --inFlight > 0
     if (outcome.id) {
+      adopt(clone(input), outcome.submitted)
       acknowledge(draft.value, outcome.submitted, outcome.id)
       baseline = JSON.stringify(
         acknowledge(clone(outcome.submitted), outcome.submitted, outcome.id),

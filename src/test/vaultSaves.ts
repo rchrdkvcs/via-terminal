@@ -1,7 +1,9 @@
 import { vi } from 'vitest'
 import { ref } from 'vue'
-import type { SecretUpdate } from '@/ipc/types'
+import { api } from '@/ipc/client'
+import type { HostInput, SecretUpdate } from '@/ipc/types'
 import { useDraft } from '@/components/vault/useDraft'
+import { useVault } from '@/stores/vault'
 
 export interface Record {
   id: string | null
@@ -37,10 +39,20 @@ export function record(id: string | null, name = 'one'): Record {
   return { id, name, password: { action: 'keep' } }
 }
 
+/** Routes the vault store's host saves to `save`; the reply keeps the current view. */
+export function hostBackend(save: (input: Record) => Promise<string | null>) {
+  const vault = useVault()
+  vi.spyOn(api.vault, 'saveHost').mockImplementation(async (input: HostInput) => ({
+    id: await save(input as unknown as Record),
+    vault: vault.view,
+  }))
+}
+
 export function editor(initial: Record, save: (input: Record) => Promise<string | null>) {
+  hostBackend(save)
   const stored = ref(initial)
   const validate = (input: Record) => (input.name ? null : 'Ajoutez un nom.')
-  return { stored, ...useDraft({ kind: 'host', source: () => stored.value, save, validate }) }
+  return { stored, ...useDraft({ kind: 'host', source: () => stored.value, validate }) }
 }
 
 export const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
