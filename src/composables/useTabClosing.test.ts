@@ -24,7 +24,7 @@ it('cancelling the running-session confirmation keeps a draft chosen for discard
   const document = await discardThenAskToClose()
   useUi().confirmation = null
   expect(document.content).toBe('draft')
-  expect(useFiles().panels.tab.documents).toHaveLength(1)
+  expect(useFiles().document('tab')).toBe(document)
 })
 
 it('confirming the running-session question closes the tab and its explorer', async () => {

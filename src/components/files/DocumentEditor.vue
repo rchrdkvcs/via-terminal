@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { RefreshCw, Save } from '@lucide/vue'
 import { useFiles } from '@/stores/files'
-import { isDirty } from '@/stores/file-documents'
+import { isDirty } from '@/stores/file-document'
 import { useFileDialogs } from '@/stores/file-dialogs'
 import TextEditor from './TextEditor.vue'
 import { Button } from '@/components/ui/button'
@@ -11,17 +11,17 @@ const props = defineProps<{ tabId: string; path: string }>()
 const files = useFiles(),
   dialogs = useFileDialogs()
 const panel = computed(() => files.state(props.tabId))
-const active = computed(() => panel.value.documents.find((doc) => doc.path === props.path))
+const active = computed(() => files.document(props.tabId))
 const sessionId = computed(() => files.session(props.tabId))
 function load() {
-  if (sessionId.value && !active.value) {
-    files.dismissError(props.tabId)
-    void files.openDocument(props.tabId, props.path)
-  }
+  if (!sessionId.value) return
+  files.dismissError(props.tabId)
+  void files.openDocument(props.tabId, props.path)
 }
 watch(sessionId, load, { immediate: true })
 const dirty = computed(() => !!active.value && isDirty(active.value))
-const stale = computed(() => !!active.value && active.value.owner !== panel.value.owner)
+const ownership = computed(() => files.ownership(props.tabId))
+const stale = computed(() => ownership.value === 'other')
 const saved = ref<string | null>(null)
 watch(
   () => [active.value?.id, active.value?.content],
@@ -29,8 +29,8 @@ watch(
 )
 async function save() {
   const document = active.value
-  if (!document || stale.value) return
-  if (await files.saveDocument(props.tabId, document.id)) saved.value = document.id
+  if (!document || ownership.value !== 'same') return
+  if (await files.saveDocument(props.tabId)) saved.value = document.id
 }
 async function conflict(choice: 'reload' | 'overwrite') {
   const document = active.value,
@@ -54,8 +54,8 @@ async function conflict(choice: 'reload' | 'overwrite') {
     ],
   })
   if (answer.choice !== 'confirm' || !link.current()) return
-  if (choice === 'reload') await files.reloadDocument(tabId, document.id)
-  else await files.saveDocument(tabId, document.id, true)
+  if (choice === 'reload') await files.reloadDocument(tabId)
+  else await files.saveDocument(tabId, true)
 }
 </script>
 <template>
@@ -96,7 +96,7 @@ async function conflict(choice: 'reload' | 'overwrite') {
           type="button"
           variant="secondary"
           size="xs"
-          :disabled="!sessionId || stale || active.saving || !dirty"
+          :disabled="ownership !== 'same' || active.saving || !dirty"
           @click="save"
         >
           <Save :stroke-width="1.5" aria-hidden="true" />Enregistrer
@@ -117,7 +117,7 @@ async function conflict(choice: 'reload' | 'overwrite') {
             type="button"
             variant="secondary"
             size="xs"
-            :disabled="!sessionId"
+            :disabled="ownership !== 'same'"
             @click="conflict('reload')"
           >
             Recharger la version distante
@@ -126,7 +126,7 @@ async function conflict(choice: 'reload' | 'overwrite') {
             type="button"
             variant="secondary"
             size="xs"
-            :disabled="!sessionId || stale"
+            :disabled="ownership !== 'same'"
             @click="conflict('overwrite')"
           >
             Remplacer la version distante
@@ -138,7 +138,7 @@ async function conflict(choice: 'reload' | 'overwrite') {
         :content="active.content"
         :path="active.resolvedPath"
         class="min-h-0 flex-1"
-        @change="files.editDocument(tabId, active.id, $event)"
+        @change="files.editDocument(tabId, $event)"
         @save="save"
       />
     </div>
