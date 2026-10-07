@@ -42,7 +42,7 @@ export function findTab(space: Space, tabId: Id): Tab | undefined {
 }
 
 export function isPinned(space: Space, id: Id): boolean {
-  return locate(space, id)?.area === 'pinned'
+  return locate(space, rowOf(space, id)?.id ?? id)?.area === 'pinned'
 }
 
 export function locate(space: Space, id: Id): Location | undefined {

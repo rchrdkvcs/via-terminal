@@ -21,7 +21,7 @@ Two to four tabs shown side by side as a single row. Each member keeps its own s
 _Avoid_: Split group, pane tree, layout
 
 **Pinned tab**:
-A tab kept across restarts in the pinned area of its space.
+A tab kept across restarts in the pinned area of its space. It always reopens in the directory it was pinned with; navigating inside it never moves the pin.
 _Avoid_: Favorite, bookmark
 
 **Temporary tab**:
