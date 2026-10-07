@@ -1,9 +1,8 @@
 import { mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent } from 'vue'
 import { beforeEach, expect, it, vi } from 'vitest'
 import WindowControls from '@/components/shell/WindowControls.vue'
-import type { RemoteDocument } from '@/stores/file-documents'
+import { deferred, draft, native } from '@/stores/files.fixture'
 import { useFiles } from '@/stores/files'
 import { useFileExit } from './useFileExit'
 
@@ -68,7 +67,6 @@ vi.mock('@tauri-apps/api/window', () => {
 beforeEach(() => {
   bridge.exited = false
   bridge.deliver = undefined
-  setActivePinia(createPinia())
   Object.defineProperty(window, '__TAURI_INTERNALS__', { configurable: true, value: {} })
 })
 
@@ -104,9 +102,9 @@ it('quits when the Windows title-bar X is clicked', async () => {
 it('keeps the window open while a document is still saving', async () => {
   const harness = arm()
   await vi.waitFor(() => expect(bridge.deliver).toEqual(expect.any(Function)))
-  useFiles()
-    .state('tab')
-    .documents.push({ saving: true } as RemoteDocument)
+  await draft()
+  native.request.mockReturnValueOnce(deferred().promise)
+  void useFiles().saveDocument('tab')
   await bridge.deliver?.()
   await new Promise((resolve) => setTimeout(resolve, 0))
   expect(bridge.exited).toBe(false)

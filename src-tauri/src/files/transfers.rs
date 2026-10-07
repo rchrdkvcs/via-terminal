@@ -4,8 +4,7 @@ use super::{
     Files,
 };
 use crate::error::{AppError, AppResult};
-use std::sync::{atomic::AtomicU8, Arc, Mutex};
-use std::time::Instant;
+use std::sync::Arc;
 impl Files {
     pub fn start_transfer(self: &Arc<Self>, plan: TransferPlan) -> AppResult<()> {
         let TransferPlan {
@@ -20,12 +19,8 @@ impl Files {
         if sources.is_empty() || sources.len() > 10000 {
             return Err(AppError::invalid("Sélection de transfert invalide"));
         }
-        let job = Arc::new(Job {
-            stopped: AtomicU8::new(0),
-            decision: Mutex::new(None),
-            policy: Mutex::new(None),
-            last_progress: Mutex::new(Instant::now()),
-            event: Mutex::new(TransferEvent {
+        let job = Arc::new(Job::new(
+            TransferEvent {
                 session_id: self.session_id,
                 id,
                 direction,
@@ -37,9 +32,9 @@ impl Files {
                 skipped: vec![],
                 completed_sources,
                 directories,
-            }),
-            sink: self.sink.clone(),
-        });
+            },
+            self.sink.clone(),
+        ));
         let mut jobs = self.jobs.0.lock().unwrap();
         if jobs.contains_key(&id) {
             return Err(AppError::invalid("Ce transfert existe déjà"));

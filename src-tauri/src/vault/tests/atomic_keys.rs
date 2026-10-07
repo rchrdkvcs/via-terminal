@@ -5,7 +5,7 @@ use crate::{
     vault::{
         input::{HostInput, KeyImport},
         model::VaultData,
-        Vault,
+        HostCredential, Vault,
     },
 };
 use std::sync::Arc;
@@ -29,7 +29,10 @@ fn failed_key_creation_leaves_no_orphaned_secret() {
     let key = source.generate_key("source").unwrap();
     let saved = source
         .save_host(HostInput {
-            key_id: Some(key.id),
+            credential: HostCredential::Key {
+                id: key.id,
+                username: None,
+            },
             ..host("a")
         })
         .unwrap();
@@ -66,7 +69,10 @@ fn failed_key_deletion_keeps_key_secret_and_host_reference() {
     let key = vault.generate_key("key").unwrap();
     let saved = vault
         .save_host(HostInput {
-            key_id: Some(key.id),
+            credential: HostCredential::Key {
+                id: key.id,
+                username: None,
+            },
             ..host("a")
         })
         .unwrap();
@@ -88,7 +94,10 @@ fn successful_secret_mutations_survive_reload() {
     let key = vault.generate_key("key").unwrap();
     let saved = vault
         .save_host(HostInput {
-            key_id: Some(key.id),
+            credential: HostCredential::Key {
+                id: key.id,
+                username: None,
+            },
             ..host("a")
         })
         .unwrap();

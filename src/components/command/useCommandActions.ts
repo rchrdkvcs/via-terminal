@@ -14,7 +14,7 @@ import { rank } from '@/domain/search'
 import { isPinned, rowOfTab } from '@/domain/space'
 import { useSidebarActions } from '@/composables/useSidebarActions'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
-import { useTabClosing } from '@/composables/useTabClosing'
+import { useClosing } from '@/composables/useClosing'
 import { useFiles } from '@/stores/files'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
@@ -27,7 +27,7 @@ export function useCommandActions() {
   const workbench = useWorkbench()
   const sidebar = useSidebarActions()
   const kbd = useShortcutLabel()
-  const closing = useTabClosing()
+  const closing = useClosing()
 
   function all(): CommandItem[] {
     const section = 'Actions'
@@ -116,7 +116,7 @@ export function useCommandActions() {
           label: 'Fermer l’onglet',
           icon: X,
           shortcut: kbd('closeTab'),
-          run: () => closing.close(tab.id),
+          run: () => closing.closeTab(tab.id),
         },
       )
     }

@@ -1,6 +1,9 @@
 use super::{
-    asker::Asker, auth, channel, closing, failure::Failure, handler::Client, ConnectPlan, Context,
-    Link, Outcome, Size,
+    auth::{self, Authentication},
+    channel, closing,
+    failure::Failure,
+    handler::Client,
+    ConnectPlan, Context, Link, Outcome, Size,
 };
 use crate::{
     files::Owner,
@@ -51,37 +54,28 @@ async fn prepare(
     context
         .sink
         .state(context.id, SessionState::Connecting, Some(message));
-    let mut remembered_password = None;
-    let (handle, username, mut remembered) = loop {
+    let (handle, username, remembered) = loop {
         let stream = tcp(&plan.address, plan.port).await?;
         let mut handle = handshake(stream, plan, context).await?;
         context
             .sink
             .state(context.id, SessionState::Authenticating, None);
-        if plan.key.is_none() && plan.password.is_none() && plan.credential.is_none() {
-            remembered_password = super::credentials::choose(plan, context).await?;
-        }
-        let asker = Asker::new(context, plan);
-        match auth::authenticate(&mut handle, plan, &asker).await {
-            Ok((username, remembered)) => break (handle, username, remembered),
-            Err(Failure::Credential(choice)) => {
+        match auth::authenticate(&mut handle, plan, context).await? {
+            Authentication::Authenticated {
+                username,
+                remembered,
+            } => break (handle, username, remembered),
+            Authentication::Switched(choice) => {
                 context
                     .store
                     .select_credential(plan, choice)
                     .map_err(|_| Failure::CredentialUnavailable)?;
-                remembered_password = None;
                 let _ = handle
                     .disconnect(russh::Disconnect::ByApplication, "", "")
                     .await;
             }
-            Err(error) => return Err(error),
         }
     };
-    // A refused initial password must never be saved over the successful retry.
-    if remembered.password.is_none() && remembered.password_verified {
-        remembered.password = remembered_password;
-    }
-
     if let Ok(Some(host_id)) = context.store.authenticated(plan, &username, remembered) {
         context.sink.emit(Event::VaultChanged {
             session_id: context.id,

@@ -3,7 +3,6 @@ import { Trash2 } from '@lucide/vue'
 import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { api } from '@/ipc/client'
 import type { Id } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
 import IconAction from './IconAction.vue'
@@ -27,13 +26,14 @@ const identity = computed(() => vault.view.identities.find((item) => item.id ===
 const { draft, error, saving, commit, autosave } = useDraft({
   kind: 'identity',
   source: () => identityInput(identity.value),
-  save: (input) => vault.mutate(() => api.vault.saveIdentity(input)),
   validate: requireUsername,
 })
 
 const usage = computed(() => {
   const id = props.identityId
-  const hosts = vault.view.hosts.filter((host) => host.overrides.identityId === id).length
+  const hosts = vault.view.hosts.filter(
+    ({ credential }) => credential.kind === 'identity' && credential.id === id,
+  ).length
   const groups = vault.view.groups.filter((group) => group.defaults.identityId === id).length
   if (!hosts && !groups) return 'Utilisée par aucun hôte ni groupe'
   const parts = [

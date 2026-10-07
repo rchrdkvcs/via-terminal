@@ -1,7 +1,9 @@
 mod connect;
-mod credentials;
+mod connection_store;
+mod credential;
 mod mutation;
 pub use connect::QuickTarget;
+pub use credential::HostCredential;
 mod groups;
 mod hosts;
 pub mod input;
@@ -10,14 +12,17 @@ pub mod model;
 pub mod resolve;
 #[cfg(test)]
 mod tests;
-mod trust;
 
 use crate::{error::AppResult, secrets::Secrets, storage::Storage};
 use model::{secret_id, Id, SecretKind, VaultData, VaultSnapshot};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex,
+    },
 };
+use ts_rs::TS;
 
 const DOCUMENT: &str = "vault";
 
@@ -25,15 +30,18 @@ pub struct Vault {
     storage: Arc<Storage>,
     secrets: Arc<Secrets>,
     data: Mutex<VaultData>,
+    revision: AtomicU64,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultView {
     #[serde(flatten)]
     pub snapshot: VaultSnapshot,
 
     pub effective: HashMap<Id, resolve::Effective>,
+
+    pub revision: u64,
 }
 
 impl Vault {
@@ -43,6 +51,7 @@ impl Vault {
             storage,
             secrets,
             data: Mutex::new(data),
+            revision: AtomicU64::new(0),
         })
     }
 
@@ -80,6 +89,7 @@ impl Vault {
                 secrets_available: self.secrets.available(),
             },
             effective,
+            revision: self.revision.load(Ordering::Relaxed),
         })
     }
 

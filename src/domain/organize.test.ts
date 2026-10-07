@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Folder, Row } from '@/ipc/types'
+import { LAYOUT_LIMITS } from './limits'
 import { apply, transfer, type Intent } from './organize'
 import { type Space, locate, rows, tabs } from './space'
 
@@ -144,6 +145,98 @@ describe('organize', () => {
     ])
     expect(rejected).toBeNull()
     expect(tabs(state)[0].title).toBeNull()
+  })
+})
+
+describe('navigate', () => {
+  const remote = (id: string, extra: Partial<Row>): Row =>
+    ({ ...tab(id), target: { kind: 'host', hostId: 'h' }, ...extra }) as Row
+  const cwd = (state: Space, id: string) => {
+    const target = tabs(state).find((t) => t.id === id)!.target
+    return target.kind === 'local' ? target.cwd : undefined
+  }
+
+  it('moves a temporary tab to the directory it navigated to', () => {
+    const state = must(space([], [tab('a')]), {
+      type: 'navigate',
+      tabId: 'a',
+      side: 'local',
+      path: '/lab/src',
+    })
+    expect(cwd(state, 'a')).toBe('/lab/src')
+  })
+
+  it('never moves the pin of a pinned tab, even inside a folder or split', () => {
+    const state = space([tab('a'), folder('f', [tab('b')])])
+    for (const id of ['a', 'b']) {
+      const next = must(state, { type: 'navigate', tabId: id, side: 'local', path: '/elsewhere' })
+      expect(cwd(next, id)).toBeNull()
+    }
+    const split = must(space([tab('c'), tab('d')]), {
+      type: 'split',
+      source: 'd',
+      target: 'c',
+      edge: 'right',
+    })
+    const next = must(split, { type: 'navigate', tabId: 'd', side: 'local', path: '/elsewhere' })
+    expect(cwd(next, 'd')).toBeNull()
+  })
+
+  it('follows the remote shell or the explorer path of a temporary remote tab', () => {
+    const state = space([], [remote('t', {}), remote('e', { view: { kind: 'files', path: '/' } })])
+    let next = must(state, { type: 'navigate', tabId: 't', side: 'remote', path: '/var/log' })
+    next = must(next, { type: 'navigate', tabId: 'e', side: 'remote', path: '/etc' })
+    const [terminal, explorer] = tabs(next)
+    expect(terminal.remoteCwd).toBe('/var/log')
+    expect(explorer.view).toEqual({ kind: 'files', path: '/etc' })
+  })
+
+  it('ignores directories that do not apply to the tab', () => {
+    const doc = remote('d', { view: { kind: 'document', path: '/etc/hosts' } })
+    const state = space([], [tab('a'), doc, remote('t', {})])
+    expect(must(state, { type: 'navigate', tabId: 'd', side: 'remote', path: '/etc' })).toEqual(
+      state,
+    )
+    expect(must(state, { type: 'navigate', tabId: 't', side: 'remote', path: '' })).toEqual(state)
+    expect(must(state, { type: 'navigate', tabId: 't', side: 'local', path: '/x' })).toEqual(state)
+    expect(apply(state, { type: 'navigate', tabId: 'zzz', side: 'local', path: '/x' })).toBeNull()
+  })
+})
+
+describe('layout limits', () => {
+  const { nameLength, titleLength } = LAYOUT_LIMITS
+
+  it('refuses tab titles the layout would reject', () => {
+    const state = space([], [tab('a')])
+    const title = (value: string) =>
+      apply(state, { type: 'updateTab', tabId: 'a', patch: { title: value } })
+    expect(title('t'.repeat(titleLength))).not.toBeNull()
+    expect(title('t'.repeat(titleLength + 1))).toBeNull()
+    expect(title('   ')).toBeNull()
+  })
+
+  it('refuses folder names the layout would reject', () => {
+    const state = space([folder('f')])
+    const rename = (name: string) => apply(state, { type: 'renameFolder', id: 'f', name })
+    expect(rename('n'.repeat(nameLength))).not.toBeNull()
+    expect(rename('n'.repeat(nameLength + 1))).toBeNull()
+    const long = { ...folder('g'), name: 'n'.repeat(nameLength + 1) }
+    expect(apply(state, { type: 'createFolder', folder: long, before: null })).toBeNull()
+  })
+
+  it('refuses split views outside the allowed tab count', () => {
+    const tooMany: Row = {
+      kind: 'split',
+      id: 'big',
+      direction: 'horizontal',
+      sizes: [1, 1, 1, 1, 1],
+      tabs: ['a', 'b', 'c', 'd', 'e'].map((id) => ({
+        id,
+        title: null,
+        target: { kind: 'local', shell: null, cwd: null },
+      })),
+    }
+    expect(apply(space(), { type: 'open', row: tooMany })).toBeNull()
   })
 })
 

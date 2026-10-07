@@ -1,55 +1,24 @@
 import { invoke } from '@tauri-apps/api/core'
 import { isNative } from './client'
+import type { FileRequest, FilesReply, Listing, RemoteText } from './bindings'
 
-/** Endpoint and account behind a listing, document or transfer. Compare with `===` only. */
-export type RemoteOwner = string
-export type EntryKind = 'file' | 'directory' | 'link' | 'other'
-export interface RemoteEntry {
-  name: string
-  path: string
-  kind: EntryKind
-  targetKind: EntryKind | null
-  size: number
-  modified: number | null
-  permissions: number | null
-}
-export interface RemoteText {
-  owner: RemoteOwner
-  path: string
-  resolvedPath: string
-  content: string
-  permissions: number | null
-  uid: number | null
-  gid: number | null
-}
-export interface Listing {
-  owner: RemoteOwner
-  path: string
-  entries: RemoteEntry[]
-}
-export type Collision = 'replace' | 'skip' | 'keepBoth'
-export type TransferDirection = 'upload' | 'download'
-export interface TransferPlan {
-  id: string
-  owner: RemoteOwner
-  direction: TransferDirection
-  sources: string[]
-  destination: string
-  completedSources?: string[]
-  directories?: Record<string, string>
-}
-export type FileRequest =
-  | { operation: 'list'; path: string }
-  | { operation: 'read'; path: string }
-  | { operation: 'save'; document: RemoteText; original: string; overwrite: boolean }
-  | { operation: 'create'; parent: string; name: string; directory: boolean }
-  | { operation: 'move'; path: string; destination: string }
-  | { operation: 'delete'; path: string }
-  | { operation: 'chmod'; path: string; permissions: number }
-  | ({ operation: 'transfer' } & TransferPlan)
-  | { operation: 'cancel'; id: string }
-  | { operation: 'resolve'; id: string; choice: Collision; all: boolean }
-interface FileReplies {
+export type {
+  Collision,
+  EntryKind,
+  FileRequest,
+  Listing,
+  NativeTransferState,
+  RemoteEntry,
+  RemoteOwner,
+  RemoteText,
+  TransferDirection,
+  TransferEvent,
+  TransferPlan,
+} from './bindings'
+
+/** Narrows Rust's untagged reply per operation; every operation must map to one of its shapes. */
+type Replies<T extends Record<FileRequest['operation'], FilesReply>> = T
+type FileReplies = Replies<{
   list: Listing
   read: RemoteText
   save: RemoteText
@@ -60,22 +29,8 @@ interface FileReplies {
   transfer: null
   cancel: null
   resolve: null
-}
+}>
 export type FileReply<R extends FileRequest> = FileReplies[R['operation']]
-export type NativeTransferState = 'running' | 'conflict' | 'completed' | 'failed' | 'cancelled'
-export interface TransferEvent {
-  sessionId: string
-  id: string
-  direction: TransferDirection
-  state: NativeTransferState
-  path: string
-  bytes: number
-  total: number
-  message: string | null
-  skipped: string[]
-  completedSources: string[]
-  directories: Record<string, string>
-}
 export const filesApi = {
   request: <R extends FileRequest>(sessionId: string, request: R): Promise<FileReply<R>> => {
     if (!isNative())
@@ -89,8 +44,15 @@ export const filesApi = {
     invoke<string[]>('files_pick', { directory, download }),
   stageBegin: () => invoke<string>('files_stage_begin'),
   stageDirectory: (id: string, path: string) => invoke<void>('files_stage_directory', { id, path }),
-  stageChunk: (id: string, path: string, data: number[]) =>
-    invoke<void>('files_stage_chunk', { id, path, data }),
+  /** Sent as raw bytes: the path's length (u32, big-endian), the UTF-8 path, then the data. */
+  stageChunk: (id: string, path: string, data: Uint8Array) => {
+    const name = new TextEncoder().encode(path)
+    const body = new Uint8Array(4 + name.length + data.length)
+    new DataView(body.buffer).setUint32(0, name.length)
+    body.set(name, 4)
+    body.set(data, 4 + name.length)
+    return invoke<void>('files_stage_chunk', body, { headers: { 'Via-Staging': id } })
+  },
   stageFinish: (id: string) => invoke<string[]>('files_stage_finish', { id }),
   stageDiscard: (id: string) => invoke<void>('files_stage_discard', { id }),
 }

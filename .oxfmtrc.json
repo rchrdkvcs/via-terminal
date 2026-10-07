@@ -12,6 +12,7 @@
     "src-tauri/target/",
     "src-tauri/gen/",
     "pnpm-lock.yaml",
-    ".ai/"
+    ".ai/",
+    "src/ipc/bindings.ts"
   ]
 }

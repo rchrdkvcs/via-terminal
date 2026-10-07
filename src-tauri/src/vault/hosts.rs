@@ -1,6 +1,6 @@
 use super::{
     input::{self, HostInput},
-    model::{now_ms, Defaults, Host, Id, SecretKind},
+    model::{now_ms, Host, Id, SecretKind},
     Vault,
 };
 use crate::error::{AppError, AppResult};
@@ -10,14 +10,11 @@ impl Vault {
     pub fn save_host(&self, input: HostInput) -> AppResult<Host> {
         let address = input.address.trim().to_string();
         input::validate_address(&address)?;
-        let overrides = Defaults {
-            username: input::trimmed(input.overrides.username),
-            ..input.overrides
-        };
+        input::validate_port(input.port)?;
+        let credential = input.credential.clone().normalized();
         self.commit_with_secrets(|data, secrets| {
             input::validate_group_ref(data, input.group_id)?;
-            input::validate_defaults(data, &overrides)?;
-            input::validate_key_ref(data, input.key_id)?;
+            credential.validate(data)?;
             let existing = input
                 .id
                 .map(|id| {
@@ -29,13 +26,12 @@ impl Vault {
                 .transpose()?;
             let previous = existing.map(|index| data.hosts[index].clone());
             let host = Host {
-                own_credentials: input.own_credentials,
                 id: previous.as_ref().map_or_else(Uuid::new_v4, |host| host.id),
                 group_id: input.group_id,
                 label: input::trimmed(Some(input.label.clone())).unwrap_or_else(|| address.clone()),
                 address: address.clone(),
-                overrides: overrides.clone(),
-                key_id: input.key_id,
+                port: input.port,
+                credential: credential.clone(),
                 tags: input::clean_tags(input.tags.clone()),
                 notes: input.notes.clone(),
                 created_at: previous

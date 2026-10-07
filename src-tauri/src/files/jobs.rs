@@ -65,6 +65,16 @@ impl Jobs {
     }
 }
 impl Job {
+    pub fn new(event: TransferEvent, sink: Arc<dyn EventSink>) -> Self {
+        Self {
+            stopped: AtomicU8::new(0),
+            decision: Mutex::new(None),
+            policy: Mutex::new(None),
+            last_progress: Mutex::new(Instant::now()),
+            event: Mutex::new(event),
+            sink,
+        }
+    }
     pub fn check(&self) -> AppResult<()> {
         match self.stopped.load(Ordering::Acquire) {
             1 => Err(AppError::new("file_cancelled", "Transfert annulé")),

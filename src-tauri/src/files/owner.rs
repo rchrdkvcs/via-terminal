@@ -1,11 +1,13 @@
 use crate::error::{AppError, AppResult};
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// Endpoint and account behind a remote explorer; documents and transfers keep the one that
 /// produced them. The interface only compares it for equality.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[cfg_attr(test, derive(Default))]
 #[serde(transparent)]
+#[ts(rename = "RemoteOwner")]
 pub struct Owner(String);
 
 impl Owner {

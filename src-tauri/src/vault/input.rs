@@ -1,8 +1,12 @@
-use super::model::{Defaults, Id, VaultData};
+use super::{
+    credential::HostCredential,
+    model::{Defaults, Id, VaultData},
+};
 use crate::error::{AppError, AppResult};
 use serde::Deserialize;
+use ts_rs::TS;
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, TS)]
 #[serde(tag = "action", content = "value", rename_all = "camelCase")]
 pub enum SecretUpdate {
     #[default]
@@ -11,19 +15,17 @@ pub enum SecretUpdate {
     Set(String),
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct HostInput {
-    #[serde(default)]
-    pub own_credentials: bool,
     pub id: Option<Id>,
     pub group_id: Option<Id>,
     #[serde(default)]
     pub label: String,
     pub address: String,
+    pub port: Option<u16>,
     #[serde(default)]
-    pub overrides: Defaults,
-    pub key_id: Option<Id>,
+    pub credential: HostCredential,
     #[serde(default)]
     pub tags: Vec<String>,
     #[serde(default)]
@@ -32,7 +34,7 @@ pub struct HostInput {
     pub password: SecretUpdate,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct GroupInput {
     pub id: Option<Id>,
@@ -42,7 +44,7 @@ pub struct GroupInput {
     pub defaults: Defaults,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct IdentityInput {
     pub id: Option<Id>,
@@ -54,7 +56,7 @@ pub struct IdentityInput {
     pub password: SecretUpdate,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyImport {
     pub label: String,
@@ -84,12 +86,17 @@ pub fn validate_username(username: &str) -> AppResult<()> {
     Ok(())
 }
 
-pub fn validate_defaults(data: &VaultData, defaults: &Defaults) -> AppResult<()> {
-    if defaults.port == Some(0) {
+pub fn validate_port(port: Option<u16>) -> AppResult<()> {
+    if port == Some(0) {
         return Err(AppError::invalid(
             "le port doit être compris entre 1 et 65535",
         ));
     }
+    Ok(())
+}
+
+pub fn validate_defaults(data: &VaultData, defaults: &Defaults) -> AppResult<()> {
+    validate_port(defaults.port)?;
     if let Some(username) = &defaults.username {
         validate_username(username)?;
     }

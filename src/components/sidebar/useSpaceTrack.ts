@@ -30,8 +30,6 @@ export function useSpaceTrack(sidebar: Ref<HTMLElement | undefined>) {
 
   let base = 0
 
-  let fling = 0
-
   function neighbor(side: 1 | -1): Id | null {
     const list = spaces.spaces
     const index = list.findIndex((space) => space.id === spaces.active.id)
@@ -85,8 +83,8 @@ export function useSpaceTrack(sidebar: Ref<HTMLElement | undefined>) {
       if (phased) api.swipeHaptic().catch(() => {})
     },
     commit: (direction, velocity) => {
-      fling = GAIN * velocity
       spaces.cycle(direction)
+      if (moving.value) settle(GAIN * velocity, SWITCH_OMEGA)
     },
     cancel: (velocity) => settle(GAIN * velocity, RETURN_OMEGA),
   })
@@ -100,15 +98,13 @@ export function useSpaceTrack(sidebar: Ref<HTMLElement | undefined>) {
   watch(
     () => spaces.activeId,
     (_, old) => {
-      const velocity = fling
-      fling = 0
       if (reduced.value || !old || !spaces.byId(old)) return rest()
 
       const direction = spaces.switchDirection
       moving.value = true
       position.value -= direction
       peer.value = { id: old, side: -direction as 1 | -1 }
-      settle(velocity, SWITCH_OMEGA)
+      settle(0, SWITCH_OMEGA)
     },
     { flush: 'sync' },
   )

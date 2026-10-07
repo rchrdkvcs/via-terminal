@@ -19,6 +19,7 @@ mod staging;
 mod transfers;
 mod upload;
 mod upload_file;
+mod walk;
 use crate::{
     error::{AppError, AppResult},
     sessions::events::EventSink,
@@ -27,7 +28,7 @@ use errors::{eof, missing, sftp_error};
 pub use owner::Owner;
 use paths::join;
 use russh_sftp::client::RawSftpSession;
-pub use staging::Staging;
+pub use staging::{parse_chunk, Staging};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -108,3 +109,5 @@ mod upload_mode_tests;
 
 #[cfg(test)]
 mod retry_noop_tests;
+#[cfg(test)]
+mod walk_tests;

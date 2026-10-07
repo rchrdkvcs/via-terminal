@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { effectScope } from 'vue'
 import { deferredBackend, editor, record } from '@/test/vaultSaves'
+
+beforeEach(() => setActivePinia(createPinia()))
 
 function closable(...args: Parameters<typeof editor>) {
   const scope = effectScope()

@@ -1,7 +1,8 @@
-use super::model::{Group, Host, Id, Identity, VaultData};
+use super::model::{Host, Id, VaultData};
 use serde::Serialize;
+use ts_rs::TS;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[serde(tag = "kind", content = "id", rename_all = "camelCase")]
 pub enum Source {
     Host,
@@ -10,14 +11,14 @@ pub enum Source {
     Default,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Sourced<T> {
     pub value: T,
     pub from: Source,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Effective {
     pub username: Option<Sourced<String>>,
@@ -26,91 +27,61 @@ pub struct Effective {
     pub key_id: Option<Sourced<Id>>,
 }
 
-enum Level<'a> {
-    Host(&'a Host),
-    Group(&'a Group),
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Inherited {
+    pub username: Option<Sourced<String>>,
+    pub port: Option<Sourced<u16>>,
+    pub identity_id: Option<Sourced<Id>>,
 }
 
-fn levels<'a>(data: &'a VaultData, host: &'a Host) -> Vec<Level<'a>> {
-    let mut levels = vec![Level::Host(host)];
-    let mut cursor = host.group_id;
-
-    while let Some(id) = cursor.filter(|_| levels.len() <= data.groups.len() + 1) {
+pub fn inherited(data: &VaultData, group_id: Option<Id>) -> Inherited {
+    let mut inherited = Inherited::default();
+    let mut cursor = group_id;
+    let mut depth = 0;
+    while let Some(id) = cursor.filter(|_| depth < data.groups.len()) {
         let Some(group) = data.groups.iter().find(|group| group.id == id) else {
             break;
         };
-        levels.push(Level::Group(group));
-        cursor = group.parent_id;
-    }
-    levels
-}
-
-fn identity(data: &VaultData, id: Option<Id>) -> Option<&Identity> {
-    id.and_then(|id| data.identities.iter().find(|identity| identity.id == id))
-}
-
-pub fn effective(data: &VaultData, host: &Host) -> Effective {
-    let mut username = None;
-    let mut port = None;
-    let mut identity_id = None;
-    for level in levels(data, host) {
-        let (defaults, source) = match level {
-            Level::Host(host) => (&host.overrides, Source::Host),
-            Level::Group(group) => (&group.defaults, Source::Group(group.id)),
-        };
-        let use_credentials = !host.own_credentials || matches!(source, Source::Host);
-        let level_identity = if host.own_credentials {
-            None
-        } else {
-            identity(data, defaults.identity_id)
-        };
-        if username.is_none() && use_credentials {
-            username = level_identity
+        depth += 1;
+        let from = Source::Group(group.id);
+        let defaults = &group.defaults;
+        let identity = defaults
+            .identity_id
+            .and_then(|id| data.identities.iter().find(|identity| identity.id == id));
+        if inherited.username.is_none() {
+            inherited.username = identity
                 .map(|identity| Sourced {
                     value: identity.username.clone(),
                     from: Source::Identity(identity.id),
                 })
                 .or_else(|| {
-                    defaults.username.clone().map(|value| Sourced {
-                        value,
-                        from: source,
-                    })
+                    defaults
+                        .username
+                        .clone()
+                        .map(|value| Sourced { value, from })
                 });
         }
-        if port.is_none() {
-            port = defaults.port.map(|value| Sourced {
-                value,
-                from: source,
-            });
+        if inherited.port.is_none() {
+            inherited.port = defaults.port.map(|value| Sourced { value, from });
         }
-        if identity_id.is_none() {
-            identity_id = level_identity.map(|identity| Sourced {
+        if inherited.identity_id.is_none() {
+            inherited.identity_id = identity.map(|identity| Sourced {
                 value: identity.id,
-                from: source,
+                from,
             });
         }
+        cursor = group.parent_id;
     }
-    let key_id = host
-        .key_id
-        .filter(|_| host.overrides.identity_id.is_none() || host.own_credentials)
-        .map(|value| Sourced {
+    inherited
+}
+
+pub fn effective(data: &VaultData, host: &Host) -> Effective {
+    let mut inherited = inherited(data, host.group_id);
+    if let Some(value) = host.port {
+        inherited.port = Some(Sourced {
             value,
             from: Source::Host,
-        })
-        .or_else(|| {
-            let identity = identity(data, identity_id.as_ref().map(|sourced| sourced.value))?;
-            identity.key_id.map(|value| Sourced {
-                value,
-                from: Source::Identity(identity.id),
-            })
         });
-    Effective {
-        username,
-        port: port.unwrap_or(Sourced {
-            value: 22,
-            from: Source::Default,
-        }),
-        identity_id,
-        key_id,
     }
+    host.credential.resolve(data, inherited)
 }

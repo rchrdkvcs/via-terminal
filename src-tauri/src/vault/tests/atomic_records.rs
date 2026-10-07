@@ -4,7 +4,7 @@ use crate::{
     vault::{
         input::{HostInput, IdentityInput, SecretUpdate},
         model::{secret_id, SecretKind, VaultData},
-        QuickTarget, Vault,
+        HostCredential, QuickTarget, Vault,
     },
 };
 use zeroize::Zeroizing;
@@ -87,7 +87,7 @@ fn failed_secret_deletion_preserves_host_and_identity_references() {
         })
         .unwrap();
     let mut input = host("a");
-    input.overrides.identity_id = Some(identity.id);
+    input.credential = HostCredential::Identity { id: identity.id };
     input.password = SecretUpdate::Set("host-pw".into());
     let saved = vault.save_host(input).unwrap();
     assert!(vault.delete_identity(identity.id).is_err());
@@ -138,7 +138,6 @@ fn failed_remembering_does_not_save_quick_connect() {
             &plan,
             "user",
             Remembered {
-                password_verified: false,
                 password: Some(Zeroizing::new("pw".into())),
                 passphrase: None,
             }

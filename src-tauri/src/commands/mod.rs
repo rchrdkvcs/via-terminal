@@ -5,8 +5,8 @@ pub mod sessions;
 pub mod vault;
 
 use crate::{
-    layout::Layouts, sessions::shells::Shell, sessions::SessionHub, settings::SettingsStore,
-    vault::Vault,
+    layout::Layouts, sessions::shells::DetectedShells, sessions::SessionHub,
+    settings::SettingsStore, vault::Vault,
 };
 use std::sync::Arc;
 
@@ -15,8 +15,15 @@ pub struct App {
     pub settings: SettingsStore,
     pub vault: Arc<Vault>,
     pub sessions: SessionHub,
-    pub shells: Vec<Shell>,
+    pub shells: DetectedShells,
     pub staging: crate::files::Staging,
+}
+
+impl App {
+    pub fn shutdown(&self) {
+        self.sessions.close_all();
+        self.staging.clear();
+    }
 }
 
 pub fn handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {

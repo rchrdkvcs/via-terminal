@@ -44,7 +44,7 @@ it('leaves sessions running if a durable save fails', async () => {
 it('blocks installation for an unsaved new vault record until its editor is closed', async () => {
   const scope = effectScope()
   const editor = scope.run(() =>
-    useDraft({ kind: 'host', source: () => ({ id: null, label: '' }), save: vi.fn() }),
+    useDraft({ kind: 'host', source: () => ({ id: null, label: '' }) }),
   )!
   editor.draft.value.label = 'Unsaved host'
   await expect(prepareUpdate()).rejects.toThrow('brouillon')

@@ -8,8 +8,9 @@ import { useSidebarActions } from '@/composables/useSidebarActions'
 import { useSessions } from '@/stores/sessions'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
-import { useTabClosing } from '@/composables/useTabClosing'
+import { useClosing } from '@/composables/useClosing'
 import InlineRename from './InlineRename.vue'
+import { LAYOUT_LIMITS } from '@/domain/limits'
 import RowMenu from './RowMenu.vue'
 import TabIcon from './TabIcon.vue'
 
@@ -17,7 +18,7 @@ const props = defineProps<{ tab: Tab; compact?: boolean }>()
 const sessions = useSessions()
 const ui = useUi()
 const workbench = useWorkbench()
-const closing = useTabClosing()
+const closing = useClosing()
 const actions = useSidebarActions()
 const names = useTabLabel()
 
@@ -51,6 +52,7 @@ const asleep = computed(() => state.value === 'asleep' || state.value === 'exite
           v-if="ui.renaming === tab.id"
           :value="label"
           label="Nom de l’onglet"
+          :maxlength="LAYOUT_LIMITS.titleLength"
           @commit="(value) => (actions.rename(tab.id, value), (ui.renaming = null))"
           @cancel="ui.renaming = null"
         />
@@ -60,7 +62,7 @@ const asleep = computed(() => state.value === 'asleep' || state.value === 'exite
           type="button"
           class="-me-1 grid size-6 shrink-0 place-items-center rounded-[5px] text-muted-foreground opacity-0 transition-opacity duration-100 group-hover/tab:opacity-100 group-focus-within/tab:opacity-100 hover:bg-row-hover hover:text-foreground focus-visible:opacity-100"
           :aria-label="`Fermer ${label}`"
-          @click.stop="closing.close(tab.id)"
+          @click.stop="closing.closeTab(tab.id)"
         >
           <X :size="14" :stroke-width="1.5" />
         </button>

@@ -1,99 +1,129 @@
 import { defineStore } from 'pinia'
-import { reactive } from 'vue'
+import { reactive, watch } from 'vue'
 import { filesApi, type RemoteEntry, type RemoteOwner } from '@/ipc/files'
 import { describeError } from '@/ipc/client'
-import { documentActions, isDirty, type RemoteDocument } from './file-documents'
-import { transferActions, type Transfer } from './file-transfers'
-export type { RemoteDocument } from './file-documents'
-export type { Transfer, TransferState } from './file-transfers'
-export type { Preparation } from './file-preparation'
-/** The remote explorer of one tab. Its connection is `sessionId`, null while disconnected. */
+import { useSessions } from './sessions'
+import { documentActions } from './file-document'
+import { transferActions } from './file-transfers'
+export type { RemoteDocument, Ownership } from './file-document'
+export type { DroppedFile, Transfer, TransferState } from './file-transfers'
+export { isActive, isFinished, isProgressing } from './file-transfers'
+/** The remote explorer of one tab; `owner` is its current connection's, once a reply told it. */
 export interface FileState {
   owner: RemoteOwner | undefined
   visible: boolean
   directory: string
   entries: RemoteEntry[]
-  documents: RemoteDocument[]
   busy: boolean
   error: string | null
-  generation: number
-  /** Invalidates document reads on disconnect, independently of directory refreshes. */
-  connectionGeneration: number
-  sessionId: string | null
-  transfers: Transfer[]
 }
+/**
+ * A tab's ready session when a request began. Its replies apply only while `current()`:
+ * the tab still exists and has not changed session since.
+ */
+export interface Connection {
+  readonly sessionId: string
+  current(): boolean
+}
+const empty = (): FileState => ({
+  owner: undefined,
+  visible: false,
+  directory: '.',
+  entries: [],
+  busy: false,
+  error: null,
+})
+const ABSENT: Readonly<FileState> = Object.freeze(empty())
 export const useFiles = defineStore('files', () => {
   const panels = reactive<Record<string, FileState>>({})
-  function state(tabId: string): FileState {
-    return (panels[tabId] ??= {
-      owner: undefined,
-      visible: false,
-      directory: '.',
-      entries: [],
-      documents: [],
-      busy: false,
-      error: null,
-      generation: 0,
-      connectionGeneration: 0,
-      sessionId: null,
-      transfers: [],
-    })
+  const sessions = useSessions()
+  /** One generation per explorer, renewed whenever its session changes or it is released. */
+  const links = new Map<string, { sessionId: string | null; generation: number }>()
+  const listings = new Map<string, symbol>()
+  let generations = 0
+  function session(tabId: string): string | null {
+    const runtime = sessions.runtime(tabId)
+    return runtime.state === 'ready' ? (runtime.sessionId ?? null) : null
   }
-  const transfers = transferActions(panels)
-  async function navigate(tabId: string, sessionId: string, path: string) {
-    const panel = state(tabId)
-    const generation = ++panel.generation
+  function connection(tabId: string): Connection | null {
+    const link = links.get(tabId)
+    if (!panels[tabId] || !link?.sessionId) return null
+    const { sessionId, generation } = link
+    return { sessionId, current: () => links.get(tabId)?.generation === generation }
+  }
+  /** Reads an explorer without creating it; a released one reads as empty. */
+  function state(tabId: string): Readonly<FileState> {
+    return panels[tabId] ?? ABSENT
+  }
+  function ensure(tabId: string): FileState {
+    if (!panels[tabId]) {
+      links.set(tabId, { sessionId: session(tabId), generation: ++generations })
+      panels[tabId] = empty()
+    }
+    return panels[tabId]
+  }
+  const transfers = transferActions(panels, connection)
+  const documents = documentActions({ panels, ensure, connection })
+  // Session ends and reconnections invalidate every reply still on its way.
+  watch(
+    () => Object.keys(panels).map((id) => [id, session(id)] as const),
+    (current) => {
+      for (const [id, sessionId] of current) {
+        const link = links.get(id)
+        if (!link || link.sessionId === sessionId) continue
+        const ended = link.sessionId !== null
+        links.set(id, { sessionId, generation: ++generations })
+        panels[id].owner = undefined
+        if (!ended) continue
+        panels[id].busy = false
+        transfers.interrupt(id)
+      }
+    },
+    { flush: 'sync' },
+  )
+  async function navigate(tabId: string, path: string) {
+    const panel = ensure(tabId)
+    const link = connection(tabId)
+    if (!link) return
+    const listing = Symbol()
+    listings.set(tabId, listing)
+    const latest = () => link.current() && listings.get(tabId) === listing
     panel.busy = true
     panel.error = null
-    panel.sessionId = sessionId
     try {
-      const listing = await filesApi.request(sessionId, { operation: 'list', path })
-      if (panel.generation !== generation) return
-      panel.owner = listing.owner
-      panel.directory = listing.path
-      panel.entries = listing.entries
+      const reply = await filesApi.request(link.sessionId, { operation: 'list', path })
+      if (!latest()) return
+      panel.owner = reply.owner
+      panel.directory = reply.path
+      panel.entries = reply.entries
     } catch (cause) {
-      if (panel.generation === generation) panel.error = describeError(cause)
+      if (latest()) panel.error = describeError(cause)
     } finally {
-      if (panel.generation === generation) panel.busy = false
+      if (latest()) panel.busy = false
     }
-  }
-  /** The session ended: keeps documents and failed transfers for a later connection. */
-  function disconnect(tabId: string) {
-    const panel = panels[tabId]
-    if (!panel) return
-    panel.generation++
-    panel.connectionGeneration++
-    panel.sessionId = null
-    panel.busy = false
-    transfers.interrupt(tabId)
   }
   /** The tab closed or changed target: forgets everything, including staged drops. */
   function release(tabId: string) {
-    disconnect(tabId)
-    transfers.forget(tabId)
+    if (!panels[tabId]) return
+    links.delete(tabId)
+    listings.delete(tabId)
+    transfers.release(tabId)
+    documents.forget(tabId)
     delete panels[tabId]
-  }
-  function unsaved(tabId: string): RemoteDocument[] {
-    return panels[tabId]?.documents.filter(isDirty) ?? []
-  }
-  function hasChanges(tabId: string) {
-    return !!panels[tabId]?.documents.some((doc) => isDirty(doc) || doc.saving)
   }
   return {
     panels,
     state,
+    session,
+    connection,
     setVisible: (tabId: string, visible: boolean) => {
-      state(tabId).visible = visible
+      ensure(tabId).visible = visible
     },
     hide: (tabId: string) => {
       if (panels[tabId]) panels[tabId].visible = false
     },
     navigate,
-    disconnect,
     release,
-    unsaved,
-    hasChanges,
     reportError: (tabId: string, error: string) => {
       if (panels[tabId]) panels[tabId].error = error
     },
@@ -101,6 +131,6 @@ export const useFiles = defineStore('files', () => {
       if (panels[tabId]) panels[tabId].error = null
     },
     ...transfers.actions,
-    ...documentActions(state),
+    ...documents.actions,
   }
 })

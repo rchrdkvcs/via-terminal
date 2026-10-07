@@ -37,6 +37,7 @@ tauri-plugin-updater = "2.13.1"
 tauri-plugin-process = "2.4.0"
 russh-sftp = "3"
 tauri-plugin-dialog = "2"
+ts-rs = { version = "12", features = ["uuid-impl", "no-serde-warnings"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"

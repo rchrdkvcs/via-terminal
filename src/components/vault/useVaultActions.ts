@@ -9,9 +9,13 @@ export function useVaultActions() {
   const vault = useVault()
   const ui = useUi()
 
-  async function run(task: () => Promise<Mutation>): Promise<Id | null> {
+  function run(task: () => Promise<Mutation>): Promise<Id | null> {
+    return attempt(() => vault.mutate(task))
+  }
+
+  async function attempt(task: () => Promise<Id | null>): Promise<Id | null> {
     try {
-      return await vault.mutate(task)
+      return await task()
     } catch (cause) {
       notify.error(describeError(cause))
       return null
@@ -25,7 +29,7 @@ export function useVaultActions() {
   function remove(request: {
     title: string
     description: string
-    run: () => Promise<Mutation>
+    run: () => Promise<Id | null>
     id: Id
   }) {
     ui.confirm({
@@ -33,7 +37,11 @@ export function useVaultActions() {
       description: request.description,
       confirm: 'Supprimer',
       destructive: true,
-      run: () => void run(request.run).then(() => forget(request.id)),
+      run: () =>
+        void request.run().then(
+          () => forget(request.id),
+          (cause) => notify.error(describeError(cause)),
+        ),
     })
   }
 
@@ -43,7 +51,7 @@ export function useVaultActions() {
   }
 
   async function duplicateHost(id: Id) {
-    const copy = await run(() => api.vault.duplicateHost(id))
+    const copy = await attempt(() => vault.duplicateHost(id))
     if (copy) ui.vaultFocus = { section: 'hosts', id: copy }
   }
 
@@ -54,7 +62,7 @@ export function useVaultActions() {
       title: `Supprimer « ${host?.label ?? 'cet hôte'} » ?`,
       description:
         'L’hôte et son mot de passe enregistré sont retirés du coffre. Les onglets épinglés qui l’utilisent restent et indiqueront que leur hôte n’existe plus.',
-      run: () => api.vault.deleteHost(id),
+      run: () => vault.remove('host', id),
     })
   }
 
@@ -66,7 +74,7 @@ export function useVaultActions() {
       id,
       title: `Supprimer le groupe « ${group?.name ?? ''} » ?`,
       description: `Ses hôtes et ses sous-groupes remontent ${destination}. Aucun hôte n’est supprimé, mais ils perdent les valeurs par défaut de ce groupe.`,
-      run: () => api.vault.deleteGroup(id),
+      run: () => vault.remove('group', id),
     })
   }
 
@@ -77,7 +85,7 @@ export function useVaultActions() {
       title: `Supprimer l’identité « ${identity?.label ?? ''} » ?`,
       description:
         'Les hôtes et groupes qui l’utilisent perdent cette référence et reprennent les valeurs héritées. Son mot de passe enregistré est oublié.',
-      run: () => api.vault.deleteIdentity(id),
+      run: () => vault.remove('identity', id),
     })
   }
 
@@ -88,7 +96,7 @@ export function useVaultActions() {
       title: `Supprimer la clé « ${key?.label ?? ''} » ?`,
       description:
         'La clé privée est effacée du coffre et ne pourra pas être récupérée. Les hôtes et identités qui l’utilisent n’auront plus de clé.',
-      run: () => api.vault.deleteKey(id),
+      run: () => vault.mutate(() => api.vault.deleteKey(id)),
     })
   }
 
@@ -98,17 +106,17 @@ export function useVaultActions() {
       id,
       title: `Oublier l’empreinte de ${known ? `${known.address}:${known.port}` : 'ce serveur'} ?`,
       description: 'La prochaine connexion redemandera de vérifier ce serveur.',
-      run: () => api.vault.deleteKnownHost(id),
+      run: () => vault.mutate(() => api.vault.deleteKnownHost(id)),
     })
   }
 
-  async function createGroup(parentId: Id | null): Promise<Id | null> {
-    const defaults = { username: null, port: null, identityId: null }
-    return run(() => api.vault.saveGroup({ id: null, parentId, name: 'Nouveau groupe', defaults }))
+  function createGroup(parentId: Id | null): Promise<Id | null> {
+    return attempt(() => vault.createGroup(parentId))
   }
 
   return {
     run,
+    attempt,
     connect,
     duplicateHost,
     deleteHost,

@@ -1,5 +1,6 @@
 use super::{
-    asker::{is_password_round, Asker},
+    asker::{is_password_round, Asker, Stop},
+    attempts::Sent,
     auth::Chain,
     failure::{Failure, Method},
 };
@@ -18,7 +19,7 @@ pub(super) async fn run(
     chain: &mut Chain<'_>,
     asker: &Asker,
     mut stored: Option<&str>,
-) -> Result<bool, Failure> {
+) -> Result<bool, Stop> {
     let mut attempts = 0;
     let mut keyboard = true;
     while attempts < USER_ATTEMPTS {
@@ -44,11 +45,9 @@ async fn keyboard_interactive(
     chain: &mut Chain<'_>,
     asker: &Asker,
     stored: &mut Option<&str>,
-) -> Result<Round, Failure> {
+) -> Result<Round, Stop> {
     chain.attempt(Method::KeyboardInteractive);
-    let (mut answered, mut asked_user, mut password_sent) = (false, false, false);
-    let mut typed = None;
-    let mut used_stored = false;
+    let (mut answered, mut asked_user) = (false, false);
     let mut reply = chain
         .handle
         .authenticate_keyboard_interactive_start(chain.username.clone(), None::<String>)
@@ -56,15 +55,15 @@ async fn keyboard_interactive(
     loop {
         let answers = match reply.map_err(|error| Failure::from_russh(&error))? {
             Reply::Success => {
-                chain.remembered.password_verified |= used_stored;
-                chain.remembered.password = typed.or(chain.remembered.password.take());
+                chain.attempts.answered(true);
                 return Ok(Round::Success);
             }
             Reply::Failure {
-                remaining_methods, ..
+                remaining_methods,
+                partial_success,
             } => {
                 chain.refused(remaining_methods)?;
-                chain.password_failed |= password_sent;
+                chain.attempts.answered(partial_success);
                 return Ok(match answered {
                     false => Round::Silent,
                     true => Round::Refused { asked_user },
@@ -72,19 +71,17 @@ async fn keyboard_interactive(
             }
             Reply::InfoRequest { prompts, .. } if prompts.is_empty() => Vec::new(),
             Reply::InfoRequest { prompts, .. } if is_password_round(&prompts) => {
-                (answered, password_sent) = (true, true);
+                answered = true;
                 if let Some(password) = stored.take() {
-                    used_stored = true;
+                    chain.attempts.sent(Sent::Stored);
                     vec![password.to_string()]
                 } else {
                     asked_user = true;
-                    used_stored = false;
-                    chain.remembered.password_verified = false;
                     let (password, remember) = asker
-                        .password(&chain.username, chain.password_failed)
+                        .password(&chain.username, chain.attempts.retry())
                         .await?;
                     let answer = vec![password.to_string()];
-                    typed = remember.then_some(password);
+                    chain.attempts.sent(Sent::Typed { password, remember });
                     answer
                 }
             }
@@ -104,20 +101,13 @@ async fn keyboard_interactive(
     }
 }
 
-async fn password(chain: &mut Chain<'_>, asker: &Asker) -> Result<bool, Failure> {
-    chain.attempt(Method::Password);
-    chain.remembered.password_verified = false;
+async fn password(chain: &mut Chain<'_>, asker: &Asker) -> Result<bool, Stop> {
     let (password, remember) = asker
-        .password(&chain.username, chain.password_failed)
+        .password(&chain.username, chain.attempts.retry())
         .await?;
-    let result = chain
-        .handle
-        .authenticate_password(chain.username.clone(), password.as_str())
-        .await;
-    let accepted = chain.settle(result)?;
-    chain.password_failed = !accepted;
-    if accepted && remember {
-        chain.remembered.password = Some(password);
-    }
-    Ok(accepted)
+    let typed = Sent::Typed {
+        password: password.clone(),
+        remember,
+    };
+    Ok(chain.password(&password, typed).await?)
 }

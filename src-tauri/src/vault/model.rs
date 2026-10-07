@@ -1,9 +1,11 @@
+use super::credential::HostCredential;
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 use uuid::Uuid;
 
 pub type Id = Uuid;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Group {
     pub id: Id,
@@ -15,7 +17,7 @@ pub struct Group {
     pub defaults: Defaults,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Defaults {
     pub username: Option<String>,
@@ -23,29 +25,69 @@ pub struct Defaults {
     pub identity_id: Option<Id>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", from = "StoredHost")]
 pub struct Host {
-    #[serde(default)]
-    pub own_credentials: bool,
     pub id: Id,
     pub group_id: Option<Id>,
     pub label: String,
     pub address: String,
-    #[serde(default)]
-    pub overrides: Defaults,
-    pub key_id: Option<Id>,
-    #[serde(default)]
+    pub port: Option<u16>,
+    pub credential: HostCredential,
     pub tags: Vec<String>,
-    #[serde(default)]
     pub notes: String,
-    #[serde(default)]
     pub created_at: i64,
-    #[serde(default)]
     pub last_connected_at: Option<i64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredHost {
+    id: Id,
+    group_id: Option<Id>,
+    label: String,
+    address: String,
+    port: Option<u16>,
+    credential: Option<HostCredential>,
+    #[serde(default)]
+    own_credentials: bool,
+    #[serde(default)]
+    overrides: Defaults,
+    key_id: Option<Id>,
+    #[serde(default)]
+    tags: Vec<String>,
+    #[serde(default)]
+    notes: String,
+    #[serde(default)]
+    created_at: i64,
+    #[serde(default)]
+    last_connected_at: Option<i64>,
+}
+
+impl From<StoredHost> for Host {
+    fn from(stored: StoredHost) -> Self {
+        Self {
+            id: stored.id,
+            group_id: stored.group_id,
+            label: stored.label,
+            address: stored.address,
+            port: stored.port.or(stored.overrides.port),
+            credential: stored.credential.unwrap_or_else(|| {
+                HostCredential::from_legacy(
+                    stored.own_credentials,
+                    &stored.overrides,
+                    stored.key_id,
+                )
+            }),
+            tags: stored.tags,
+            notes: stored.notes,
+            created_at: stored.created_at,
+            last_connected_at: stored.last_connected_at,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Identity {
     pub id: Id,
@@ -54,7 +96,7 @@ pub struct Identity {
     pub key_id: Option<Id>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Key {
     pub id: Id,
@@ -68,7 +110,7 @@ pub struct Key {
     pub created_at: i64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct KnownHost {
     pub id: Id,
@@ -80,7 +122,7 @@ pub struct KnownHost {
     pub added_at: i64,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultData {
     #[serde(default)]
@@ -95,7 +137,7 @@ pub struct VaultData {
     pub known_hosts: Vec<KnownHost>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultSnapshot {
     #[serde(flatten)]

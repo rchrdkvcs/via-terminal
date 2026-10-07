@@ -50,7 +50,7 @@ impl Staging {
             .await
             .map_err(io)
     }
-    pub async fn chunk(&self, id: Uuid, relative: &str, data: Vec<u8>) -> AppResult<()> {
+    pub async fn chunk(&self, id: Uuid, relative: &str, data: &[u8]) -> AppResult<()> {
         if data.len() > CHUNK_LIMIT {
             return Err(AppError::invalid("Bloc de fichier trop volumineux"));
         }
@@ -64,7 +64,7 @@ impl Staging {
             .open(path)
             .await
             .map_err(io)?;
-        file.write_all(&data).await.map_err(io)
+        file.write_all(data).await.map_err(io)
     }
     pub fn finish(&self, id: Uuid) -> AppResult<Vec<String>> {
         std::fs::read_dir(self.root(id)?)
@@ -106,6 +106,18 @@ impl Staging {
             .cloned()
             .ok_or_else(|| AppError::not_found("Dépôt temporaire"))
     }
+}
+/// Splits a raw chunk request: the path's length (u32, big-endian), the UTF-8 path, then the
+/// bytes to append. The path and size are still checked by `Staging::chunk`.
+pub fn parse_chunk(body: &[u8]) -> AppResult<(&str, &[u8])> {
+    let invalid = || AppError::invalid("Bloc de fichier invalide");
+    let (length, rest) = body.split_first_chunk::<4>().ok_or_else(invalid)?;
+    let length = usize::try_from(u32::from_be_bytes(*length)).map_err(|_| invalid())?;
+    if length > rest.len() {
+        return Err(invalid());
+    }
+    let (path, data) = rest.split_at(length);
+    Ok((std::str::from_utf8(path).map_err(|_| invalid())?, data))
 }
 fn io(error: std::io::Error) -> AppError {
     AppError::new(

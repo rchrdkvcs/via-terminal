@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import type { Space } from '@/domain/space'
 import { useSidebarActions } from '@/composables/useSidebarActions'
-import { useSpaceRemoval } from '@/composables/useSpaceRemoval'
+import { useClosing } from '@/composables/useClosing'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import { spaceIcon } from './spaceIcons'
@@ -18,7 +18,7 @@ defineProps<{ space: Space }>()
 const spaces = useSpaces()
 const ui = useUi()
 const actions = useSidebarActions()
-const removal = useSpaceRemoval()
+const closing = useClosing()
 
 function newFolder() {
   ui.renaming = actions.newFolder()
@@ -49,7 +49,7 @@ function newFolder() {
         <DropdownMenuItem
           :disabled="spaces.spaces.length <= 1"
           class="text-destructive"
-          @select="removal.request(space.id)"
+          @select="closing.removeSpace(space.id)"
         >
           <Trash2 :stroke-width="1.5" /> Supprimer l’espace
         </DropdownMenuItem>

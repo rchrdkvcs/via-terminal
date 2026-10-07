@@ -1,5 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { deferredBackend, editor, record } from '@/test/vaultSaves'
+
+beforeEach(() => setActivePinia(createPinia()))
 
 describe('useDraft concurrent saves', () => {
   it('acknowledges the submitted fields and preserves a later password', async () => {
