@@ -61,9 +61,9 @@ impl SessionHub {
         &self,
         plan: ssh::ConnectPlan,
         store: Arc<dyn ssh::ConnectionStore>,
-        size: Size,
+        size: Option<Size>,
     ) -> AppResult<Uuid> {
-        let size = size.validated()?;
+        let size = size.map(Size::validated).transpose()?;
         let id = Uuid::new_v4();
         let context = ssh::Context {
             id,

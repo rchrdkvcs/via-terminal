@@ -1,13 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Server, Terminal, Zap } from '@lucide/vue'
-import type { Target } from '@/ipc/types'
+import { FileText, FolderOpen, Server, Terminal, Zap } from '@lucide/vue'
+import type { Target, TabView } from '@/ipc/types'
 import type { TabState } from '@/stores/sessions'
 
-const props = defineProps<{ target: Target; state: TabState }>()
+const props = defineProps<{ target: Target; view?: TabView; state: TabState }>()
 
 const icon = computed(() =>
-  props.target.kind === 'local' ? Terminal : props.target.kind === 'host' ? Server : Zap,
+  props.view?.kind === 'files'
+    ? FolderOpen
+    : props.view?.kind === 'document'
+      ? FileText
+      : props.target.kind === 'local'
+        ? Terminal
+        : props.target.kind === 'host'
+          ? Server
+          : Zap,
 )
 const pending = computed(() => ['connecting', 'verifying', 'authenticating'].includes(props.state))
 const problem = computed(() => props.state === 'failed' || props.state === 'disconnected')

@@ -6,10 +6,14 @@ use crate::files::Owner;
 use crate::sessions::events::{Event, SessionState};
 use russh::{
     client::{Handle, Msg},
-    Channel, ChannelMsg, ChannelWriteHalf, Disconnect,
+    Channel, ChannelMsg, ChannelReadHalf, ChannelWriteHalf, Disconnect,
 };
 use std::{sync::atomic::Ordering, time::Duration};
-use tokio::{sync::mpsc::UnboundedReceiver, time::timeout};
+use tokio::{
+    sync::mpsc::UnboundedReceiver,
+    task::JoinHandle,
+    time::{sleep, timeout},
+};
 
 pub(super) async fn open(handle: &Handle<Client>, size: Size) -> Result<Channel<Msg>, Failure> {
     let shell_failure = |error: russh::Error| match Failure::from_russh(&error) {
@@ -35,7 +39,7 @@ pub(super) async fn open(handle: &Handle<Client>, size: Size) -> Result<Channel<
 
 pub(super) async fn pump(
     mut handle: Handle<Client>,
-    shell: Channel<Msg>,
+    shell: Option<Channel<Msg>>,
     link: Link,
     context: &Context,
     owner: Owner,
@@ -46,8 +50,16 @@ pub(super) async fn pump(
         ready,
         mut closed,
     } = link;
-    let (mut reader, writer) = shell.split();
-    let input = tokio::spawn(forward_input(writer, commands));
+    let (mut reader, input): (_, Option<JoinHandle<()>>) = match shell {
+        Some(shell) => {
+            let (reader, writer) = shell.split();
+            (
+                Some(reader),
+                Some(tokio::spawn(forward_input(writer, commands))),
+            )
+        }
+        None => (None, None),
+    };
     ready.store(true, Ordering::Release);
     context.sink.state(context.id, SessionState::Ready, None);
     let mut exit_code = None;
@@ -56,7 +68,7 @@ pub(super) async fn pump(
         tokio::select! {
             Some(call) = files.recv() => file_access.call(call),
             _ = file_access.progress() => {}
-            message = reader.wait() => match message {
+            message = read(reader.as_mut(), &handle) => match message {
                 Some(ChannelMsg::Data { data }) | Some(ChannelMsg::ExtendedData { data, .. }) => {
                     context.sink.emit(Event::Output {
                         session_id: context.id,
@@ -87,8 +99,23 @@ pub(super) async fn pump(
     }
     file_requests.abort_all();
     ready.store(false, Ordering::Release);
-    input.abort();
+    if let Some(input) = input {
+        input.abort();
+    }
     outcome
+}
+
+/// Without a shell, nothing arrives until the connection drops.
+async fn read(reader: Option<&mut ChannelReadHalf>, handle: &Handle<Client>) -> Option<ChannelMsg> {
+    match reader {
+        Some(reader) => reader.wait().await,
+        None => {
+            while !handle.is_closed() {
+                sleep(Duration::from_secs(1)).await;
+            }
+            None
+        }
+    }
 }
 
 async fn forward_input(writer: ChannelWriteHalf<Msg>, mut commands: UnboundedReceiver<Command>) {

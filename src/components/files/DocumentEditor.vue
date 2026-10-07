@@ -1,22 +1,24 @@
 <script setup lang="ts">
-import { computed, ref, useId, watch } from 'vue'
-import { Save } from '@lucide/vue'
+import { computed, ref, watch } from 'vue'
+import { RefreshCw, Save } from '@lucide/vue'
 import { useFiles } from '@/stores/files'
 import { isDirty } from '@/stores/file-documents'
-import { useFileProtection } from '@/composables/useFileProtection'
 import { useFileDialogs } from '@/stores/file-dialogs'
-import DocumentTabs from './DocumentTabs.vue'
 import TextEditor from './TextEditor.vue'
 import { Button } from '@/components/ui/button'
-const props = defineProps<{ tabId: string; sessionId: string | null }>()
+/** The remote document a tab shows in place of its terminal. */
+const props = defineProps<{ tabId: string; path: string; sessionId: string | null }>()
 const files = useFiles(),
-  protection = useFileProtection(),
   dialogs = useFileDialogs()
-const id = useId()
 const panel = computed(() => files.state(props.tabId))
-const active = computed(() =>
-  panel.value.documents.find((doc) => doc.id === panel.value.activeDocument),
-)
+const active = computed(() => panel.value.documents.find((doc) => doc.path === props.path))
+function load() {
+  if (props.sessionId && !active.value) {
+    files.dismissError(props.tabId)
+    void files.openDocument(props.tabId, props.sessionId, props.path)
+  }
+}
+watch(() => props.sessionId, load, { immediate: true })
 const dirty = computed(() => !!active.value && isDirty(active.value))
 const stale = computed(() => !!active.value && active.value.owner !== panel.value.owner)
 const saved = ref<string | null>(null)
@@ -56,25 +58,21 @@ async function conflict(choice: 'reload' | 'overwrite') {
 }
 </script>
 <template>
-  <section
-    v-if="panel.documents.length"
-    class="flex h-full min-h-0 flex-col"
-    aria-label="Documents distants"
-  >
-    <DocumentTabs
-      :documents="panel.documents"
-      :active="panel.activeDocument"
-      :panel="id"
-      @select="files.selectDocument(tabId, $event)"
-      @close="protection.closeDocument(tabId, $event)"
-    />
+  <section class="flex h-full min-h-0 flex-col" :aria-label="`Document distant ${path}`">
     <div
-      v-if="active"
-      :id="id"
-      role="tabpanel"
-      :aria-labelledby="`${id}-tab-${active.id}`"
-      class="flex min-h-0 flex-1 flex-col bg-surface text-surface-ink"
+      v-if="!active"
+      class="grid flex-1 place-items-center p-6 text-xs text-ink-muted"
+      :role="panel.error ? 'alert' : 'status'"
     >
+      <div v-if="panel.error" class="flex max-w-sm flex-col items-center gap-2 text-center">
+        <p class="break-words">{{ panel.error }}</p>
+        <Button type="button" variant="secondary" size="xs" :disabled="!sessionId" @click="load">
+          <RefreshCw :stroke-width="1.5" aria-hidden="true" />Réessayer
+        </Button>
+      </div>
+      <p v-else-if="sessionId">Ouverture de {{ path }}…</p>
+    </div>
+    <div v-else class="flex min-h-0 flex-1 flex-col bg-surface text-surface-ink">
       <div
         class="flex shrink-0 flex-wrap items-start gap-x-2 border-b border-hairline py-1.5 ps-3 pe-2"
       >

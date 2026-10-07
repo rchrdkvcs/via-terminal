@@ -1,4 +1,4 @@
-use super::{Entry, Layout, Row, Split, Tab};
+use super::{Entry, Layout, Row, Split, Tab, Target, View};
 use crate::error::{AppError, AppResult};
 use std::collections::HashSet;
 use uuid::Uuid;
@@ -63,12 +63,22 @@ impl Ids {
 
 fn check_tab(tab: &Tab, ids: &mut Ids) -> AppResult<()> {
     ids.claim(tab.id)?;
-    if tab
-        .remote_cwd
-        .as_ref()
-        .is_some_and(|path| path.len() > 32768 || path.contains('\0'))
-    {
+    let bad_path = |path: &String| path.len() > 32768 || path.contains('\0');
+    if tab.remote_cwd.as_ref().is_some_and(bad_path) {
         return Err(AppError::invalid("invalid remote directory"));
+    }
+    match &tab.view {
+        None => {}
+        Some(_) if matches!(tab.target, Target::Local { .. }) => {
+            return Err(AppError::invalid("only remote tabs show files"));
+        }
+        Some(View::Files { path }) if path.as_ref().is_some_and(bad_path) => {
+            return Err(AppError::invalid("invalid remote directory"));
+        }
+        Some(View::Document { path }) if path.is_empty() || bad_path(path) => {
+            return Err(AppError::invalid("invalid remote document"));
+        }
+        Some(_) => {}
     }
     match &tab.title {
         Some(title) => name(title, MAX_TITLE),
@@ -110,7 +120,7 @@ fn short(value: &str) -> AppResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{Direction, Target};
+    use super::super::Direction;
     use super::*;
 
     fn tab() -> Tab {
@@ -118,6 +128,7 @@ mod tests {
             id: Uuid::new_v4(),
             title: None,
             remote_cwd: None,
+            view: None,
             target: Target::Local {
                 shell: None,
                 cwd: None,
@@ -167,5 +178,45 @@ mod tests {
         assert!(check(&layout).is_err());
         layout.spaces.clear();
         assert!(check(&layout).is_err());
+    }
+
+    #[test]
+    fn views_belong_to_remote_tabs_with_valid_paths() {
+        let remote = |view: View| Tab {
+            view: Some(view),
+            target: Target::Host {
+                host_id: Uuid::new_v4(),
+            },
+            ..tab()
+        };
+        let files = View::Files {
+            path: Some("/var/www".into()),
+        };
+        assert!(check(&with(Entry::Tab(remote(files.clone())))).is_ok());
+        assert!(check(&with(Entry::Tab(remote(View::Files { path: None })))).is_ok());
+        assert!(check(&with(Entry::Tab(Tab {
+            view: Some(files),
+            ..tab()
+        })))
+        .is_err());
+        let document = |path: &str| View::Document { path: path.into() };
+        assert!(check(&with(Entry::Tab(remote(document("/etc/hosts"))))).is_ok());
+        assert!(check(&with(Entry::Tab(remote(document(""))))).is_err());
+        assert!(check(&with(Entry::Tab(remote(document("/a\0b"))))).is_err());
+    }
+
+    #[test]
+    fn views_round_trip_through_json() {
+        let document = Tab {
+            view: Some(View::Document {
+                path: "/etc/hosts".into(),
+            }),
+            ..tab()
+        };
+        let json = serde_json::to_value(&document).unwrap();
+        assert_eq!(json["view"]["kind"], "document");
+        assert_eq!(serde_json::from_value::<Tab>(json).unwrap(), document);
+        let plain = serde_json::to_value(tab()).unwrap();
+        assert!(plain.get("view").is_none());
     }
 }

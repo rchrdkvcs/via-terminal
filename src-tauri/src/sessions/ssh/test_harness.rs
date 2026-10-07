@@ -48,6 +48,10 @@ impl Harness {
     }
 
     pub fn open(&self, password: Option<&str>) -> Uuid {
+        self.open_sized(password, Some(Size { cols: 80, rows: 24 }))
+    }
+
+    pub fn open_sized(&self, password: Option<&str>, size: Option<Size>) -> Uuid {
         let plan = ConnectPlan {
             credential: None,
             host_id: None,
@@ -60,7 +64,6 @@ impl Harness {
             can_remember: true,
             save_host: false,
         };
-        let size = Size { cols: 80, rows: 24 };
         self.hub.open_ssh(plan, self.store.clone(), size).unwrap()
     }
 

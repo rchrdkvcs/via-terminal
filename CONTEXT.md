@@ -9,7 +9,7 @@ A named context of tabs with its own icon and optional default shell. Spaces nev
 _Avoid_: Workspace, project, profile
 
 **Tab**:
-One terminal bound to one target, living in exactly one place in one space.
+One terminal, remote explorer or remote document bound to one target, living in exactly one place in one space.
 _Avoid_: Session (the live part), pane, window
 
 **Row**:
@@ -21,7 +21,7 @@ Two to four tabs shown side by side as a single row. Each member keeps its own s
 _Avoid_: Split group, pane tree, layout
 
 **Pinned tab**:
-A tab kept across restarts in the pinned area of its space. It always reopens in the directory it was pinned with; navigating inside it never moves the pin.
+A tab kept across restarts in the pinned area of its space. It always reopens in the directory it was pinned with, and a pinned remote explorer or remote document at its pinned path; navigating inside it never moves the pin.
 _Avoid_: Favorite, bookmark
 
 **Temporary tab**:
@@ -61,8 +61,8 @@ _Avoid_: Ad-hoc connection
 ## Remote files
 
 **Remote explorer**:
-The file panel attached to an SSH tab, showing files on that tab's remote target. It can sit beside the terminal or expand within Via.
-_Avoid_: File tab, local explorer, file workspace
+The file panel showing files on a remote target. It sits beside an SSH terminal or fills its own tab, which opens its own file-only connection.
+_Avoid_: Finder, local explorer, file workspace
 
 **Owner**:
 The endpoint and account behind a remote explorer. Documents and transfers keep the owner that produced them and are never saved or retried through another one.
@@ -73,8 +73,8 @@ An upload or download of files and directories started from a remote explorer. A
 _Avoid_: Job, copy, sync
 
 **Remote document**:
-A remote text file opened for reading or editing in a tab's remote explorer. Its unsaved changes belong to that document until saved or explicitly discarded.
-_Avoid_: Editor tab, buffer, local file
+A remote text file opened from a remote explorer, shown in its own tab in place of a terminal. Its unsaved changes belong to that document until saved or explicitly discarded.
+_Avoid_: Buffer, local file
 
 ## Vault
 

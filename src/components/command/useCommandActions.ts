@@ -72,7 +72,7 @@ export function useCommandActions() {
         run: () => (ui.route = 'settings'),
       },
     ]
-    if (tab && tab.target.kind !== 'local')
+    if (tab && tab.target.kind !== 'local' && !tab.view)
       items.unshift({
         id: 'files',
         section,

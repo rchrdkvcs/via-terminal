@@ -48,7 +48,7 @@ async fn vault_key_can_be_selected_and_reused_on_the_next_connection() {
         .unwrap();
     let id = harness
         .hub
-        .open_ssh(plan, vault.clone(), Size { cols: 80, rows: 24 })
+        .open_ssh(plan, vault.clone(), Some(Size { cols: 80, rows: 24 }))
         .unwrap();
     let (prompt_id, prompt) = harness.prompt(id).await;
     assert!(matches!(prompt, Prompt::Authentication { .. }));
@@ -72,7 +72,7 @@ async fn vault_key_can_be_selected_and_reused_on_the_next_connection() {
     harness.state(id, SessionState::Exited).await;
     let next = harness
         .hub
-        .open_ssh(plan, vault, Size { cols: 80, rows: 24 })
+        .open_ssh(plan, vault, Some(Size { cols: 80, rows: 24 }))
         .unwrap();
     harness.state(next, SessionState::Ready).await;
     harness.hub.close(next);
@@ -104,7 +104,7 @@ async fn refused_password_can_switch_to_an_identity_with_a_different_username() 
     plan.password = Some(zeroize::Zeroizing::new("wrong".into()));
     let id = harness
         .hub
-        .open_ssh(plan, vault.clone(), Size { cols: 80, rows: 24 })
+        .open_ssh(plan, vault.clone(), Some(Size { cols: 80, rows: 24 }))
         .unwrap();
     let (prompt_id, prompt) = harness.prompt(id).await;
     assert!(matches!(prompt, Prompt::Password { retry: true, .. }));
@@ -141,7 +141,7 @@ async fn cancelling_the_identity_selection_does_not_save_a_host() {
         .unwrap();
     let id = harness
         .hub
-        .open_ssh(plan, vault.clone(), Size { cols: 80, rows: 24 })
+        .open_ssh(plan, vault.clone(), Some(Size { cols: 80, rows: 24 }))
         .unwrap();
     let (prompt_id, _) = harness.prompt(id).await;
     harness.answer(prompt_id, PromptAnswer::Cancel);

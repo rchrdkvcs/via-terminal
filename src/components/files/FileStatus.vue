@@ -2,12 +2,12 @@
 import { X } from '@lucide/vue'
 import type { TabState } from '@/stores/sessions'
 import { Button } from '@/components/ui/button'
-defineProps<{ state: TabState; error: string | null; connected: boolean }>()
+defineProps<{ state: TabState; error: string | null; connected: boolean; docked: boolean }>()
 const emit = defineEmits<{ connect: []; retry: []; dismiss: [] }>()
 const pending = ['connecting', 'verifying', 'authenticating']
 </script>
 <template>
-  <div v-if="!connected" class="shrink-0 px-3 py-3 text-xs text-ink-muted" role="status">
+  <div v-if="!connected && docked" class="shrink-0 px-3 py-3 text-xs text-ink-muted" role="status">
     <p v-if="pending.includes(state)">Connexion du terminal en cours…</p>
     <template v-else>
       <p>Les fichiers distants sont disponibles quand le terminal est connecté.</p>

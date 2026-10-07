@@ -73,6 +73,7 @@ export function tabFromRow(row: Row & { kind: 'tab' }): Tab {
     title: row.title,
     target: row.target,
     ...(row.remoteCwd ? { remoteCwd: row.remoteCwd } : {}),
+    ...(row.view ? { view: row.view } : {}),
   }
 }
 

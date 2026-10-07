@@ -74,8 +74,9 @@ export const api = {
   session: {
     openLocal: (shell: string | null, cwd: string | null, size: Size) =>
       call<Id>('session_open_local', { target: { shell, cwd }, size }),
-    openHost: (hostId: Id, size: Size) => call<Id>('session_open_host', { hostId, size }),
-    openQuick: (target: QuickTarget, size: Size) =>
+    /** Without a size, the session serves files only and opens no shell. */
+    openHost: (hostId: Id, size: Size | null) => call<Id>('session_open_host', { hostId, size }),
+    openQuick: (target: QuickTarget, size: Size | null) =>
       call<Id>('session_open_quick', { target, size }),
     write: (id: Id, data: string) => call<void>('session_write', { id, data }),
     resize: (id: Id, size: Size) => call<void>('session_resize', { id, size }),

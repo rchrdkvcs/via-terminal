@@ -63,6 +63,8 @@ export function useFileRuntime() {
         if (previous && (previous !== current || state !== 'ready')) files.disconnect(id)
     },
   )
+  // Terminals and explorer tabs follow their directory until pinned, then keep the one they
+  // were pinned at.
   watch(
     () =>
       Object.entries(files.panels).map(([id, panel]) => {
@@ -70,11 +72,17 @@ export function useFileRuntime() {
         return [id, panel.directory, Boolean(space && isPinned(space, id))] as const
       }),
     (directories) => {
-      for (const [id, remoteCwd, pinned] of directories) {
+      for (const [id, path, pinned] of directories) {
         const space = spaces.spaceOf(id),
           tab = space && findTab(space, id)
-        if (tab && !pinned && remoteCwd.startsWith('/') && tab.remoteCwd !== remoteCwd)
-          spaces.dispatch({ type: 'updateTab', tabId: id, patch: { remoteCwd } }, space!.id)
+        if (!space || !tab || pinned || !path.startsWith('/')) continue
+        if (!tab.view && tab.remoteCwd !== path)
+          spaces.dispatch({ type: 'updateTab', tabId: id, patch: { remoteCwd: path } }, space.id)
+        else if (tab.view?.kind === 'files' && tab.view.path !== path)
+          spaces.dispatch(
+            { type: 'updateTab', tabId: id, patch: { view: { kind: 'files', path } } },
+            space.id,
+          )
       }
     },
   )

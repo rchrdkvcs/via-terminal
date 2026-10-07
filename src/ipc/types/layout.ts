@@ -5,11 +5,15 @@ export type Target =
   | { kind: 'host'; hostId: Id }
   | { kind: 'quick'; address: string; port: number | null; username: string | null }
 
+/** What a remote tab shows instead of its terminal. A tab without a view is a terminal. */
+export type TabView = { kind: 'files'; path: string | null } | { kind: 'document'; path: string }
+
 export interface Tab {
   id: Id
 
   title: string | null
   remoteCwd?: string | null
+  view?: TabView
   target: Target
 }
 

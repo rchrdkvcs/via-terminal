@@ -57,7 +57,8 @@ struct SshSession {
     ready: Arc<AtomicBool>,
 }
 
-pub fn spawn(plan: ConnectPlan, size: Size, context: Context) -> Arc<dyn SessionIo> {
+/// Without a size, the session opens no shell and only serves files.
+pub fn spawn(plan: ConnectPlan, size: Option<Size>, context: Context) -> Arc<dyn SessionIo> {
     let (files, files_receiver) = mpsc::unbounded_channel();
     let (commands, commands_receiver) = mpsc::unbounded_channel();
     let (closed, closed_receiver) = watch::channel(false);
