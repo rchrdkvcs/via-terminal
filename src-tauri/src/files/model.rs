@@ -1,15 +1,17 @@
-//! Wire types of the remote explorer, mirrored by `src/ipc/files.ts`.
+//! Wire types of the remote explorer, generated into `src/ipc/bindings.ts`.
 use super::Owner;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use ts_rs::TS;
 use uuid::Uuid;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
 #[serde(
     tag = "operation",
     rename_all = "camelCase",
     rename_all_fields = "camelCase"
 )]
+#[ts(rename = "FileRequest")]
 pub enum Request {
     List {
         path: String,
@@ -49,14 +51,15 @@ pub enum Request {
     },
 }
 /// Answer to a request: a listing, a document, or nothing for commands.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
 #[serde(untagged)]
+#[ts(rename = "FilesReply")]
 pub enum Reply {
     Listing(Listing),
     Document(Document),
     Done,
 }
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferPlan {
     pub id: Uuid,
@@ -65,19 +68,22 @@ pub struct TransferPlan {
     pub sources: Vec<String>,
     pub destination: String,
     #[serde(default)]
+    #[ts(as = "Option<_>", optional)]
     pub completed_sources: Vec<String>,
     #[serde(default)]
+    #[ts(as = "Option<_>", optional)]
     pub directories: HashMap<String, String>,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Listing {
     pub owner: Owner,
     pub path: String,
     pub entries: Vec<Entry>,
 }
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(rename = "RemoteText")]
 pub struct Document {
     pub owner: Owner,
     pub path: String,
@@ -87,7 +93,7 @@ pub struct Document {
     pub uid: Option<u32>,
     pub gid: Option<u32>,
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum EntryKind {
     File,
@@ -95,8 +101,9 @@ pub enum EntryKind {
     Link,
     Other,
 }
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(rename = "RemoteEntry")]
 pub struct Entry {
     pub name: String,
     pub path: String,
@@ -106,21 +113,23 @@ pub struct Entry {
     pub modified: Option<u32>,
     pub permissions: Option<u32>,
 }
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(rename = "TransferDirection")]
 pub enum Direction {
     Upload,
     Download,
 }
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum Collision {
     Replace,
     Skip,
     KeepBoth,
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(rename = "NativeTransferState")]
 pub enum TransferState {
     Running,
     Conflict,
@@ -128,7 +137,7 @@ pub enum TransferState {
     Failed,
     Cancelled,
 }
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferEvent {
     pub session_id: Uuid,

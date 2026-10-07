@@ -4,8 +4,9 @@ use crate::{
 };
 use serde::Serialize;
 use tauri::State;
+use ts_rs::TS;
 
-#[derive(Serialize)]
+#[derive(Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Bootstrap {
     layout: Layout,

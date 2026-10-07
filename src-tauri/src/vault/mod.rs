@@ -22,6 +22,7 @@ use std::{
         Arc, Mutex,
     },
 };
+use ts_rs::TS;
 
 const DOCUMENT: &str = "vault";
 
@@ -32,7 +33,7 @@ pub struct Vault {
     revision: AtomicU64,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultView {
     #[serde(flatten)]

@@ -6,9 +6,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tokio::sync::oneshot;
+use ts_rs::TS;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -50,14 +51,14 @@ pub enum Prompt {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct PromptField {
     pub label: String,
     pub echo: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, TS)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

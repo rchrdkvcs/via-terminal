@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod bindings;
 mod commands;
 pub mod error;
 pub mod files;
