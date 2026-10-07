@@ -1,6 +1,6 @@
 # The remote explorer belongs to its SSH tab
 
-- Status: accepted and implemented
+- Status: superseded by [ADR-0011](0011-remote-explorers-and-documents-in-their-own-tabs.md)
 - Date: 2026-10-07
 
 Each SSH tab owns its remote explorer, documents and transfers. Open SFTP lazily as an additional channel on that tab's authenticated SSH connection, using the existing vault and host-key verification. This keeps the displayed files bound to the terminal's target and avoids a separate authentication and connection lifecycle.
