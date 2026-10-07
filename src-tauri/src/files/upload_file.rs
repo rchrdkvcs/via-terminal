@@ -2,60 +2,30 @@
 //! given its final mode, then renamed. Replacement keeps the destination's permission bits
 //! (without setuid, setgid or sticky); a new file keeps the local bits without group or
 //! other write.
-use super::{
-    browsing::CHUNK, errors::kind_collision, jobs::Job, join, missing, model::Collision,
-    sftp_error, upload::local, Files,
-};
+use super::{browsing::CHUNK, jobs::Job, join, sftp_error, upload::local, Files};
 use crate::error::{AppError, AppResult};
 use russh_sftp::protocol::{FileAttributes, OpenFlags};
 use std::{fs::Metadata, path::PathBuf};
 use tokio::io::AsyncReadExt;
 use uuid::Uuid;
 impl Files {
-    /// Uploads one file after resolving a collision; returns `false` when skipped.
-    pub(super) async fn upload_entry(
-        &self,
-        job: &Job,
-        source: PathBuf,
-        mut target: String,
-        metadata: &Metadata,
-    ) -> AppResult<bool> {
-        let existing = match self.raw.lstat(&target).await {
-            Ok(found) => Some(found.attrs),
-            Err(e) if missing(&e) => None,
-            Err(e) => return Err(sftp_error(e)),
-        };
-        let mut mode = new_file_mode(metadata);
-        let mut replace = false;
-        if let Some(existing) = existing {
-            match job.collision(&target).await? {
-                Collision::Skip => {
-                    job.skip(&target);
-                    return Ok(false);
-                }
-                Collision::Replace if existing.is_dir() => return Err(kind_collision(true)),
-                Collision::Replace => {
-                    replace = true;
-                    if !existing.is_symlink() {
-                        mode = existing.permissions.map_or(mode, |bits| bits & 0o777);
-                    }
-                }
-                Collision::KeepBoth => target = self.available_remote(&target).await?,
-            }
-        }
-        self.upload_file(job, source, &target, metadata.len(), replace, mode)
-            .await?;
-        Ok(true)
-    }
-    async fn upload_file(
+    /// Replaces `replaced`, the destination found there, when given.
+    pub(super) async fn upload_file(
         &self,
         job: &Job,
         source: PathBuf,
         target: &str,
-        size: u64,
-        replace: bool,
-        mode: u32,
+        metadata: &Metadata,
+        replaced: Option<FileAttributes>,
     ) -> AppResult<()> {
+        let size = metadata.len();
+        let replace = replaced.is_some();
+        let mode = match replaced {
+            Some(existing) if !existing.is_symlink() => existing
+                .permissions
+                .map_or(new_file_mode(metadata), |bits| bits & 0o777),
+            _ => new_file_mode(metadata),
+        };
         if replace && !self.replace_supported {
             return Err(AppError::new(
                 "file_unsafe_save",

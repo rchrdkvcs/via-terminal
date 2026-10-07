@@ -1,9 +1,14 @@
 use super::{
-    errors::kind_collision, jobs::Job, join, missing, model::Collision, paths::remote_name,
-    sftp_error, Files,
+    jobs::Job,
+    join, missing,
+    paths::remote_name,
+    sftp_error,
+    walk::{walk, Destination, Found, Node, Source},
+    Files,
 };
 use crate::error::{AppError, AppResult};
-use std::path::PathBuf;
+use russh_sftp::protocol::FileAttributes;
+use std::{fs::Metadata, path::PathBuf};
 pub(super) fn local(error: std::io::Error) -> AppError {
     AppError::new(
         "file_local",
@@ -17,100 +22,91 @@ impl Files {
         sources: Vec<String>,
         destination: String,
     ) -> AppResult<()> {
-        let mut stack = Vec::new();
-        for source in sources {
-            let source = PathBuf::from(source);
-            let name = source
+        let roots = sources.into_iter().map(PathBuf::from).collect();
+        walk(job, &Local, &Remote(self), roots, destination).await
+    }
+}
+struct Local;
+struct Remote<'a>(&'a Files);
+impl Source for Local {
+    type Path = PathBuf;
+    type File = Metadata;
+    fn key(&self, path: &PathBuf) -> String {
+        path.to_string_lossy().into_owned()
+    }
+    fn name(&self, path: &PathBuf) -> AppResult<String> {
+        path.file_name()
+            .and_then(|n| n.to_str())
+            .map(str::to_owned)
+            .ok_or_else(|| AppError::invalid("Nom local invalide"))
+    }
+    async fn inspect(&self, path: &PathBuf) -> AppResult<Node<Metadata>> {
+        let metadata = tokio::fs::symlink_metadata(path).await.map_err(local)?;
+        Ok(if metadata.is_dir() {
+            Node::Directory
+        } else if metadata.is_file() {
+            Node::File(metadata)
+        } else {
+            Node::Other
+        })
+    }
+    async fn children(&self, path: &PathBuf) -> AppResult<Vec<(String, PathBuf)>> {
+        let mut children = Vec::new();
+        let mut entries = tokio::fs::read_dir(path).await.map_err(local)?;
+        while let Some(entry) = entries.next_entry().await.map_err(local)? {
+            let name = entry
                 .file_name()
-                .and_then(|n| n.to_str())
-                .ok_or_else(|| AppError::invalid("Nom local invalide"))?;
-            remote_name(name)?;
-            stack.push((source.clone(), join(&destination, name)));
+                .to_str()
+                .ok_or_else(|| AppError::invalid("Nom local non UTF-8"))?
+                .to_owned();
+            children.push((name, entry.path()));
         }
-        while let Some((source, target)) = stack.pop() {
-            job.check()?;
-            let key = source.to_string_lossy().into_owned();
-            if job.already_completed(&key) {
-                continue;
-            }
-            let metadata = tokio::fs::symlink_metadata(&source).await.map_err(local)?;
-            if metadata.is_dir() {
-                let Some(target) = self.upload_directory(job, &key, target).await? else {
-                    continue;
-                };
-                let mut entries = tokio::fs::read_dir(source).await.map_err(local)?;
-                while let Some(entry) = entries.next_entry().await.map_err(local)? {
-                    let name = entry
-                        .file_name()
-                        .to_str()
-                        .ok_or_else(|| AppError::invalid("Nom local non UTF-8"))?
-                        .to_owned();
-                    remote_name(&name)?;
-                    stack.push((entry.path(), join(&target, &name)));
-                }
-            } else if metadata.is_file() {
-                if self.upload_entry(job, source, target, &metadata).await? {
-                    job.completed(&key);
-                }
-            } else {
-                // Links and special files are never followed.
-                job.skip(&key);
-            }
-        }
-        Ok(())
+        Ok(children)
     }
-    /// Returns the remote directory receiving the children, or `None` when skipped.
-    async fn upload_directory(
-        &self,
-        job: &Job,
-        key: &str,
-        mut target: String,
-    ) -> AppResult<Option<String>> {
-        let remembered = job.directory(key);
-        if let Some(previous) = &remembered {
-            target = previous.clone();
-        }
-        match self.raw.lstat(&target).await {
-            Ok(existing) if remembered.is_some() && existing.attrs.is_dir() => {}
-            Ok(existing) => match job.collision(&target).await? {
-                Collision::Skip => {
-                    job.skip(&target);
-                    return Ok(None);
-                }
-                Collision::Replace if !existing.attrs.is_dir() => {
-                    return Err(kind_collision(false));
-                }
-                Collision::Replace => {}
-                Collision::KeepBoth => {
-                    target = self.available_remote(&target).await?;
-                    self.make_directory(&target).await?;
-                }
-            },
-            Err(error) if missing(&error) => self.make_directory(&target).await?,
-            Err(error) => return Err(sftp_error(error)),
-        }
-        job.remember_directory(key, &target);
-        Ok(Some(target))
+}
+impl Found for FileAttributes {
+    fn is_directory(&self) -> bool {
+        self.is_dir()
     }
-    async fn make_directory(&self, path: &str) -> AppResult<()> {
-        self.raw
+}
+impl Destination<Local> for Remote<'_> {
+    type Path = String;
+    type Found = FileAttributes;
+    fn child(&self, parent: &String, name: &str) -> AppResult<String> {
+        remote_name(name)?;
+        Ok(join(parent, name))
+    }
+    fn display(&self, path: &String) -> String {
+        path.clone()
+    }
+    fn name_of<'a>(&self, path: &'a str) -> Option<&'a str> {
+        path.rsplit('/').next()
+    }
+    async fn existing(&self, path: &String) -> AppResult<Option<FileAttributes>> {
+        match self.0.raw.lstat(path).await {
+            Ok(found) => Ok(Some(found.attrs)),
+            Err(e) if missing(&e) => Ok(None),
+            Err(e) => Err(sftp_error(e)),
+        }
+    }
+    async fn create_directory(&self, path: &String) -> AppResult<()> {
+        self.0
+            .raw
             .mkdir(path, Default::default())
             .await
             .map(drop)
             .map_err(sftp_error)
     }
-    pub(super) async fn available_remote(&self, path: &str) -> AppResult<String> {
-        for index in 1..10000 {
-            let candidate = format!("{path} ({index})");
-            match self.raw.lstat(&candidate).await {
-                Err(e) if missing(&e) => return Ok(candidate),
-                Err(e) => return Err(sftp_error(e)),
-                Ok(_) => {}
-            }
-        }
-        Err(AppError::new(
-            "file_collision",
-            "Aucun nom de destination disponible",
-        ))
+    async fn copy(
+        &self,
+        job: &Job,
+        source: PathBuf,
+        file: Metadata,
+        target: String,
+        replaced: Option<FileAttributes>,
+    ) -> AppResult<()> {
+        self.0
+            .upload_file(job, source, &target, &file, replaced)
+            .await
     }
 }
