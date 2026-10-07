@@ -17,8 +17,7 @@ vi.mock('@/stores/vault', () => ({
 
 it('selects one identity and removes credentials that would override it', async () => {
   const draft = hostInput(undefined)
-  draft.overrides.username = 'old-user'
-  draft.keyId = 'old-key'
+  draft.credential = { kind: 'key', id: 'old-key', username: 'old-user' }
   draft.password = { action: 'set', value: 'old-password' }
   const view = mount(HostCredentials, {
     props: {
@@ -27,6 +26,7 @@ it('selects one identity and removes credentials that would override it', async 
         username: null,
         port: { value: 22, from: { kind: 'default' } },
         identityId: null,
+        keyId: null,
       },
     },
   })
@@ -34,8 +34,7 @@ it('selects one identity and removes credentials that would override it', async 
     .findComponent({ name: 'CredentialSelect' })
     .vm.$emit('update:modelValue', 'identity:identity')
   await view.vm.$nextTick()
-  expect(draft.overrides).toMatchObject({ identityId: 'identity', username: null })
-  expect(draft.keyId).toBeNull()
+  expect(draft.credential).toEqual({ kind: 'identity', id: 'identity' })
   expect(draft.password).toEqual({ action: 'clear' })
   expect(view.findAll('[role="combobox"]')).toHaveLength(1)
   expect(view.find('input').exists()).toBe(false)

@@ -20,6 +20,7 @@ export interface PromptField {
 }
 
 export type CredentialChoice =
+  | { kind: 'password'; username: string }
   | { kind: 'identity'; id: Id }
   | { kind: 'key'; id: Id; username: string }
 

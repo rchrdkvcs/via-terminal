@@ -1,14 +1,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { HostInput } from '@/ipc/types'
+import {
+  choose,
+  credentialOption,
+  credentialUsername,
+  inherited,
+  optionId,
+  parseOption,
+  withUsername,
+} from '@/domain/credentials'
+import type { Effective, HostInput } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
 import CredentialSelect from './CredentialSelect.vue'
-import { identityHint, inherited, type Inherited } from './inherit'
+import { identityHint } from './inherit'
 import SecretField from './SecretField.vue'
 import UsernameField from './UsernameField.vue'
 import VaultField from './VaultField.vue'
 
-const props = defineProps<{ resolved: Inherited }>()
+const props = defineProps<{ resolved: Effective }>()
 const draft = defineModel<HostInput>({ required: true })
 const emit = defineEmits<{ commit: [] }>()
 const vault = useVault()
@@ -20,31 +29,27 @@ const inheritance = computed(() =>
       ? `Hérité : ${groupDefaults.value.username.value}`
       : undefined,
 )
+const option = computed(() => credentialOption(draft.value.credential, Boolean(inheritance.value)))
 const selection = computed({
-  get: () =>
-    draft.value.overrides.identityId
-      ? `identity:${draft.value.overrides.identityId}`
-      : draft.value.keyId
-        ? `key:${draft.value.keyId}`
-        : !draft.value.ownCredentials && !draft.value.overrides.username && inheritance.value
-          ? 'inherit'
-          : null,
-  set: (choice: string | null) => {
-    const previousUsername =
-      draft.value.overrides.username ?? props.resolved.username?.value ?? null
-    draft.value.overrides.identityId = choice?.startsWith('identity:') ? choice.slice(9) : null
-    draft.value.keyId = choice?.startsWith('key:') ? choice.slice(4) : null
-    draft.value.ownCredentials = choice !== 'inherit' && !draft.value.overrides.identityId
-    draft.value.overrides.username = draft.value.ownCredentials ? previousUsername : null
+  get: () => optionId(option.value),
+  set: (id: string | null) => {
+    const username = credentialUsername(draft.value.credential) ?? props.resolved.username?.value
+    draft.value.credential = choose(parseOption(id), username ?? null)
     draft.value.password = { action: 'clear' }
     emit('commit')
   },
 })
+const username = computed({
+  get: () => credentialUsername(draft.value.credential),
+  set: (value: string | null) => {
+    draft.value.credential = withUsername(draft.value.credential, value)
+  },
+})
 function commitPersonal() {
-  draft.value.ownCredentials = true
+  draft.value.credential = withUsername(draft.value.credential, username.value)
   emit('commit')
 }
-const personal = computed(() => !selection.value || selection.value.startsWith('key:'))
+const personal = computed(() => !option.value || option.value.kind === 'key')
 </script>
 
 <template>
@@ -54,12 +59,12 @@ const personal = computed(() => !selection.value || selection.value.startsWith('
   <UsernameField
     v-if="personal"
     id="host-username"
-    v-model="draft.overrides.username"
+    v-model="username"
     placeholder="Demandé à la connexion"
     @commit="commitPersonal"
   />
   <SecretField
-    v-if="!selection"
+    v-if="!option"
     :id="`host-password-${draft.id ?? 'new'}`"
     :key="draft.id ?? 'new'"
     v-model="draft.password"

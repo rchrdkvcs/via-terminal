@@ -11,8 +11,6 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
-/// How a host authenticates: its group defaults, a vault identity, a vault key
-/// with a username, or a username and password.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum HostCredential {
@@ -105,8 +103,6 @@ impl HostCredential {
         }
     }
 
-    /// A deleted identity leaves its username on the host, which then asks for
-    /// a password instead of falling back to group defaults.
     pub(super) fn identity_removed(&mut self, identity: &Identity) {
         if *self == (Self::Identity { id: identity.id }) {
             *self = Self::Password {
@@ -167,13 +163,11 @@ impl HostCredential {
         }
     }
 
-    /// Secret owners whose stored password is tried, in order.
     fn password_owners(&self, host: Option<Id>, identity: Option<Id>) -> Vec<Id> {
         let host = host.filter(|_| !matches!(self, Self::Identity { .. }));
         host.into_iter().chain(identity).collect()
     }
 
-    /// Where a password typed for this host is remembered.
     pub(super) fn password_owner(&self, host: Id) -> Id {
         match self {
             Self::Identity { id } => *id,

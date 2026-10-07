@@ -10,9 +10,10 @@ commands/           Tauri commands, thin adapters (app, vault, sessions, emitter
 storage/            SQLite: named JSON documents and opaque blobs
 secrets/            ChaCha20-Poly1305 sealing; the key comes from the OS keychain
 vault/              hosts, groups, identities, keys, known hosts
-  resolve.rs        inheritance of username, port, identity, key
+  credential.rs     host credential: legacy decoding, validation, resolution, secrets to try
+  resolve.rs        group inheritance of username, port, identity; a host's effective values
   connect.rs        host or typed address → connection plan
-  trust.rs          the vault as the SSH client's store
+  connection_store.rs  the vault as the SSH client's store; persists a credential after authentication
 layout/             persisted spaces and pinned rows, structurally validated
 files/              remote explorer service of an SSH tab
   model.rs          wire types mirrored by `src/ipc/files.ts`
@@ -47,7 +48,7 @@ sessions/           live sessions behind tabs
 
 ```text
 ipc/                typed commands and events, mirrors of the Rust wire types
-domain/             pure logic, no Vue: organize (intents), split, drop, search, quick-connect, palette
+domain/             pure logic, no Vue: organize (intents), split, drop, search, quick-connect, palette, credentials
 stores/             spaces, sessions, workbench, vault, settings, ui, files (Pinia), and the
                     store-private parts of workbench (workbench-opening, -lifecycle, -effects) and files (file-documents,
                     -transfers, -preparation, -transfer-model); file-dialogs queues
@@ -85,7 +86,7 @@ The terminal registry exposes tab-level search, selection and paste operations. 
 ## Testing
 
 - **Rust**: unit tests per module, plus an end-to-end SSH test against an in-process russh server (`sessions/ssh/tests.rs`).
-- **Interface**: Vitest on `domain/`, `lib/`, store lifecycle operations, asynchronous vault drafts and the terminal registry. Deferred native replies exercise opening/closing races; mocked renderer construction is an internal seam for registry tests. Store tests share their mocks through `stores/*.fixture.ts` (`files.fixture.ts` for the explorer); draft tests hold saves in `test/vaultSaves.ts`.
+- **Interface**: Vitest on `domain/`, `lib/`, store lifecycle operations, asynchronous vault drafts and the terminal registry. Deferred native replies exercise opening/closing races; mocked renderer construction is an internal seam for registry tests. Store tests share their mocks through `stores/*.fixture.ts` (`files.fixture.ts` for the explorer); draft tests hold saves in `test/vaultSaves.ts`. `test/fixtures/credential-cases.json` is the shared table of host credential resolution, read by both `domain/credentials.test.ts` and the Rust vault tests.
 - **Real application**: `.ai/cdp-smoke.mjs` drives the running window over CDP. See `.ai/lessons.md`.
 
 **Remote files.** Each SSH actor opens one lazy SFTP service on its authenticated handle (`ssh/sftp.rs`). Opening is polled beside the shell reader, so a shell filling its channel cannot stall it; calls arriving meanwhile wait for that single attempt. The `files::Files` service answers typed requests with typed replies; transfer progress travels through `EventSink`. Atomic document replacement requires the OpenSSH extension and verified metadata. Remote names follow POSIX; only local names are checked against the platform.

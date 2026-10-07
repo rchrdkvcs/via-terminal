@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Input } from '@/components/ui/input'
-import type { HostInput } from '@/ipc/types'
+import type { Effective, HostInput } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
-import { hint, type Inherited } from './inherit'
+import { hint } from './inherit'
 import PortField from './PortField.vue'
 import VaultField from './VaultField.vue'
 
-defineProps<{ inherited: Inherited }>()
+defineProps<{ inherited: Effective }>()
 const draft = defineModel<HostInput>({ required: true })
 const emit = defineEmits<{ commit: [] }>()
 const vault = useVault()
@@ -37,7 +37,7 @@ const field = 'h-8 text-[13px] md:text-[13px]'
   </VaultField>
   <PortField
     id="host-port"
-    v-model="draft.overrides.port"
+    v-model="draft.port"
     :placeholder="hint(vault.view, inherited.port)"
     @commit="emit('commit')"
   />

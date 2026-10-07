@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import CredentialSelect from '@/components/vault/CredentialSelect.vue'
+import { parseOption } from '@/domain/credentials'
 import type { Prompt, PromptAnswer } from '@/ipc/types'
 
 type SecretPrompt = Extract<
@@ -47,16 +48,15 @@ const retry = computed(() => 'retry' in props.prompt && props.prompt.retry)
 const canRemember = computed(() => 'canRemember' in props.prompt && props.prompt.canRemember)
 
 function submit() {
-  if (credential.value) {
-    const [kind, id] = credential.value.split(':')
-    if (kind === 'key' && !username.value.trim()) return
-    emit('answer', {
-      kind: 'credential',
-      credential:
-        kind === 'identity'
-          ? { kind: 'identity', id: id! }
-          : { kind: 'key', id: id!, username: username.value.trim() },
-    })
+  const option = parseOption(credential.value)
+  if (option?.kind === 'identity') {
+    emit('answer', { kind: 'credential', credential: option })
+    return
+  }
+  if (option?.kind === 'key') {
+    if (!username.value.trim()) return
+    const choice = { kind: 'key', id: option.id, username: username.value.trim() } as const
+    emit('answer', { kind: 'credential', credential: choice })
     return
   }
   if (props.prompt.kind === 'authentication') {
@@ -88,7 +88,10 @@ onMounted(() =>
       <label :for="credentialId" class="text-[13px]">Identité</label>
       <CredentialSelect :id="credentialId" v-model="credential" />
       <Input
-        v-if="credential?.startsWith('key:') || (!credential && prompt.kind === 'authentication')"
+        v-if="
+          parseOption(credential)?.kind === 'key' ||
+          (!credential && prompt.kind === 'authentication')
+        "
         ref="usernameInput"
         v-model="username"
         aria-label="Nom d’utilisateur"
