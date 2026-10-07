@@ -2,7 +2,6 @@
 import { FolderPlus, Trash2 } from '@lucide/vue'
 import { computed } from 'vue'
 import { Input } from '@/components/ui/input'
-import { api } from '@/ipc/client'
 import type { Id } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
 import IconAction from './IconAction.vue'
@@ -26,7 +25,6 @@ const options = useVaultOptions()
 const { draft, error, autosave } = useDraft({
   kind: 'group',
   source: () => groupInput(vault.group(props.groupId)),
-  save: (input) => vault.mutate(() => api.vault.saveGroup(input)),
   validate: (input) => (input.name.trim() ? null : 'Donnez un nom au groupe.'),
 })
 

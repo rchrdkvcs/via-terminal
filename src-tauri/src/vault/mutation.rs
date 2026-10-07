@@ -4,6 +4,7 @@ use super::{
     Vault, DOCUMENT,
 };
 use crate::{error::AppResult, secrets::Secrets, storage::BlobChange};
+use std::sync::atomic::Ordering;
 
 pub(super) struct SecretChanges<'a> {
     secrets: &'a Secrets,
@@ -63,6 +64,7 @@ impl Vault {
         self.storage
             .save_with_blobs(DOCUMENT, &next, &secrets.blobs)?;
         *data = next;
+        self.revision.fetch_add(1, Ordering::Relaxed);
         Ok(result)
     }
 }

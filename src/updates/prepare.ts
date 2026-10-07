@@ -6,7 +6,6 @@ import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
 import { useVault } from '@/stores/vault'
 import { prepareDrafts } from './drafts'
-import { flushVaultSaves } from '@/components/vault/saveQueue'
 
 export async function prepareUpdate() {
   const files = useFiles()
@@ -15,7 +14,6 @@ export async function prepareUpdate() {
   if (!decision)
     throw new Error('La mise à jour a été annulée pour conserver les fichiers ouverts.')
   await prepareDrafts()
-  await flushVaultSaves()
   const results = await Promise.allSettled([
     useSettings().flush(),
     useSpaces().flush(),
