@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { onMounted, ref, useTemplateRef } from 'vue'
+import { onMounted, onScopeDispose, ref, useTemplateRef } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { Id } from '@/ipc/types'
 import { useKeyActions } from './useKeyActions'
+import { registerDraftPreparation } from '@/updates/drafts'
 
 const emit = defineEmits<{ done: [id: Id | null] }>()
 const keys = useKeyActions()
 const label = ref('')
 const busy = ref(false)
 const input = useTemplateRef<InstanceType<typeof Input>>('input')
+onScopeDispose(
+  registerDraftPreparation(async () => {
+    if (label.value.trim() || busy.value)
+      throw new Error('Terminez ou annulez la création de la clé avant la mise à jour.')
+  }),
+)
 
 onMounted(() => (input.value?.$el as HTMLInputElement | undefined)?.focus())
 

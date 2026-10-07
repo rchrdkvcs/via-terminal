@@ -5,6 +5,7 @@ import type { Id, Layout } from '@/ipc/types'
 import { apply, transfer as transferRow, type Intent } from '@/domain/organize'
 import { type Space, fromPersisted, locate, rowOfTab, toPersisted } from '@/domain/space'
 import { notify } from '@/lib/notify'
+import { deferredSave } from '@/lib/deferred-save'
 
 export interface SpaceDraft {
   name: string
@@ -37,20 +38,17 @@ export const useSpaces = defineStore('spaces', () => {
     sidebar.value = { ...layout.sidebar }
   }
 
-  let saving: ReturnType<typeof setTimeout> | undefined
-  function persist() {
-    clearTimeout(saving)
-    saving = setTimeout(() => {
-      const layout: Layout = {
-        activeSpaceId: activeId.value,
-        sidebar: sidebar.value,
-        spaces: spaces.value.map(toPersisted),
-      }
-      api.saveLayout(layout).catch((cause) => {
-        notify.error(`Organisation non enregistrée : ${describeError(cause)}`)
-      })
-    }, 250)
-  }
+  const persistence = deferredSave(
+    (): Layout => ({
+      activeSpaceId: activeId.value,
+      sidebar: sidebar.value,
+      spaces: spaces.value.map(toPersisted),
+    }),
+    api.saveLayout,
+    (cause) => notify.error(`Organisation non enregistrée : ${describeError(cause)}`),
+    250,
+  )
+  const persist = persistence.schedule
 
   function dispatch(
     intent: Intent | readonly Intent[],
@@ -148,5 +146,6 @@ export const useSpaces = defineStore('spaces', () => {
     reorder,
     transfer,
     setSidebar,
+    flush: persistence.flush,
   }
 })

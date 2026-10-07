@@ -3,6 +3,7 @@ import { describeError } from '@/ipc/client'
 import { clone } from '@/lib/clone'
 import type { Id } from '@/ipc/types'
 import { acknowledge, queueSave, type RecordKind } from './saveQueue'
+import { registerDraftPreparation } from '@/updates/drafts'
 
 interface Options<T> {
   kind: RecordKind
@@ -79,6 +80,19 @@ export function useDraft<T extends { id: Id | null }>({
 
   async function autosave() {
     if (draft.value.id && JSON.stringify(draft.value) !== baseline) await commit()
+  }
+
+  if (getCurrentScope()) {
+    const unregister = registerDraftPreparation(async () => {
+      if (JSON.stringify(draft.value) === baseline) return
+      if (!draft.value.id)
+        throw new Error(
+          'Enregistrez ou annulez le nouveau brouillon du coffre avant la mise à jour.',
+        )
+      if (!(await commit()))
+        throw new Error(error.value ?? 'Le brouillon du coffre n’a pas pu être enregistré.')
+    })
+    onScopeDispose(unregister)
   }
 
   return { draft, error, saving, commit, autosave, reset }

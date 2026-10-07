@@ -10,6 +10,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { useSettings } from '@/stores/settings'
 import SettingRow from '../SettingRow.vue'
+import UpdateSettings from '../UpdateSettings.vue'
 
 const store = useSettings()
 
@@ -80,5 +81,6 @@ function onShell(value: unknown) {
         @update:model-value="(on: boolean) => store.update({ confirmCloseRunning: on })"
       />
     </SettingRow>
+    <UpdateSettings />
   </section>
 </template>

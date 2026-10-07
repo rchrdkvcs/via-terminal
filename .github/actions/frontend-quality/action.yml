@@ -1,0 +1,34 @@
+name: Frontend quality
+description: Build and validate the frontend with the locked dependencies.
+inputs:
+  release-tag:
+    description: Optional release version to synchronize before building.
+    default: ''
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+    - name: Synchronize version from release tag
+      if: inputs.release-tag != ''
+      shell: bash
+      env:
+        RELEASE_TAG: ${{ inputs.release-tag }}
+      run: node .github/scripts/sync-release-version.mjs
+    - shell: bash
+      run: pnpm install --frozen-lockfile
+    - shell: bash
+      run: pnpm build
+    - shell: bash
+      run: pnpm test
+    - shell: bash
+      run: pnpm test:release
+    - shell: bash
+      run: pnpm lint
+    - shell: bash
+      run: pnpm format:check

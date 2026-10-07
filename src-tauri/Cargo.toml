@@ -33,6 +33,8 @@ russh = { version = "0.63", default-features = false, features = ["ring", "flate
 tokio = { version = "1", features = ["sync", "time", "rt", "macros", "net"] }
 rand = "0.10"
 tauri-plugin-window-state = "2"
+tauri-plugin-updater = "2.13.1"
+tauri-plugin-process = "2.4.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"

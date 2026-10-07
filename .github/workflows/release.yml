@@ -20,46 +20,68 @@ env:
   RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
 
 jobs:
-  quality:
-    runs-on: windows-latest
-    timeout-minutes: 30
+  publication:
+    outputs:
+      complete: ${{ steps.publication.outputs.complete }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Check whether this release is already complete
+        id: publication
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          complete="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" --jq 'any(.assets[]; .name == "latest.json")')"
+          echo "complete=${complete}" >> "$GITHUB_OUTPUT"
+
+  frontend:
+    needs: publication
+    if: needs.publication.outputs.complete != 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.RELEASE_TAG }}
-      - uses: pnpm/action-setup@v4
+      - uses: ./.github/actions/frontend-quality
         with:
-          version: 10
-      - uses: actions/setup-node@v4
+          release-tag: ${{ env.RELEASE_TAG }}
+      - uses: actions/upload-artifact@v4
         with:
-          node-version: 22
-          cache: pnpm
-      - name: Synchronize version from release tag
-        run: node .github/scripts/sync-release-version.mjs
-      - uses: dtolnay/rust-toolchain@stable
+          name: release-frontend
+          path: dist
+          if-no-files-found: error
+          retention-days: 1
+
+  quality:
+    needs: publication
+    if: needs.publication.outputs.complete != 'true'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_PROFILE_TEST_DEBUG: 0
+    steps:
+      - uses: actions/checkout@v4
         with:
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: ./.github/actions/native-quality
         with:
-          workspaces: src-tauri
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm test
-      - run: pnpm lint
-      - run: pnpm format:check
-      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
-      - run: cargo test --manifest-path src-tauri/Cargo.toml --all-features
-      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
+          release-tag: ${{ env.RELEASE_TAG }}
 
   publish:
-    needs: quality
+    needs: [publication, frontend, quality]
+    if: needs.publication.outputs.complete != 'true'
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: macos-latest
-            args: --target aarch64-apple-darwin --bundles dmg
+            args: --target aarch64-apple-darwin --bundles app,dmg
             rust_targets: aarch64-apple-darwin
           - platform: ubuntu-22.04
             args: --bundles appimage,deb
@@ -98,7 +120,21 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          shared-key: release-${{ matrix.platform }}
+          # Only main warms this cache; saving tag-scoped copies wastes time.
+          save-if: false
       - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-frontend
+          path: dist
+      - name: Require updater signing key
+        shell: bash
+        run: |
+          if [[ -z "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
+            echo "Configure the TAURI_SIGNING_PRIVATE_KEY repository secret before releasing." >&2
+            exit 1
+          fi
       - name: Resolve GitHub Release
         id: gh_release
         shell: bash
@@ -116,7 +152,7 @@ jobs:
           APPLE_SIGNING_IDENTITY: '-'
         with:
           uploadUpdaterJson: false
-          args: ${{ matrix.args }}
+          args: ${{ matrix.args }} --config .github/tauri-prebuilt.conf.json -- --locked
       - name: Verify macOS app inside installer before upload
         if: runner.os == 'macOS'
         shell: bash
@@ -126,7 +162,12 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$RELEASE_TAG" src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg --repo "$GITHUB_REPOSITORY" --clobber
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg \
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz \
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz.sig \
+            --repo "$GITHUB_REPOSITORY" --clobber
       - name: Build and upload Windows and Linux installers
         if: runner.os != 'macOS'
         uses: tauri-apps/tauri-action@v1
@@ -134,5 +175,32 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           releaseId: ${{ steps.gh_release.outputs.id }}
+          tagName: ${{ env.RELEASE_TAG }}
           uploadUpdaterJson: false
-          args: ${{ matrix.args }}
+          args: ${{ matrix.args }} --config .github/tauri-prebuilt.conf.json -- --locked
+
+  updater:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate and publish the complete stable updater manifest
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > release.json
+          if [[ "$(jq -r .prerelease release.json)" == "true" ]]; then
+            echo "Prerelease installers uploaded; stable updater channel is unchanged."
+            exit 0
+          fi
+          mkdir signatures
+          gh release download "$RELEASE_TAG" --pattern '*.sig' --dir signatures --repo "$GITHUB_REPOSITORY"
+          node .github/scripts/updater-manifest.mjs release.json signatures latest.json
+          gh release upload "$RELEASE_TAG" latest.json --repo "$GITHUB_REPOSITORY"

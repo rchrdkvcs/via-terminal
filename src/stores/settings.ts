@@ -4,6 +4,7 @@ import { usePreferredDark } from '@vueuse/core'
 import { api, describeError } from '@/ipc/client'
 import type { Bootstrap, Settings, Shell } from '@/ipc/types'
 import { notify } from '@/lib/notify'
+import { deferredSave } from '@/lib/deferred-save'
 
 export const defaultSettings: Settings = {
   theme: 'system',
@@ -17,6 +18,7 @@ export const defaultSettings: Settings = {
   defaultShell: null,
   saveQuickConnect: true,
   confirmCloseRunning: false,
+  checkForUpdates: true,
 }
 
 export const useSettings = defineStore('settings', () => {
@@ -48,15 +50,15 @@ export const useSettings = defineStore('settings', () => {
     return shell?.name ?? 'Terminal'
   }
 
-  let saving: ReturnType<typeof setTimeout> | undefined
+  const persistence = deferredSave(
+    () => settings.value,
+    api.saveSettings,
+    (cause) => notify.error(`Réglages non enregistrés : ${describeError(cause)}`),
+    300,
+  )
   function update(patch: Partial<Settings>) {
     settings.value = { ...settings.value, ...patch }
-    clearTimeout(saving)
-    saving = setTimeout(() => {
-      api.saveSettings(settings.value).catch((cause) => {
-        notify.error(`Réglages non enregistrés : ${describeError(cause)}`)
-      })
-    }, 300)
+    persistence.schedule()
   }
 
   function reset() {
@@ -74,5 +76,6 @@ export const useSettings = defineStore('settings', () => {
     shellName,
     update,
     reset,
+    flush: persistence.flush,
   }
 })

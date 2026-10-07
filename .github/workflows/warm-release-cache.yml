@@ -1,0 +1,66 @@
+name: Warm release cache
+
+# Tag-scoped caches cannot be restored by the next release. Compile on main
+# without installers/signing so release jobs can restore its dependencies.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: warm-release-cache-${{ github.ref }}
+  # Let a cold compilation finish and save; keep only the newest pending run.
+  cancel-in-progress: false
+
+jobs:
+  warm:
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+            rust_targets: aarch64-apple-darwin
+          - platform: ubuntu-22.04
+            args: ''
+            rust_targets: ''
+          - platform: windows-latest
+            args: ''
+            rust_targets: ''
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+      - uses: Swatinem/rust-cache@v2
+        id: rust-cache
+        with:
+          workspaces: src-tauri
+          shared-key: release-${{ matrix.platform }}
+      - name: Install Linux dependencies
+        if: steps.rust-cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils file
+      - uses: pnpm/action-setup@v4
+        if: steps.rust-cache.outputs.cache-hit != 'true'
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        if: steps.rust-cache.outputs.cache-hit != 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.rust-cache.outputs.cache-hit != 'true'
+      - run: pnpm build
+        if: steps.rust-cache.outputs.cache-hit != 'true'
+      - name: Compile release dependencies without creating installers
+        if: steps.rust-cache.outputs.cache-hit != 'true'
+        run: pnpm tauri build --ci --no-bundle ${{ matrix.args }} --config .github/tauri-prebuilt.conf.json -- --locked

@@ -25,6 +25,8 @@ pub struct Settings {
     pub save_quick_connect: bool,
 
     pub confirm_close_running: bool,
+    /// Check the public release endpoint once after startup.
+    pub check_for_updates: bool,
 }
 
 impl Default for Settings {
@@ -41,6 +43,7 @@ impl Default for Settings {
             default_shell: None,
             save_quick_connect: true,
             confirm_close_running: false,
+            check_for_updates: true,
         }
     }
 }

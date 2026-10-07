@@ -48,6 +48,7 @@ export function describeError(cause: unknown): string {
 
 export const api = {
   bootstrap: () => call<Bootstrap>('app_bootstrap'),
+  prepareUpdate: () => call<void>('app_prepare_update'),
   saveLayout: (layout: Layout) => call<void>('layout_save', { layout }),
   saveSettings: (settings: Settings) => call<Settings>('settings_save', { settings }),
   swipeRegion: (region: SwipeRegion | null) => call<void>('swipe_region', { region }),

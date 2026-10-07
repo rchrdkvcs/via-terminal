@@ -31,7 +31,7 @@
     "targets": ["nsis", "msi", "dmg", "appimage", "deb"],
     "category": "DeveloperTool",
     "publisher": "Via",
-    "shortDescription": "Via — native terminal workspace",
+    "shortDescription": "Via \u2014 native terminal workspace",
     "windows": {
       "nsis": {
         "startMenuFolder": "Via"
@@ -46,6 +46,18 @@
     ],
     "macOS": {
       "hardenedRuntime": true
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEEzNTY2MUVFMDVDRUYyRkQKUldUOThzNEY3bUZXbzlScHVrbE5od21XbmZaTXhGZzlsRVFYelcxU2VETVY1cXc5aHB0YmN6MHUK",
+      "endpoints": [
+        "https://github.com/rchrdkvcs/via-terminal/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

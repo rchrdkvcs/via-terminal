@@ -1,14 +1,14 @@
 # Release checklist
 
-Publishing a GitHub Release (stable or prerelease) for tag `vX.Y.Z` triggers GitHub Actions. Saving a draft does not trigger a build; use the manual **Release** workflow with its tag to prepare draft assets. Quality runs first, then Windows, macOS, and Linux installer jobs upload their artifacts onto **that same release**. Pushing a commit to `main`, opening or updating a pull request, or pushing a tag by itself does not build installers. CI keeps the frontend build, tests, lint, and Rust quality checks. There is no in-app updater in this slice: do not produce or require an updater manifest or updater signing keys.
+Publishing a GitHub Release (stable or prerelease) for tag `vX.Y.Z` triggers GitHub Actions. Saving a draft does not trigger a build; use the manual **Release** workflow with its tag to prepare draft assets. Frontend and native quality checks run in parallel, then Windows, macOS, and Linux installer jobs upload their artifacts onto **that same release**. Pushing a commit to `main`, opening or updating a pull request, or pushing a tag by itself does not build installers. CI keeps the frontend build, tests, lint, and Rust quality checks. Pushes to `main` also prepare reusable Rust release dependencies without producing installers; see [CI-PERFORMANCE.md](CI-PERFORMANCE.md). A final job validates the complete signed updater manifest and uploads `latest.json` only after every platform succeeds. See [UPDATING.md](UPDATING.md) for signing setup and update behavior.
 
 The workflow already requests `contents: write`. If asset upload fails with “Resource not accessible by integration”, set the repository Actions permission to allow GitHub Actions to create and update releases.
 
 ## Version and GitHub Release
 
 - [ ] Merge the changes to release into `main`. For local builds, synchronize the version with `node .github/scripts/sync-release-version.mjs vX.Y.Z`.
-- [ ] Create a GitHub Release with tag `vX.Y.Z` on that commit. Publish it to start the three installer jobs. To attach files before publication, save a **draft**, run the **Release** workflow manually with its tag, wait for the jobs, then publish. Publication also triggers a build, replacing assets with the same names.
-- [ ] Do not create a second release for the same tag. Re-run the **Release** workflow (`workflow_dispatch` with the tag) if an asset is missing.
+- [ ] Create a GitHub Release with tag `vX.Y.Z` on that commit. Publish it to start the three installer jobs. To attach files before publication, save a **draft**, run the **Release** workflow manually with its tag, wait for the jobs, then publish. Publication also triggers quality checks; a release with an existing `latest.json` skips rebuilding its completed artifacts.
+- [ ] Do not create a second release for the same tag. Re-run the **Release** workflow (`workflow_dispatch` with the tag) if an incomplete release is missing assets. A completed updater release is immutable: make a new version to change its binaries.
 
 The release tag is the source of truth: both quality and installer jobs automatically synchronize `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the application entry in `src-tauri/Cargo.lock` before building. These changes are local to the runners; they do not create a commit. A forgotten version bump no longer blocks the release. Use a stable tag in the format `vX.Y.Z`.
 
@@ -22,15 +22,15 @@ The release tag is the source of truth: both quality and installer jobs automati
   - macOS arm64 (Apple Silicon): `Via_*_aarch64.dmg` containing `Via.app`
   - Linux x64: `Via_*_amd64.AppImage` and `via_*_amd64.deb`
 - [ ] macOS installers contain an ad-hoc signed app, without a Developer ID certificate or Apple notarization. The workflow verifies the app inside the DMG before upload. Windows binaries remain unsigned; SmartScreen warnings are expected.
-- [ ] No updater manifest, updater endpoint, or updater signing key is required or published.
+- [ ] The updater signing secret is configured; all five updater targets have signed artifacts. Stable releases contain a complete `latest.json`; prereleases do not enter the stable update channel. Private signing keys are never published.
 
 ## Acceptance
 
 - [ ] Every scenario in [ACCEPTANCE.md](ACCEPTANCE.md) is recorded against the release candidate on Windows, macOS, and Linux.
-- [ ] Fresh install, upgrade by reinstalling over the previous version, uninstall, and retained-data behavior are verified on each OS as available.
+- [ ] Fresh install, in-app update from a previous updater-enabled version, manual reinstall, uninstall, and retained-data behavior are verified on each OS and installer type as available.
 - [ ] Database migration is tested from every supported prior schema and backed up before mutation.
 - [ ] Performance results and the reference machine are recorded (OS, CPU, RAM, WebView, build hash).
-- [ ] Known limitations include unsigned Windows binaries (SmartScreen), interactive SSH passwords, no process survival after exit, no in-app updater, and features outside V1.
+- [ ] Known limitations include unsigned Windows binaries (SmartScreen), interactive SSH passwords, no process survival after exit, and features outside V1.
 
 ## Security and privacy
 
@@ -50,7 +50,7 @@ The release tag is the source of truth: both quality and installer jobs automati
 
 ## Operator notes
 
-Windows installers are not code-signed. macOS releases use ad-hoc signing and require manual Gatekeeper approval on first launch after download. No paid Apple Developer membership or Apple Actions secrets are required. The running app does not check for updates; install a newer version by downloading it from the GitHub Release in a browser.
+Windows installers are not code-signed. macOS releases use ad-hoc signing and require manual Gatekeeper approval on first launch after download. No paid Apple Developer membership or Apple Actions secrets are required for the current ad-hoc build. The separate Tauri updater signing secret is required. Installed release builds check for updates once after startup unless disabled in Settings. The first updater-enabled version must be installed manually; subsequent upgrades can use the title-bar button.
 
 ### Windows (unsigned NSIS `.exe` / MSI)
 
@@ -64,7 +64,7 @@ Download the DMG on an Apple Silicon Mac, drag **Via.app** into **Applications**
 
 Create a new version/tag containing these changes to build the updated installer. Re-running an old tag checks out its old scripts/configuration. Existing downloads are not changed by a new release.
 
-For a local build, use `APPLE_SIGNING_IDENTITY=- pnpm tauri build --target aarch64-apple-darwin --bundles dmg`. `pnpm tauri dev` does not require release signing credentials. See [Tauri's signing guide](https://v2.tauri.app/distribute/sign/macos/) for ad-hoc signing details.
+For a local signed build, set `TAURI_SIGNING_PRIVATE_KEY` to the private key path and use `APPLE_SIGNING_IDENTITY=- pnpm tauri build --target aarch64-apple-darwin --bundles app,dmg`. `pnpm tauri dev` does not require release signing credentials. See [Tauri's signing guide](https://v2.tauri.app/distribute/sign/macos/) for ad-hoc signing details.
 
 ### Linux (AppImage / `.deb`)
 

@@ -49,7 +49,11 @@ export function useShortcuts() {
   function onKeydown(event: KeyboardEvent) {
     const found = match(event, settings.platform)
     if (!found) return
-
+    if (document.querySelector('[data-update-dialog]')) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
     const dialog = document.querySelector('[role="dialog"], [role="alertdialog"]')
     if (dialog && found.id !== 'newTab') return
     event.preventDefault()

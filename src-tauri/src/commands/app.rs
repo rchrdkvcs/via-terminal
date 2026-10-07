@@ -42,3 +42,9 @@ pub fn layout_save(app: State<App>, layout: Layout) -> AppResult<()> {
 pub fn settings_save(app: State<App>, settings: Settings) -> AppResult<Settings> {
     app.settings.save(settings)
 }
+
+/// Called only after frontend persistence has completed, before installing.
+#[tauri::command]
+pub fn app_prepare_update(app: State<App>) {
+    app.sessions.close_all();
+}

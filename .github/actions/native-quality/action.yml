@@ -1,0 +1,33 @@
+name: Native quality
+description: Validate formatting, tests and Clippy on Windows.
+inputs:
+  release-tag:
+    description: Optional release version to synchronize before checking.
+    default: ''
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      if: inputs.release-tag != ''
+      with:
+        node-version: 22
+    - name: Synchronize version from release tag
+      if: inputs.release-tag != ''
+      shell: bash
+      env:
+        RELEASE_TAG: ${{ inputs.release-tag }}
+      run: node .github/scripts/sync-release-version.mjs
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: src-tauri
+        shared-key: quality-windows
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+    - shell: bash
+      run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+    - shell: bash
+      run: cargo test --locked --manifest-path src-tauri/Cargo.toml --all-features
+    - shell: bash
+      run: cargo clippy --locked --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings

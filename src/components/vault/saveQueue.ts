@@ -21,6 +21,17 @@ interface Entry {
 }
 
 const queues = new Map<string | object, Entry[]>()
+const pending = new Set<Promise<SaveOutcome<unknown>>>()
+
+/** Includes waiting snapshots whose backend call has not started yet. */
+export async function flushVaultSaves() {
+  while (pending.size) {
+    const results = await Promise.all(pending)
+    const failed = results.find((result) => !result.id)
+    if (failed?.id === null)
+      throw failed.cause ?? new Error('Une modification du coffre n’a pas pu être enregistrée.')
+  }
+}
 
 const KEEP = { action: 'keep' } as const
 
@@ -39,7 +50,7 @@ export function queueSave<T extends { id: Id | null }>(
   request: Request<T>,
 ): Promise<SaveOutcome<T>> {
   const key = request.input.id ? `${request.kind}:${request.input.id}` : request.owner
-  return new Promise((resolve) => {
+  const operation = new Promise<SaveOutcome<T>>((resolve) => {
     const waiter = resolve as Entry['waiters'][number]
     const queue = queues.get(key)
     const last = queue?.[queue.length - 1]
@@ -54,6 +65,9 @@ export function queueSave<T extends { id: Id | null }>(
     queues.set(key, [entry])
     void drain(key, request.kind)
   })
+  pending.add(operation)
+  void operation.then(() => pending.delete(operation))
+  return operation
 }
 
 async function drain(key: string | object, kind: RecordKind) {

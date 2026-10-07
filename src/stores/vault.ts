@@ -18,6 +18,7 @@ const empty: VaultView = {
 
 export const useVault = defineStore('vault', () => {
   const view = ref<VaultView>(empty)
+  const pending = new Set<Promise<Id | null>>()
 
   const hostsById = computed(() => new Map(view.value.hosts.map((host) => [host.id, host])))
 
@@ -58,10 +59,23 @@ export const useVault = defineStore('vault', () => {
     return view.value.passwords.includes(id)
   }
 
-  async function mutate(run: () => Promise<Mutation>): Promise<Id | null> {
-    const result = await run()
-    view.value = result.vault
-    return result.id
+  function mutate(run: () => Promise<Mutation>): Promise<Id | null> {
+    const operation = run().then((result) => {
+      view.value = result.vault
+      return result.id
+    })
+    pending.add(operation)
+    const remove = () => pending.delete(operation)
+    void operation.then(remove, remove)
+    return operation
+  }
+
+  async function flush() {
+    while (pending.size) {
+      const results = await Promise.allSettled(pending)
+      const failed = results.find((result) => result.status === 'rejected')
+      if (failed?.status === 'rejected') throw failed.reason
+    }
   }
 
   function isUnnamed(id: Id): boolean {
@@ -108,6 +122,7 @@ export const useVault = defineStore('vault', () => {
     isUnnamed,
     rename,
     mutate,
+    flush,
     refresh,
     hydrate,
   }
