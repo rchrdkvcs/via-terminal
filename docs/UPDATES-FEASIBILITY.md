@@ -99,7 +99,7 @@ The shutdown path needs explicit persistence completion:
 
 - [Spaces](../src/stores/spaces.ts) and [settings](../src/stores/settings.ts)
   debounce saves; expose an awaited flush instead of relying on a delay.
-- Await pending [vault saves](../src/components/vault/saveQueue.ts), and resolve
+- Await pending [vault saves](../src/stores/vault-saves.ts), and resolve
   unsaved editor drafts before exit.
 - [Rust exit handling](../src-tauri/src/lib.rs) closes sessions on `RunEvent::Exit`;
   verify updater termination paths, particularly Windows, and add an explicit
