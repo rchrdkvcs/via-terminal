@@ -9,9 +9,10 @@ use crate::{
     sessions::ssh::{ConnectPlan, CredentialChoice, PlanKey},
 };
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 use zeroize::Zeroizing;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum HostCredential {
     Inherit {

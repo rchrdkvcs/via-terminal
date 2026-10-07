@@ -1,8 +1,9 @@
 use crate::error::AppResult;
+use ts_rs::TS;
 use uuid::Uuid;
 use zeroize::Zeroizing;
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, TS)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum CredentialChoice {
     Password { username: String },
@@ -47,9 +48,9 @@ pub struct ServerKey {
     pub fingerprint: String,
 }
 
+/// What a successful authentication may save; the vault picks the owner of the password.
 #[derive(Default)]
 pub struct Remembered {
-    pub password_verified: bool,
     pub password: Option<Zeroizing<String>>,
     pub passphrase: Option<(Uuid, Zeroizing<String>)>,
 }

@@ -28,7 +28,7 @@ use errors::{eof, missing, sftp_error};
 pub use owner::Owner;
 use paths::join;
 use russh_sftp::client::RawSftpSession;
-pub use staging::Staging;
+pub use staging::{parse_chunk, Staging};
 use std::sync::Arc;
 use uuid::Uuid;
 

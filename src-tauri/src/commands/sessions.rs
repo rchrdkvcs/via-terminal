@@ -7,8 +7,9 @@ use crate::{
 use serde::Deserialize;
 use std::sync::Arc;
 use tauri::State;
+use ts_rs::TS;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalTarget {
     shell: Option<String>,

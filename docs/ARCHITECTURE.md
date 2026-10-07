@@ -16,13 +16,15 @@ vault/              hosts, groups, identities, keys, known hosts
   connection_store.rs  the vault as the SSH client's store; persists a credential after authentication
 layout/             persisted spaces and pinned rows, structurally validated
 files/              remote explorer service of an SSH tab
-  model.rs          wire types mirrored by `src/ipc/files.ts`
+  model.rs          wire types of the explorer
   owner.rs          endpoint/account identity checked on saves and transfers
   paths.rs          POSIX remote names versus platform-safe local names
   documents.rs      safe document replacement; reading.rs bounded UTF-8 reads
   upload*, download*, jobs.rs  streamed transfers, collisions, cancellation
-  staging.rs        local copies of interface drops, cleared at launch and exit
+  staging.rs        local copies of interface drops, received as raw byte chunks, cleared at
+                    launch and exit
 settings.rs         preferences
+bindings.rs         test that generates `src/ipc/bindings.ts` from the wire types (ts-rs)
 sessions/           live sessions behind tabs
   local.rs          shells in a native PTY (portable-pty)
   shells.rs         detected shells; only these may be launched
@@ -43,15 +45,16 @@ sessions/           live sessions behind tabs
 - Every vault mutation goes through `Vault::commit` or `commit_with_secrets`. Both validate a copy and persist it before publishing it. Changes to encrypted secret blobs and the vault document share one SQLite transaction, so a failed mutation keeps both unchanged. `Secrets` only seals and opens blobs; it has no write path of its own.
 - Secrets never enter a document, a snapshot sent to the interface, a log or a process argument.
 - The interface can only launch a detected shell, by its path, never an arbitrary executable.
+- Rust owns every wire type: derive `ts_rs::TS`, list it in `bindings.rs`, regenerate with `UPDATE_BINDINGS=1 cargo test --manifest-path src-tauri/Cargo.toml bindings`. `cargo test` fails while `src/ipc/bindings.ts` is stale.
 
 ## Interface (`src`)
 
 ```text
-ipc/                typed commands and events, mirrors of the Rust wire types
+ipc/                typed commands and events over `bindings.ts`, generated from the Rust wire types
 domain/             pure logic, no Vue: organize (intents), split, drop, search, quick-connect, palette, credentials
 stores/             spaces, sessions, workbench, vault, settings, ui, files (Pinia), and the
-                    store-private parts of files (file-document, -transfers, -preparation,
-                    -transfer-model); file-dialogs queues explorer questions
+                    store-private parts of files (file-document, file-transfers); file-dialogs
+                    queues explorer questions
 terminal/           xterm instances keyed by tab, outside the Vue tree
 composables/        bootstrap, shortcuts, drag and drop, labels, sidebar actions, and file
                     protection (useFileProtection), every destructive intent (useClosing),
@@ -90,4 +93,4 @@ The terminal registry exposes tab-level search, selection and paste operations. 
 
 **Remote files.** Each SSH actor opens one lazy SFTP service on its authenticated handle (`ssh/sftp.rs`). Opening is polled beside the shell reader, so a shell filling its channel cannot stall it; calls arriving meanwhile wait for that single attempt. The `files::Files` service answers typed requests with typed replies; transfer progress travels through `EventSink`. Atomic document replacement requires the OpenSSH extension and verified metadata. Remote names follow POSIX; only local names are checked against the platform.
 
-The in-memory `stores/files` keeps every transfer plan and, through `file-document`, the single document each document tab shows. That document keeps the owner of the read that produced it; after a reconnection the tab reads it again to learn the new connection's owner, and it can be saved only while both match. It reads each tab's ready session from `stores/sessions` itself and keeps one connection generation per explorer, renewed when the session changes or the explorer is released; every reply, success or failure, applies only while its generation is current. Reading an explorer never creates it. Retry, drop preparation and staging cleanup are store operations, so a released explorer is never recreated by a late reply. `useFileProtection` turns closing questions into a decision that loses nothing; `release` runs the closing, whose workbench operation releases the explorers, only while the decision is current, and asks again if a draft or transfer changed meanwhile. Quitting and updating check it again after flushing. Pinned tab layout retains only `remoteCwd`, never documents. See ADR-0009 and ADR-0010.
+The in-memory `stores/files` keeps every transfer plan and, through `file-document`, the single document each document tab shows. That document keeps the owner of the read that produced it; after a reconnection the tab reads it again to learn the new connection's owner, and it can be saved only while both match. It reads each tab's ready session from `stores/sessions` itself and keeps one connection generation per explorer, renewed when the session changes or the explorer is released; every reply, success or failure, applies only while its generation is current. Reading an explorer never creates it. `file-transfers` holds one record per transfer, from which each explorer's list is derived; starting, staging a drop, cancelling, retrying and staging cleanup are its operations, so a released explorer is never recreated by a late reply. `useFileProtection` turns closing questions into a decision that loses nothing; `release` runs the closing, whose workbench operation releases the explorers, only while the decision is current, and asks again if a draft or transfer changed meanwhile. Quitting and updating check it again after flushing. Pinned tab layout retains only `remoteCwd`, never documents. See ADR-0009 and ADR-0010.

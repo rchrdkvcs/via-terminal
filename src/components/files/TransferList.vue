@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { computed, useId } from 'vue'
 import { RotateCcw, X, Upload, Download } from '@lucide/vue'
-import type { Transfer, TransferState } from '@/stores/files'
-import { isActive, isFinished, isProgressing } from '@/stores/file-transfer-model'
+import {
+  isActive,
+  isFinished,
+  isProgressing,
+  type Transfer,
+  type TransferState,
+} from '@/stores/files'
 import { Button } from '@/components/ui/button'
 const props = defineProps<{ transfers: Transfer[]; connected: boolean }>()
 const emit = defineEmits<{ cancel: [id: string]; retry: [id: string]; clear: [] }>()
