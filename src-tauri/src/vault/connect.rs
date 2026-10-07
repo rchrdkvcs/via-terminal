@@ -26,19 +26,8 @@ impl Vault {
                 .find(|h| h.id == host_id)
                 .ok_or_else(|| AppError::not_found("hôte"))?;
             let effective = resolve::effective(data, host);
-            let password = if host.overrides.identity_id.is_some() && !host.own_credentials {
-                None
-            } else {
-                self.secrets
-                    .get_string(&secret_id(SecretKind::Password, host.id))?
-            };
-            let password = match (password, &effective.identity_id) {
-                (Some(password), _) => Some(password),
-                (None, Some(identity)) => self
-                    .secrets
-                    .get_string(&secret_id(SecretKind::Password, identity.value))?,
-                (None, None) => None,
-            };
+            let (key, password) =
+                self.connection(data, Some(host.id), &host.credential, &effective)?;
             Ok(ConnectPlan {
                 credential: None,
                 host_id: Some(host.id),
@@ -46,10 +35,7 @@ impl Vault {
                 address: host.address.clone(),
                 port: effective.port.value,
                 username: effective.username.map(|sourced| sourced.value),
-                key: effective
-                    .key_id
-                    .map(|sourced| self.plan_key(data, sourced.value))
-                    .transpose()?,
+                key,
                 password,
                 can_remember: self.secrets.available(),
                 save_host: false,

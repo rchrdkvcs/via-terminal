@@ -2,10 +2,12 @@ mod atomic_auth;
 mod atomic_keys;
 mod atomic_records;
 mod connections;
+mod credential_cases;
 mod credentials;
 mod records;
 
-use super::{input::*, model::*, Vault};
+use super::{input::*, Vault};
+use crate::vault::HostCredential;
 use crate::{
     secrets::{FixedKey, Secrets},
     storage::Storage,
@@ -20,13 +22,12 @@ pub(super) fn vault() -> Vault {
 
 pub(super) fn host(address: &str) -> HostInput {
     HostInput {
-        own_credentials: false,
         id: None,
         group_id: None,
         label: String::new(),
         address: address.into(),
-        overrides: Defaults::default(),
-        key_id: None,
+        port: None,
+        credential: HostCredential::Inherit,
         tags: vec![],
         notes: String::new(),
         password: SecretUpdate::Keep,

@@ -1,22 +1,88 @@
 use super::{host, vault};
 use crate::{
+    secrets::{FixedKey, Secrets},
     sessions::ssh::{ConnectionStore, CredentialChoice, Remembered},
-    vault::{input::*, model::*},
+    storage::Storage,
+    vault::{input::*, model::*, HostCredential, Vault},
 };
+use std::sync::Arc;
 
-#[test]
-fn an_explicit_host_credential_does_not_mix_with_the_group_identity() {
-    let vault = vault();
-    let key = vault.generate_key("Group key").unwrap();
-    let identity = vault
+fn identity(vault: &Vault, username: &str, key_id: Option<Id>, password: &str) -> Identity {
+    vault
         .save_identity(IdentityInput {
             id: None,
-            label: "Group identity".into(),
-            username: "group-user".into(),
-            key_id: Some(key.id),
-            password: SecretUpdate::Set("group-password".into()),
+            label: username.into(),
+            username: username.into(),
+            key_id,
+            password: SecretUpdate::Set(password.into()),
         })
+        .unwrap()
+}
+
+#[test]
+fn records_stored_before_the_selector_load_into_it() {
+    let storage = Arc::new(Storage::memory().unwrap());
+    let ids: Vec<String> = (1..=7)
+        .map(|n| format!("00000000-0000-0000-0000-00000000000{n}"))
+        .collect();
+    let host = |id: &str, extra: serde_json::Value| {
+        let mut host = serde_json::json!({
+            "id": id, "groupId": null, "label": "a", "address": "a", "keyId": null,
+        });
+        host.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        host
+    };
+    let overrides = |username: Option<&str>, identity: Option<&str>| serde_json::json!({ "username": username, "port": 2200, "identityId": identity });
+    let (identity, key) = (&ids[5], &ids[6]);
+    storage
+        .save(
+            "vault",
+            &serde_json::json!({
+                "hosts": [
+                    host(&ids[0], serde_json::json!({})),
+                    host(&ids[1], serde_json::json!({ "overrides": overrides(Some("old"), Some(identity)), "keyId": key })),
+                    host(&ids[2], serde_json::json!({ "overrides": overrides(Some("root"), None), "keyId": key })),
+                    host(&ids[3], serde_json::json!({ "overrides": overrides(Some("root"), None) })),
+                    host(&ids[4], serde_json::json!({ "ownCredentials": true, "overrides": overrides(None, Some(identity)) })),
+                ],
+            }),
+        )
         .unwrap();
+    let secrets = Arc::new(Secrets::new(storage.clone(), &FixedKey(Some([3; 32]))));
+    let vault = Vault::load(storage, secrets).unwrap();
+    let hosts = vault.view().unwrap().snapshot.data.hosts;
+    let (identity, key) = (identity.parse().unwrap(), key.parse().unwrap());
+    let root = Some("root".to_string());
+    assert_eq!(
+        hosts
+            .iter()
+            .map(|h| h.credential.clone())
+            .collect::<Vec<_>>(),
+        vec![
+            HostCredential::Inherit,
+            HostCredential::Identity { id: identity },
+            HostCredential::Key {
+                id: key,
+                username: root.clone()
+            },
+            HostCredential::Password { username: root },
+            HostCredential::Password { username: None },
+        ]
+    );
+    assert_eq!(hosts[0].port, None);
+    assert_eq!(hosts[1].port, Some(2200));
+    let saved = serde_json::to_value(&hosts[1]).unwrap();
+    assert_eq!(saved["credential"]["kind"], "identity");
+    assert!(saved.get("ownCredentials").is_none() && saved.get("overrides").is_none());
+}
+
+#[test]
+fn an_explicit_host_credential_does_not_use_group_secrets() {
+    let vault = vault();
+    let key = vault.generate_key("Group key").unwrap();
+    let identity = identity(&vault, "group-user", Some(key.id), "group-password");
     let group = vault
         .save_group(GroupInput {
             id: None,
@@ -31,15 +97,19 @@ fn an_explicit_host_credential_does_not_mix_with_the_group_identity() {
         .unwrap();
     let saved = vault
         .save_host(HostInput {
-            own_credentials: true,
             group_id: Some(group.id),
-            overrides: Defaults {
-                username: Some("own-user".into()),
-                ..Default::default()
+            credential: HostCredential::Password {
+                username: Some(" own-user ".into()),
             },
             ..host("test")
         })
         .unwrap();
+    assert_eq!(
+        saved.credential,
+        HostCredential::Password {
+            username: Some("own-user".into())
+        }
+    );
     let plan = vault.plan(saved.id).unwrap();
     assert_eq!(plan.username.as_deref(), Some("own-user"));
     assert_eq!(plan.port, 2200);
@@ -48,26 +118,82 @@ fn an_explicit_host_credential_does_not_mix_with_the_group_identity() {
 }
 
 #[test]
+fn saving_rejects_a_credential_missing_from_the_vault() {
+    let vault = vault();
+    for credential in [
+        HostCredential::Identity {
+            id: uuid::Uuid::new_v4(),
+        },
+        HostCredential::Key {
+            id: uuid::Uuid::new_v4(),
+            username: None,
+        },
+        HostCredential::Password {
+            username: Some("-oProxyCommand".into()),
+        },
+    ] {
+        assert!(vault
+            .save_host(HostInput {
+                credential,
+                ..host("test")
+            })
+            .is_err());
+    }
+    assert!(vault.view().unwrap().snapshot.data.hosts.is_empty());
+}
+
+#[test]
+fn deleting_a_selected_identity_or_key_keeps_the_username_and_asks_for_a_password() {
+    let vault = vault();
+    let key = vault.generate_key("Key").unwrap();
+    let identity = identity(&vault, "deploy", None, "pw");
+    let by_identity = vault
+        .save_host(HostInput {
+            credential: HostCredential::Identity { id: identity.id },
+            ..host("a")
+        })
+        .unwrap();
+    let by_key = vault
+        .save_host(HostInput {
+            credential: HostCredential::Key {
+                id: key.id,
+                username: Some("root".into()),
+            },
+            ..host("b")
+        })
+        .unwrap();
+    vault.delete_identity(identity.id).unwrap();
+    vault.delete_key(key.id).unwrap();
+    let hosts = vault.view().unwrap().snapshot.data.hosts;
+    assert_eq!(
+        hosts[0].credential,
+        HostCredential::Password {
+            username: Some("deploy".into())
+        }
+    );
+    assert_eq!(
+        hosts[1].credential,
+        HostCredential::Password {
+            username: Some("root".into())
+        }
+    );
+    let plan = vault.plan(by_identity.id).unwrap();
+    assert!(plan.password.is_none());
+    assert!(vault.plan(by_key.id).unwrap().key.is_none());
+}
+
+#[test]
 fn selecting_an_identity_replaces_old_host_credentials_after_success() {
     let vault = vault();
     let key = vault.generate_key("Old key").unwrap();
-    let identity = vault
-        .save_identity(IdentityInput {
-            id: None,
-            label: "Identity".into(),
-            username: "identity-user".into(),
-            key_id: None,
-            password: SecretUpdate::Set("identity-password".into()),
-        })
-        .unwrap();
+    let identity = identity(&vault, "identity-user", None, "identity-password");
     let saved = vault
         .save_host(HostInput {
-            key_id: Some(key.id),
-            password: SecretUpdate::Set("old-password".into()),
-            overrides: Defaults {
+            credential: HostCredential::Key {
+                id: key.id,
                 username: Some("old-user".into()),
-                ..Default::default()
             },
+            password: SecretUpdate::Set("old-password".into()),
             ..host("test")
         })
         .unwrap();
@@ -104,23 +230,24 @@ fn a_missing_credential_leaves_the_connection_plan_unchanged() {
     let vault = vault();
     let saved = vault
         .save_host(HostInput {
-            overrides: Defaults {
+            credential: HostCredential::Password {
                 username: Some("original".into()),
-                ..Default::default()
             },
             ..host("test")
         })
         .unwrap();
     let mut plan = vault.plan(saved.id).unwrap();
-    assert!(vault
-        .select_credential(
-            &mut plan,
-            CredentialChoice::Key {
-                id: uuid::Uuid::new_v4(),
-                username: "other".into()
-            }
-        )
-        .is_err());
+    for choice in [
+        CredentialChoice::Key {
+            id: uuid::Uuid::new_v4(),
+            username: "other".into(),
+        },
+        CredentialChoice::Password {
+            username: "  ".into(),
+        },
+    ] {
+        assert!(vault.select_credential(&mut plan, choice).is_err());
+    }
     assert_eq!(plan.username.as_deref(), Some("original"));
     assert!(plan.credential.is_none());
 }

@@ -96,8 +96,8 @@ impl Vault {
             if data.keys.len() == before {
                 return Err(AppError::not_found("clé"));
             }
-            for host in data.hosts.iter_mut().filter(|h| h.key_id == Some(id)) {
-                host.key_id = None;
+            for host in &mut data.hosts {
+                host.credential.key_removed(id);
             }
             for identity in data.identities.iter_mut().filter(|i| i.key_id == Some(id)) {
                 identity.key_id = None;

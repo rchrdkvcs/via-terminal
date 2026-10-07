@@ -1,7 +1,9 @@
 mod connect;
-mod credentials;
+mod connection_store;
+mod credential;
 mod mutation;
 pub use connect::QuickTarget;
+pub use credential::HostCredential;
 mod groups;
 mod hosts;
 pub mod input;
@@ -10,7 +12,6 @@ pub mod model;
 pub mod resolve;
 #[cfg(test)]
 mod tests;
-mod trust;
 
 use crate::{error::AppResult, secrets::Secrets, storage::Storage};
 use model::{secret_id, Id, SecretKind, VaultData, VaultSnapshot};
