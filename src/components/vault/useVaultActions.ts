@@ -37,7 +37,11 @@ export function useVaultActions() {
       description: request.description,
       confirm: 'Supprimer',
       destructive: true,
-      run: () => void attempt(request.run).then(() => forget(request.id)),
+      run: () =>
+        void request.run().then(
+          () => forget(request.id),
+          (cause) => notify.error(describeError(cause)),
+        ),
     })
   }
 

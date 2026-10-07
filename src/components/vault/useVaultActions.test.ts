@@ -126,7 +126,9 @@ describe('vault actions', () => {
     expect(useVault().host('alpha')).toBeUndefined()
   })
 
-  it('tells why a deletion failed', async () => {
+  it('tells why a deletion failed and keeps the selection', async () => {
+    const ui = useUi()
+    ui.vaultFocus = { section: 'hosts', id: 'web' }
     native.fail('verrouillé')
     useVaultActions().deleteGroup('web')
     expect(useUi().confirmation?.description).toContain('dans « Servers »')
@@ -135,6 +137,7 @@ describe('vault actions', () => {
       expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('verrouillé')),
     )
     expect(useVault().group('web')).toBeDefined()
+    expect(ui.vaultFocus).toEqual({ section: 'hosts', id: 'web' })
   })
 
   it('opens a host in the workbench', () => {
