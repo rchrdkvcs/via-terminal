@@ -73,6 +73,7 @@ async fn upload(
     }
     panic!("transfer did not finish");
 }
+#[cfg(unix)]
 async fn mode(files: &Arc<Files>, path: &str) -> u64 {
     let read = files
         .json(Request::Read { path: path.into() })
