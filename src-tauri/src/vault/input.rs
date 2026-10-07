@@ -14,6 +14,8 @@ pub enum SecretUpdate {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HostInput {
+    #[serde(default)]
+    pub own_credentials: bool,
     pub id: Option<Id>,
     pub group_id: Option<Id>,
     #[serde(default)]

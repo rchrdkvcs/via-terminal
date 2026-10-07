@@ -9,6 +9,14 @@ use crate::{
 use uuid::Uuid;
 
 impl ConnectionStore for Vault {
+    fn select_credential(
+        &self,
+        plan: &mut ConnectPlan,
+        choice: crate::sessions::ssh::CredentialChoice,
+    ) -> AppResult<()> {
+        self.apply_credential(plan, choice)
+    }
+
     fn host_key_status(&self, address: &str, port: u16, key: &ServerKey) -> HostKeyStatus {
         self.read(|data| {
             let known = data
@@ -53,6 +61,13 @@ impl ConnectionStore for Vault {
         let saved = plan.host_id.is_none();
         self.commit_with_secrets(|data, secrets| {
             if plan
+                .credential
+                .as_ref()
+                .is_some_and(|choice| !super::credentials::exists(data, choice))
+            {
+                return Ok(None);
+            }
+            if plan
                 .host_id
                 .is_some_and(|id| !data.hosts.iter().any(|host| host.id == id))
             {
@@ -66,6 +81,7 @@ impl ConnectionStore for Vault {
                 host.id
             } else {
                 let host = Host {
+                    own_credentials: false,
                     id: Uuid::new_v4(),
                     group_id: None,
                     label: plan.label.clone(),
@@ -85,8 +101,46 @@ impl ConnectionStore for Vault {
                 host.id
             };
             let mut changed = saved;
+            if let Some(choice) = &plan.credential {
+                use crate::sessions::ssh::CredentialChoice;
+                let host = data
+                    .hosts
+                    .iter_mut()
+                    .find(|host| host.id == host_id)
+                    .unwrap();
+                match choice {
+                    CredentialChoice::Password { .. } => {
+                        host.overrides.identity_id = None;
+                        host.overrides.username = Some(username.to_string());
+                        host.key_id = None;
+                        host.own_credentials = true;
+                    }
+                    CredentialChoice::Identity { id } => {
+                        host.overrides.identity_id = Some(*id);
+                        host.overrides.username = None;
+                        host.key_id = None;
+                        host.own_credentials = false;
+                    }
+                    CredentialChoice::Key { id, .. } => {
+                        host.overrides.identity_id = None;
+                        host.overrides.username = Some(username.to_string());
+                        host.key_id = Some(*id);
+                        host.own_credentials = true;
+                    }
+                }
+                secrets.update(
+                    SecretKind::Password,
+                    host_id,
+                    &super::input::SecretUpdate::Clear,
+                )?;
+                changed = true;
+            }
             if let Some(password) = remembered.password {
-                secrets.put(SecretKind::Password, host_id, password.as_bytes())?;
+                let owner = match plan.credential {
+                    Some(crate::sessions::ssh::CredentialChoice::Identity { id }) => id,
+                    _ => host_id,
+                };
+                secrets.put(SecretKind::Password, owner, password.as_bytes())?;
                 changed = true;
             }
             if let Some((key_id, passphrase)) = remembered.passphrase {

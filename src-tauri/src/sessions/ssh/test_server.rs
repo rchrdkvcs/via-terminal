@@ -20,7 +20,7 @@ pub async fn start() -> TestServer {
     let key = PrivateKey::from(Ed25519Keypair::from_seed(&seed));
     let fingerprint = key.public_key().fingerprint(HashAlg::Sha256).to_string();
     let config = Arc::new(server::Config {
-        methods: password_only(),
+        methods: auth_methods(),
         auth_rejection_time: Duration::from_millis(10),
         auth_rejection_time_initial: Some(Duration::ZERO),
         keys: vec![key],
@@ -51,12 +51,27 @@ struct Shell {
 impl server::Handler for Shell {
     type Error = russh::Error;
 
+    async fn auth_publickey(
+        &mut self,
+        user: &str,
+        _: &russh::keys::PublicKey,
+    ) -> Result<Auth, Self::Error> {
+        Ok(if user == "via-key" {
+            Auth::Accept
+        } else {
+            Auth::Reject {
+                proceed_with_methods: Some(auth_methods()),
+                partial_success: false,
+            }
+        })
+    }
+
     async fn auth_password(&mut self, user: &str, password: &str) -> Result<Auth, Self::Error> {
         Ok(if user == "via" && password == "pw" {
             Auth::Accept
         } else {
             Auth::Reject {
-                proceed_with_methods: Some(password_only()),
+                proceed_with_methods: Some(auth_methods()),
                 partial_success: false,
             }
         })
@@ -143,6 +158,6 @@ impl server::Handler for Shell {
     }
 }
 
-fn password_only() -> MethodSet {
-    MethodSet::from(&[MethodKind::Password][..])
+fn auth_methods() -> MethodSet {
+    MethodSet::from(&[MethodKind::Password, MethodKind::PublicKey][..])
 }

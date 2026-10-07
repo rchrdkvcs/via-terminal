@@ -34,6 +34,7 @@ impl Asker {
             PromptAnswer::Text { value, .. } if !value.trim().is_empty() => {
                 Ok(value.trim().to_string())
             }
+            PromptAnswer::Credential { credential } => Err(Failure::Credential(credential)),
             _ => Err(Failure::Cancelled),
         }
     }
@@ -51,6 +52,7 @@ impl Asker {
         };
         match self.ask(prompt).await {
             PromptAnswer::Text { value, remember } => Ok((Zeroizing::new(value), remember)),
+            PromptAnswer::Credential { credential } => Err(Failure::Credential(credential)),
             _ => Err(Failure::Cancelled),
         }
     }
@@ -75,6 +77,7 @@ impl Asker {
         };
         match self.ask(prompt).await {
             PromptAnswer::Fields { values } if values.len() == prompts.len() => Ok(values),
+            PromptAnswer::Credential { credential } => Err(Failure::Credential(credential)),
             _ => Err(Failure::Cancelled),
         }
     }

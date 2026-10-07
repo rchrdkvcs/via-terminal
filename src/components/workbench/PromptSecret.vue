@@ -1,20 +1,30 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, useId } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import CredentialSelect from '@/components/vault/CredentialSelect.vue'
 import type { Prompt, PromptAnswer } from '@/ipc/types'
 
-type SecretPrompt = Extract<Prompt, { kind: 'username' | 'password' | 'passphrase' }>
+type SecretPrompt = Extract<
+  Prompt,
+  { kind: 'authentication' | 'username' | 'password' | 'passphrase' }
+>
 
 const props = defineProps<{ prompt: SecretPrompt }>()
 const emit = defineEmits<{ answer: [answer: PromptAnswer] }>()
+const credentialId = useId()
 const value = ref('')
+const credential = ref<string | null>(null)
+const username = ref('username' in props.prompt ? (props.prompt.username ?? '') : '')
 const remember = ref(false)
 const input = ref<InstanceType<typeof Input>>()
+const usernameInput = ref<InstanceType<typeof Input>>()
 
 const copy = computed(() => {
   const prompt = props.prompt
+  if (prompt.kind === 'authentication')
+    return { title: `Identité pour ${prompt.address}`, label: 'Mot de passe', secret: true }
   if (prompt.kind === 'username')
     return {
       title: `Utilisateur pour ${prompt.address}`,
@@ -23,7 +33,7 @@ const copy = computed(() => {
     }
   if (prompt.kind === 'password')
     return {
-      title: `Mot de passe de ${prompt.username}@${prompt.address}`,
+      title: `Connexion à ${prompt.username}@${prompt.address}`,
       label: 'Mot de passe',
       secret: true,
     }
@@ -33,15 +43,39 @@ const copy = computed(() => {
     secret: true,
   }
 })
-const retry = computed(() => props.prompt.kind !== 'username' && props.prompt.retry)
-const canRemember = computed(() => props.prompt.kind !== 'username' && props.prompt.canRemember)
+const retry = computed(() => 'retry' in props.prompt && props.prompt.retry)
+const canRemember = computed(() => 'canRemember' in props.prompt && props.prompt.canRemember)
 
 function submit() {
+  if (credential.value) {
+    const [kind, id] = credential.value.split(':')
+    if (kind === 'key' && !username.value.trim()) return
+    emit('answer', {
+      kind: 'credential',
+      credential:
+        kind === 'identity'
+          ? { kind: 'identity', id: id! }
+          : { kind: 'key', id: id!, username: username.value.trim() },
+    })
+    return
+  }
+  if (props.prompt.kind === 'authentication') {
+    if (!username.value.trim()) return
+    emit('answer', {
+      kind: 'authentication',
+      username: username.value.trim(),
+      password: value.value,
+      remember: remember.value,
+    })
+    return
+  }
   if (!value.value && props.prompt.kind === 'username') return
   emit('answer', { kind: 'text', value: value.value, remember: remember.value })
 }
 
-onMounted(() => (input.value?.$el as HTMLInputElement | undefined)?.focus())
+onMounted(() =>
+  ((usernameInput.value ?? input.value)?.$el as HTMLInputElement | undefined)?.focus(),
+)
 </script>
 
 <template>
@@ -50,7 +84,21 @@ onMounted(() => (input.value?.$el as HTMLInputElement | undefined)?.focus())
     <p v-if="retry" role="alert" class="text-[13px] text-destructive">
       Refusé par le serveur. Réessayez.
     </p>
+    <template v-if="prompt.kind !== 'passphrase'">
+      <label :for="credentialId" class="text-[13px]">Identité</label>
+      <CredentialSelect :id="credentialId" v-model="credential" />
+      <Input
+        v-if="credential?.startsWith('key:') || (!credential && prompt.kind === 'authentication')"
+        ref="usernameInput"
+        v-model="username"
+        aria-label="Nom d’utilisateur"
+        placeholder="Nom d’utilisateur"
+        autocomplete="off"
+        spellcheck="false"
+      />
+    </template>
     <Input
+      v-if="!credential"
       ref="input"
       v-model="value"
       :type="copy.secret ? 'password' : 'text'"
@@ -60,7 +108,10 @@ onMounted(() => (input.value?.$el as HTMLInputElement | undefined)?.focus())
       spellcheck="false"
       @keydown.escape.prevent="emit('answer', { kind: 'cancel' })"
     />
-    <label v-if="canRemember" class="flex items-center gap-2 text-[13px] text-muted-foreground">
+    <label
+      v-if="canRemember && !credential"
+      class="flex items-center gap-2 text-[13px] text-muted-foreground"
+    >
       <Switch v-model="remember" /> Mémoriser dans le coffre
     </label>
     <div class="flex justify-end gap-2">

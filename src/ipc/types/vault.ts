@@ -15,6 +15,7 @@ export interface Group {
 }
 
 export interface Host {
+  ownCredentials?: boolean
   id: Id
   groupId: Id | null
   label: string
@@ -91,6 +92,7 @@ export type SecretUpdate =
   | { action: 'set'; value: string }
 
 export interface HostInput {
+  ownCredentials?: boolean
   id: Id | null
   groupId: Id | null
   label: string

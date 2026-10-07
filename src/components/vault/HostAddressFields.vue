@@ -4,7 +4,6 @@ import type { HostInput } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
 import { hint, type Inherited } from './inherit'
 import PortField from './PortField.vue'
-import UsernameField from './UsernameField.vue'
 import VaultField from './VaultField.vue'
 
 defineProps<{ inherited: Inherited }>()
@@ -36,18 +35,10 @@ const field = 'h-8 text-[13px] md:text-[13px]'
       @blur="emit('commit')"
     />
   </VaultField>
-  <div class="grid grid-cols-2 gap-2">
-    <UsernameField
-      id="host-username"
-      v-model="draft.overrides.username"
-      :placeholder="hint(vault.view, inherited.username, 'Demandé à la connexion')"
-      @commit="emit('commit')"
-    />
-    <PortField
-      id="host-port"
-      v-model="draft.overrides.port"
-      :placeholder="hint(vault.view, inherited.port)"
-      @commit="emit('commit')"
-    />
-  </div>
+  <PortField
+    id="host-port"
+    v-model="draft.overrides.port"
+    :placeholder="hint(vault.view, inherited.port)"
+    @commit="emit('commit')"
+  />
 </template>

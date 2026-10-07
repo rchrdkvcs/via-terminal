@@ -48,6 +48,7 @@ async fn keyboard_interactive(
     chain.attempt(Method::KeyboardInteractive);
     let (mut answered, mut asked_user, mut password_sent) = (false, false, false);
     let mut typed = None;
+    let mut used_stored = false;
     let mut reply = chain
         .handle
         .authenticate_keyboard_interactive_start(chain.username.clone(), None::<String>)
@@ -55,6 +56,7 @@ async fn keyboard_interactive(
     loop {
         let answers = match reply.map_err(|error| Failure::from_russh(&error))? {
             Reply::Success => {
+                chain.remembered.password_verified |= used_stored;
                 chain.remembered.password = typed.or(chain.remembered.password.take());
                 return Ok(Round::Success);
             }
@@ -72,9 +74,12 @@ async fn keyboard_interactive(
             Reply::InfoRequest { prompts, .. } if is_password_round(&prompts) => {
                 (answered, password_sent) = (true, true);
                 if let Some(password) = stored.take() {
+                    used_stored = true;
                     vec![password.to_string()]
                 } else {
                     asked_user = true;
+                    used_stored = false;
+                    chain.remembered.password_verified = false;
                     let (password, remember) = asker
                         .password(&chain.username, chain.password_failed)
                         .await?;
@@ -101,6 +106,7 @@ async fn keyboard_interactive(
 
 async fn password(chain: &mut Chain<'_>, asker: &Asker) -> Result<bool, Failure> {
     chain.attempt(Method::Password);
+    chain.remembered.password_verified = false;
     let (password, remember) = asker
         .password(&chain.username, chain.password_failed)
         .await?;

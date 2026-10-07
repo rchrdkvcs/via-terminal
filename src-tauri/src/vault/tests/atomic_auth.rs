@@ -29,6 +29,7 @@ fn failure_on_second_secret_rolls_back_first_secret_and_connection_timestamp() {
             &plan,
             "user",
             Remembered {
+                password_verified: false,
                 password: Some(Zeroizing::new("new".into())),
                 passphrase: Some((key.id, Zeroizing::new("phrase".into()))),
             }
@@ -57,6 +58,7 @@ fn completed_authentication_does_not_resurrect_a_deleted_host() {
                 &plan,
                 "user",
                 Remembered {
+                    password_verified: false,
                     password: Some(Zeroizing::new("pw".into())),
                     passphrase: None,
                 }
@@ -91,6 +93,7 @@ fn completed_authentication_does_not_remember_a_deleted_keys_passphrase() {
                 &plan,
                 "user",
                 Remembered {
+                    password_verified: false,
                     password: None,
                     passphrase: Some((key.id, Zeroizing::new("phrase".into()))),
                 }

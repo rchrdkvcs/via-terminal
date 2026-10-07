@@ -45,6 +45,7 @@ const usage = computed(() => {
 
 function setKey(id: Id | null) {
   draft.value.keyId = id
+  draft.value.password = { action: 'clear' }
   void autosave()
 }
 
@@ -95,16 +96,17 @@ const field = 'h-8 text-[13px] md:text-[13px]'
         @blur="autosave"
       />
     </VaultField>
-    <VaultField label="Clé" for="identity-key">
+    <VaultField label="Authentification" for="identity-key">
       <IdSelect
         id="identity-key"
         :model-value="draft.keyId"
         :options="options.keys.value"
-        none="Aucune"
+        none="Mot de passe"
         @update:model-value="setKey"
       />
     </VaultField>
     <SecretField
+      v-if="!draft.keyId"
       :id="`identity-password-${draft.id ?? 'new'}`"
       :key="draft.id ?? 'new'"
       v-model="draft.password"

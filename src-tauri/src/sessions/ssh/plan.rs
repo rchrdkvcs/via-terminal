@@ -2,7 +2,16 @@ use crate::error::AppResult;
 use uuid::Uuid;
 use zeroize::Zeroizing;
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum CredentialChoice {
+    Password { username: String },
+    Identity { id: Uuid },
+    Key { id: Uuid, username: String },
+}
+
 pub struct ConnectPlan {
+    pub credential: Option<CredentialChoice>,
     pub host_id: Option<Uuid>,
     pub label: String,
     pub address: String,
@@ -40,11 +49,14 @@ pub struct ServerKey {
 
 #[derive(Default)]
 pub struct Remembered {
+    pub password_verified: bool,
     pub password: Option<Zeroizing<String>>,
     pub passphrase: Option<(Uuid, Zeroizing<String>)>,
 }
 
 pub trait ConnectionStore: Send + Sync + 'static {
+    fn select_credential(&self, plan: &mut ConnectPlan, choice: CredentialChoice) -> AppResult<()>;
+
     fn host_key_status(&self, address: &str, port: u16, key: &ServerKey) -> HostKeyStatus;
 
     fn trust_host_key(&self, address: &str, port: u16, key: &ServerKey) -> AppResult<()>;

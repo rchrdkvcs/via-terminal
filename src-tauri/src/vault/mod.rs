@@ -1,4 +1,5 @@
 mod connect;
+mod credentials;
 mod mutation;
 pub use connect::QuickTarget;
 mod groups;

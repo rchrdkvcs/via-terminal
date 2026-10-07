@@ -26,9 +26,12 @@ impl Vault {
                 .find(|h| h.id == host_id)
                 .ok_or_else(|| AppError::not_found("hôte"))?;
             let effective = resolve::effective(data, host);
-            let password = self
-                .secrets
-                .get_string(&secret_id(SecretKind::Password, host.id))?;
+            let password = if host.overrides.identity_id.is_some() && !host.own_credentials {
+                None
+            } else {
+                self.secrets
+                    .get_string(&secret_id(SecretKind::Password, host.id))?
+            };
             let password = match (password, &effective.identity_id) {
                 (Some(password), _) => Some(password),
                 (None, Some(identity)) => self
@@ -37,6 +40,7 @@ impl Vault {
                 (None, None) => None,
             };
             Ok(ConnectPlan {
+                credential: None,
                 host_id: Some(host.id),
                 label: host.label.clone(),
                 address: host.address.clone(),
@@ -61,6 +65,7 @@ impl Vault {
             input::validate_username(username)?;
         }
         Ok(ConnectPlan {
+            credential: None,
             host_id: None,
             label: address.clone(),
             address,
@@ -73,7 +78,7 @@ impl Vault {
         })
     }
 
-    fn plan_key(&self, data: &VaultData, key_id: Id) -> AppResult<PlanKey> {
+    pub(super) fn plan_key(&self, data: &VaultData, key_id: Id) -> AppResult<PlanKey> {
         let label = data
             .keys
             .iter()

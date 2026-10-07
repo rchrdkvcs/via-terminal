@@ -89,6 +89,7 @@ export const useVault = defineStore('vault', () => {
     await mutate(() =>
       api.vault.saveHost({
         id: found.id,
+        ownCredentials: found.ownCredentials,
         groupId: found.groupId,
         label,
         address: found.address,

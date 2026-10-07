@@ -23,6 +23,11 @@ pub enum Prompt {
 
         previous_fingerprint: Option<String>,
     },
+    Authentication {
+        address: String,
+        username: Option<String>,
+        can_remember: bool,
+    },
     Username {
         address: String,
     },
@@ -59,10 +64,23 @@ pub struct PromptField {
     rename_all_fields = "camelCase"
 )]
 pub enum PromptAnswer {
+    Credential {
+        credential: super::ssh::CredentialChoice,
+    },
+    Authentication {
+        username: String,
+        password: String,
+        remember: bool,
+    },
     Accept,
     Cancel,
-    Text { value: String, remember: bool },
-    Fields { values: Vec<String> },
+    Text {
+        value: String,
+        remember: bool,
+    },
+    Fields {
+        values: Vec<String>,
+    },
 }
 
 type Pending = HashMap<Uuid, (Uuid, oneshot::Sender<PromptAnswer>)>;

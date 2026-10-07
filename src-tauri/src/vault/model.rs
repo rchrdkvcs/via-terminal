@@ -26,6 +26,8 @@ pub struct Defaults {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Host {
+    #[serde(default)]
+    pub own_credentials: bool,
     pub id: Id,
     pub group_id: Option<Id>,
     pub label: String,
