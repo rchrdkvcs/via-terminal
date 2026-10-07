@@ -2,10 +2,21 @@ mod validate;
 
 use crate::{error::AppResult, storage::Storage};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use uuid::Uuid;
 
 const DOCUMENT: &str = "layout";
+const BACKUP_PREFIX: &str = "layout.invalid.";
+
+fn backup_key() -> String {
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.as_millis());
+    format!("{BACKUP_PREFIX}{millis}")
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -144,19 +155,71 @@ impl Layouts {
     }
 
     pub fn load(&self) -> AppResult<Layout> {
-        let saved: Option<Layout> = self.storage.load(DOCUMENT).ok().flatten();
-        match saved.filter(|layout| validate::check(layout).is_ok()) {
-            Some(layout) => Ok(layout),
-            None => {
-                let layout = Layout::default();
-                self.storage.save(DOCUMENT, &layout)?;
-                Ok(layout)
-            }
+        let raw: Option<serde_json::Value> = self.storage.load(DOCUMENT).ok().flatten();
+        let saved = raw
+            .clone()
+            .and_then(|value| serde_json::from_value::<Layout>(value).ok());
+        if let Some(layout) = saved.filter(|layout| validate::check(layout).is_ok()) {
+            return Ok(layout);
         }
+        if let Some(raw) = raw {
+            self.storage.save(&backup_key(), &raw)?;
+        }
+        let layout = Layout::default();
+        self.storage.save(DOCUMENT, &layout)?;
+        Ok(layout)
     }
 
     pub fn save(&self, layout: &Layout) -> AppResult<()> {
         validate::check(layout)?;
         self.storage.save(DOCUMENT, layout)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn backups(storage: &Storage) -> Vec<serde_json::Value> {
+        storage.documents_with_prefix(BACKUP_PREFIX).unwrap()
+    }
+
+    #[test]
+    fn invalid_stored_layout_is_kept_aside_before_falling_back() {
+        let storage = Arc::new(Storage::memory().unwrap());
+        let mut invalid = Layout::default();
+        invalid.spaces[0].name = "x".repeat(200);
+        storage.save(DOCUMENT, &invalid).unwrap();
+
+        let layouts = Layouts::new(storage.clone());
+        let loaded = layouts.load().unwrap();
+
+        assert_ne!(loaded, invalid);
+        assert!(validate::check(&loaded).is_ok());
+        assert_eq!(
+            backups(&storage),
+            vec![serde_json::to_value(&invalid).unwrap()]
+        );
+        assert_eq!(layouts.load().unwrap(), loaded);
+        assert_eq!(backups(&storage).len(), 1);
+    }
+
+    #[test]
+    fn unreadable_stored_layout_is_kept_aside() {
+        let storage = Arc::new(Storage::memory().unwrap());
+        let unreadable = serde_json::json!({ "spaces": "not a list" });
+        storage.save(DOCUMENT, &unreadable).unwrap();
+
+        Layouts::new(storage.clone()).load().unwrap();
+
+        assert_eq!(backups(&storage), vec![unreadable]);
+    }
+
+    #[test]
+    fn missing_layout_creates_default_without_backup() {
+        let storage = Arc::new(Storage::memory().unwrap());
+        let loaded = Layouts::new(storage.clone()).load().unwrap();
+        assert_eq!(storage.load::<Layout>(DOCUMENT).unwrap(), Some(loaded));
+        assert!(backups(&storage).is_empty());
     }
 }

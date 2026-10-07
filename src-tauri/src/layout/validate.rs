@@ -5,12 +5,14 @@ use uuid::Uuid;
 
 const MAX_NAME: usize = 80;
 const MAX_TITLE: usize = 200;
+const SPLIT_TABS: std::ops::RangeInclusive<usize> = 2..=4;
+const SIDEBAR_WIDTH: std::ops::RangeInclusive<u16> = 160..=640;
 
 pub fn check(layout: &Layout) -> AppResult<()> {
     if layout.spaces.is_empty() {
         return Err(AppError::invalid("there must be at least one space"));
     }
-    if !(160..=640).contains(&layout.sidebar.width) {
+    if !SIDEBAR_WIDTH.contains(&layout.sidebar.width) {
         return Err(AppError::invalid("sidebar width out of range"));
     }
     let mut ids = Ids::default();
@@ -88,7 +90,7 @@ fn check_tab(tab: &Tab, ids: &mut Ids) -> AppResult<()> {
 
 fn check_split(split: &Split, ids: &mut Ids) -> AppResult<()> {
     ids.claim(split.id)?;
-    if !(2..=4).contains(&split.tabs.len()) {
+    if !SPLIT_TABS.contains(&split.tabs.len()) {
         return Err(AppError::invalid("a split view holds two to four tabs"));
     }
     let sizes_valid = split.sizes.len() == split.tabs.len()
@@ -104,9 +106,9 @@ fn check_split(split: &Split, ids: &mut Ids) -> AppResult<()> {
 
 fn name(value: &str, max: usize) -> AppResult<()> {
     if value.trim().is_empty() || value.chars().count() > max {
-        return Err(AppError::invalid(
-            "names must be between 1 and 80 characters",
-        ));
+        return Err(AppError::invalid(format!(
+            "names must be between 1 and {max} characters"
+        )));
     }
     Ok(())
 }
@@ -167,6 +169,26 @@ mod tests {
             vec![1.0, 1.0]
         ))))
         .is_ok());
+    }
+
+    #[test]
+    fn names_and_titles_report_their_own_limit() {
+        let titled = |length: usize| {
+            with(Entry::Tab(Tab {
+                title: Some("t".repeat(length)),
+                ..tab()
+            }))
+        };
+        assert!(check(&titled(MAX_TITLE)).is_ok());
+        let error = check(&titled(MAX_TITLE + 1)).unwrap_err();
+        assert!(error.message.contains("200 characters"));
+
+        let mut layout = Layout::default();
+        layout.spaces[0].name = "n".repeat(MAX_NAME + 1);
+        assert!(check(&layout)
+            .unwrap_err()
+            .message
+            .contains("80 characters"));
     }
 
     #[test]

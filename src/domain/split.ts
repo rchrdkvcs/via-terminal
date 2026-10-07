@@ -1,10 +1,9 @@
 import type { Direction, Id, Split, Tab } from '@/ipc/types'
+import { LAYOUT_LIMITS } from './limits'
 import { slot, take } from './lists'
 import { type Space, newTabRow, rows, tabFromRow } from './space'
 
 export type Edge = 'left' | 'right' | 'top' | 'bottom'
-
-export const MAX_SPLIT = 4
 
 export function directionOf(edge: Edge): Direction {
   return edge === 'left' || edge === 'right' ? 'horizontal' : 'vertical'
@@ -16,7 +15,9 @@ export function canSplit(space: Space, source: Id, target: Id, edge: Edge): bool
   const targetRow = all.find((row) => row.id === target)
   if (source === target || sourceRow?.kind !== 'tab' || !targetRow) return false
   if (targetRow.kind === 'tab') return true
-  return targetRow.direction === directionOf(edge) && targetRow.tabs.length < MAX_SPLIT
+  return (
+    targetRow.direction === directionOf(edge) && targetRow.tabs.length < LAYOUT_LIMITS.splitTabs.max
+  )
 }
 
 export function splitWith(space: Space, source: Id, target: Id, edge: Edge): boolean {
