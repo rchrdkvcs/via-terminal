@@ -148,6 +148,61 @@ describe('organize', () => {
   })
 })
 
+describe('navigate', () => {
+  const remote = (id: string, extra: Partial<Row>): Row =>
+    ({ ...tab(id), target: { kind: 'host', hostId: 'h' }, ...extra }) as Row
+  const cwd = (state: Space, id: string) => {
+    const target = tabs(state).find((t) => t.id === id)!.target
+    return target.kind === 'local' ? target.cwd : undefined
+  }
+
+  it('moves a temporary tab to the directory it navigated to', () => {
+    const state = must(space([], [tab('a')]), {
+      type: 'navigate',
+      tabId: 'a',
+      side: 'local',
+      path: '/lab/src',
+    })
+    expect(cwd(state, 'a')).toBe('/lab/src')
+  })
+
+  it('never moves the pin of a pinned tab, even inside a folder or split', () => {
+    const state = space([tab('a'), folder('f', [tab('b')])])
+    for (const id of ['a', 'b']) {
+      const next = must(state, { type: 'navigate', tabId: id, side: 'local', path: '/elsewhere' })
+      expect(cwd(next, id)).toBeNull()
+    }
+    const split = must(space([tab('c'), tab('d')]), {
+      type: 'split',
+      source: 'd',
+      target: 'c',
+      edge: 'right',
+    })
+    const next = must(split, { type: 'navigate', tabId: 'd', side: 'local', path: '/elsewhere' })
+    expect(cwd(next, 'd')).toBeNull()
+  })
+
+  it('follows the remote shell or the explorer path of a temporary remote tab', () => {
+    const state = space([], [remote('t', {}), remote('e', { view: { kind: 'files', path: '/' } })])
+    let next = must(state, { type: 'navigate', tabId: 't', side: 'remote', path: '/var/log' })
+    next = must(next, { type: 'navigate', tabId: 'e', side: 'remote', path: '/etc' })
+    const [terminal, explorer] = tabs(next)
+    expect(terminal.remoteCwd).toBe('/var/log')
+    expect(explorer.view).toEqual({ kind: 'files', path: '/etc' })
+  })
+
+  it('ignores directories that do not apply to the tab', () => {
+    const doc = remote('d', { view: { kind: 'document', path: '/etc/hosts' } })
+    const state = space([], [tab('a'), doc, remote('t', {})])
+    expect(must(state, { type: 'navigate', tabId: 'd', side: 'remote', path: '/etc' })).toEqual(
+      state,
+    )
+    expect(must(state, { type: 'navigate', tabId: 't', side: 'remote', path: '' })).toEqual(state)
+    expect(must(state, { type: 'navigate', tabId: 't', side: 'local', path: '/x' })).toEqual(state)
+    expect(apply(state, { type: 'navigate', tabId: 'zzz', side: 'local', path: '/x' })).toBeNull()
+  })
+})
+
 describe('layout limits', () => {
   const { nameLength, titleLength } = LAYOUT_LIMITS
 
