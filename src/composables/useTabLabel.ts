@@ -27,10 +27,18 @@ export function useTabLabel() {
   }
 
   function label(tab: Tab): string {
+    if (tab.view) return tab.title ?? viewName(tab) ?? targetName(tab)
     return tab.title ?? usefulTitle(sessions.runtime(tab.id).autoTitle) ?? targetName(tab)
   }
 
+  function viewName(tab: Tab): string | null {
+    const path = tab.view?.path
+    return path ? path.replace(/\/+$/, '').split('/').pop() || path : null
+  }
+
   function detail(tab: Tab): string {
+    const path = tab.view?.path
+    if (path) return `${targetName(tab)} · ${path}`
     const target = tab.target
     if (target.kind === 'host') return vault.describe(target.hostId)
     if (target.kind === 'quick') return formatQuickTarget(target)

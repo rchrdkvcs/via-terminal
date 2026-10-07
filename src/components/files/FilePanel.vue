@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, watch } from 'vue'
 import FileNavigation from './FileNavigation.vue'
 import { useFiles } from '@/stores/files'
 import { useSessions } from '@/stores/sessions'
@@ -7,15 +7,14 @@ import { useWorkbench } from '@/stores/workbench'
 import { useTabLabel } from '@/composables/useTabLabel'
 import type { Tab } from '@/ipc/types'
 import type { RemoteEntry } from '@/ipc/files'
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { useFileOperations } from './useFileOperations'
 import { useFileTransfers } from './useFileTransfers'
-import DocumentEditor from './DocumentEditor.vue'
 import FileList from './FileList.vue'
 import FileToolbar from './FileToolbar.vue'
 import TransferList from './TransferList.vue'
 import FileStatus from './FileStatus.vue'
 import FileDropZone from './FileDropZone.vue'
+/** Beside the terminal, unless the tab itself shows the explorer. */
 const props = defineProps<{ tab: Tab }>()
 const files = useFiles(),
   sessions = useSessions(),
@@ -27,14 +26,7 @@ const session = computed(() =>
     ? sessions.runtime(props.tab.id).sessionId
     : null,
 )
-const editorPane = ref<{ resize: (size: number) => void }>()
-watch(
-  () => !!panel.value.documents.length,
-  async (shown) => {
-    await nextTick()
-    if (shown) editorPane.value?.resize(60)
-  },
-)
+const docked = computed(() => props.tab.view?.kind !== 'files')
 const selected = ref<string[]>([]),
   hidden = ref(true)
 const context = { tabId: () => props.tab.id, sessionId: () => session.value }
@@ -49,7 +41,8 @@ watch(
     selected.value = []
     if (sessionId) {
       const current = files.state(id)
-      const directory = current.directory === '.' ? (props.tab.remoteCwd ?? '.') : current.directory
+      const saved = props.tab.view?.kind === 'files' ? props.tab.view.path : props.tab.remoteCwd
+      const directory = current.directory === '.' ? (saved ?? '.') : current.directory
       await files.navigate(id, sessionId, directory)
     }
   },
@@ -70,24 +63,31 @@ function select(entry: string, checked: boolean) {
 }
 function open(entry: RemoteEntry) {
   if (entry.kind === 'directory' || entry.targetKind === 'directory') navigate(entry.path)
-  else if (session.value) void files.openDocument(props.tab.id, session.value, entry.path)
+  else workbench.openView(props.tab, { kind: 'document', path: entry.path })
+}
+function detach() {
+  const path = panel.value.directory
+  workbench.openView(props.tab, { kind: 'files', path: path.startsWith('/') ? path : null })
+  files.hide(props.tab.id)
 }
 </script>
 <template>
   <FileDropZone
     :directory="panel.directory"
-    class="relative flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-rail"
+    class="relative flex h-full min-h-0 min-w-0 flex-col overflow-y-auto"
+    :class="docked ? 'bg-rail' : 'bg-surface'"
     aria-label="Explorateur distant"
     @drop="transfers.drop"
   >
     <FileNavigation
-      :name="names.label(tab)"
+      :name="docked ? names.label(tab) : names.targetName(tab)"
       :panel="panel"
       :connected="!!session"
       :hidden="hidden"
+      :docked="docked"
       @navigate="navigate"
       @hidden="hidden = !hidden"
-      @expand="files.toggleExpanded(tab.id)"
+      @detach="detach"
       @hide="files.hide(tab.id)"
     />
     <FileToolbar
@@ -104,40 +104,24 @@ function open(entry: RemoteEntry) {
       :state="sessions.runtime(tab.id).state"
       :error="panel.error"
       :connected="!!session"
+      :docked="docked"
       @connect="workbench.reconnect(tab.id)"
       @retry="navigate(panel.directory)"
       @dismiss="files.dismissError(tab.id)"
     />
-    <ResizablePanelGroup
-      direction="vertical"
-      class="flex-1"
-      :class="panel.documents.length ? 'min-h-72' : 'min-h-40'"
-    >
-      <ResizablePanel :min-size="15">
-        <div class="flex h-full min-h-0 flex-col">
-          <FileList
-            :entries="panel.entries"
-            :selected="selected"
-            :busy="panel.busy"
-            :hidden="hidden"
-            :connected="!!session"
-            :failed="!!panel.error"
-            @select="select"
-            @select-all="selected = $event"
-            @open="open"
-          />
-        </div>
-      </ResizablePanel>
-      <template v-if="panel.documents.length"
-        ><ResizableHandle
-          class="bg-hairline"
-          aria-label="Redimensionner l’éditeur" /><ResizablePanel
-          ref="editorPane"
-          :default-size="60"
-          :min-size="20"
-          ><DocumentEditor :tab-id="tab.id" :session-id="session" /></ResizablePanel
-      ></template>
-    </ResizablePanelGroup>
+    <div class="flex min-h-40 flex-1 flex-col">
+      <FileList
+        :entries="panel.entries"
+        :selected="selected"
+        :busy="panel.busy"
+        :hidden="hidden"
+        :connected="!!session"
+        :failed="!!panel.error"
+        @select="select"
+        @select-all="selected = $event"
+        @open="open"
+      />
+    </div>
     <TransferList
       :transfers="panel.transfers"
       :connected="!!session"

@@ -53,11 +53,16 @@ export const useSessions = defineStore('sessions', () => {
       state: 'connecting',
     }
     try {
-      const size = await terminals.measure(tab.id)
+      // A tab showing files or a document opens no shell, so it has no terminal to size.
+      const size = tab.view ? null : await terminals.measure(tab.id)
       if (openings.get(tab.id) !== attempt) return
       const sessionId =
         target.kind === 'local'
-          ? await api.session.openLocal(target.shell ?? defaultShell, target.cwd, size)
+          ? await api.session.openLocal(
+              target.shell ?? defaultShell,
+              target.cwd,
+              size ?? terminals.sizeFor(tab.id),
+            )
           : target.kind === 'host'
             ? await api.session.openHost(target.hostId, size)
             : await api.session.openQuick(target, size)

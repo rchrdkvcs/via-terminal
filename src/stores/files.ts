@@ -11,11 +11,9 @@ export type { Preparation } from './file-preparation'
 export interface FileState {
   owner: RemoteOwner | undefined
   visible: boolean
-  expanded: boolean
   directory: string
   entries: RemoteEntry[]
   documents: RemoteDocument[]
-  activeDocument: string | null
   busy: boolean
   error: string | null
   generation: number
@@ -30,11 +28,9 @@ export const useFiles = defineStore('files', () => {
     return (panels[tabId] ??= {
       owner: undefined,
       visible: false,
-      expanded: false,
       directory: '.',
       entries: [],
       documents: [],
-      activeDocument: null,
       busy: false,
       error: null,
       generation: 0,
@@ -89,10 +85,6 @@ export const useFiles = defineStore('files', () => {
     state,
     setVisible: (tabId: string, visible: boolean) => {
       state(tabId).visible = visible
-    },
-    toggleExpanded: (tabId: string) => {
-      const panel = state(tabId)
-      panel.expanded = !panel.expanded
     },
     hide: (tabId: string) => {
       if (panels[tabId]) panels[tabId].visible = false

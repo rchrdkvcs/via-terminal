@@ -38,7 +38,8 @@ pub fn session_open_local(app: State<App>, target: LocalTarget, size: Size) -> A
 }
 
 #[tauri::command]
-pub fn session_open_host(app: State<App>, host_id: Id, size: Size) -> AppResult<Id> {
+/// Without a size, the session serves files only and opens no shell.
+pub fn session_open_host(app: State<App>, host_id: Id, size: Option<Size>) -> AppResult<Id> {
     let plan = app.vault.plan(host_id)?;
     app.sessions.open_ssh(plan, app.vault.clone(), size)
 }
@@ -47,7 +48,7 @@ pub fn session_open_host(app: State<App>, host_id: Id, size: Size) -> AppResult<
 pub fn session_open_quick(
     app: State<App>,
     target: crate::vault::QuickTarget,
-    size: Size,
+    size: Option<Size>,
 ) -> AppResult<Id> {
     let plan = app
         .vault

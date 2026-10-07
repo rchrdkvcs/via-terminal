@@ -21,7 +21,12 @@ use tokio::{
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 
-pub(super) async fn run(mut plan: ConnectPlan, size: Size, context: Context, mut link: Link) {
+pub(super) async fn run(
+    mut plan: ConnectPlan,
+    size: Option<Size>,
+    context: Context,
+    mut link: Link,
+) {
     let prepared = tokio::select! {
         prepared = prepare(&mut plan, size, &context) => Some(prepared),
         _ = closing(&mut link.closed) => None,
@@ -39,9 +44,9 @@ pub(super) async fn run(mut plan: ConnectPlan, size: Size, context: Context, mut
 
 async fn prepare(
     plan: &mut ConnectPlan,
-    size: Size,
+    size: Option<Size>,
     context: &Context,
-) -> Result<(client::Handle<Client>, Channel<client::Msg>, Owner), Failure> {
+) -> Result<(client::Handle<Client>, Option<Channel<client::Msg>>, Owner), Failure> {
     let message = format!("Connexion à {}:{}…", plan.address, plan.port);
     context
         .sink
@@ -83,7 +88,10 @@ async fn prepare(
             host_id: Some(host_id),
         });
     }
-    let shell = channel::open(&handle, size).await?;
+    let shell = match size {
+        Some(size) => Some(channel::open(&handle, size).await?),
+        None => None,
+    };
     let owner = Owner::new(&plan.address, plan.port, &username);
     Ok((handle, shell, owner))
 }

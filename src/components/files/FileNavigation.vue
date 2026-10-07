@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { ArrowUp, Eye, EyeOff, Maximize2, Minimize2, RefreshCw, X } from '@lucide/vue'
+import { ArrowUp, AppWindow, Eye, EyeOff, RefreshCw, X } from '@lucide/vue'
 import type { FileState } from '@/stores/files'
 import { Button } from '@/components/ui/button'
-const props = defineProps<{ name: string; panel: FileState; connected: boolean; hidden: boolean }>()
-const emit = defineEmits<{ navigate: [path: string]; hidden: []; expand: []; hide: [] }>()
+const props = defineProps<{
+  name: string
+  panel: FileState
+  connected: boolean
+  hidden: boolean
+  docked: boolean
+}>()
+const emit = defineEmits<{ navigate: [path: string]; hidden: []; detach: []; hide: [] }>()
 const path = ref('')
 watch(
   () => props.panel.directory,
@@ -21,29 +27,26 @@ const pressed =
 <template>
   <header class="flex h-10 shrink-0 items-center gap-1 border-b border-hairline ps-3 pe-2">
     <h2 class="min-w-0 flex-1 truncate text-xs font-medium">Fichiers · {{ name }}</h2>
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      :aria-label="
-        panel.expanded ? 'Réduire l’explorateur distant' : 'Agrandir l’explorateur distant'
-      "
-      :title="panel.expanded ? 'Réduire et afficher le terminal' : 'Agrandir'"
-      @click="emit('expand')"
-    >
-      <Minimize2 v-if="panel.expanded" :stroke-width="1.5" /><Maximize2
-        v-else
-        :stroke-width="1.5"
-      />
-    </Button>
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      aria-label="Masquer l’explorateur distant"
-      title="Masquer"
-      @click="emit('hide')"
-    >
-      <X :stroke-width="1.5" />
-    </Button>
+    <template v-if="docked">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Ouvrir l’explorateur distant dans un onglet"
+        title="Ouvrir dans un onglet"
+        @click="emit('detach')"
+      >
+        <AppWindow :stroke-width="1.5" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Masquer l’explorateur distant"
+        title="Masquer"
+        @click="emit('hide')"
+      >
+        <X :stroke-width="1.5" />
+      </Button>
+    </template>
   </header>
   <form
     class="@container flex shrink-0 flex-wrap items-center gap-1 px-2 pt-2"

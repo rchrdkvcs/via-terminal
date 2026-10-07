@@ -63,7 +63,17 @@ pub struct Tab {
     pub title: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub remote_cwd: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub view: Option<View>,
     pub target: Target,
+}
+
+/// What a remote tab shows instead of its terminal. A tab without a view is a terminal.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum View {
+    Files { path: Option<String> },
+    Document { path: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -46,7 +46,7 @@ const asleep = computed(() => state.value === 'asleep' || state.value === 'exite
         @keydown.enter.prevent="workbench.activate(tab.id)"
         @keydown.f2.prevent="ui.renaming = tab.id"
       >
-        <TabIcon :target="tab.target" :state="state" />
+        <TabIcon :target="tab.target" :view="tab.view" :state="state" />
         <InlineRename
           v-if="ui.renaming === tab.id"
           :value="label"

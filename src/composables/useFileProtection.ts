@@ -26,12 +26,11 @@ export function useFileProtection() {
     const saved = await files.saveDocument(tabId, runtime.sessionId, document.id)
     return saved && !isDirty(document)
   }
-  async function decide(tabIds: string[], only?: string): Promise<Abandonment | null> {
+  async function decide(tabIds: string[]): Promise<Abandonment | null> {
     const documents: Abandonment['documents'][number][] = []
     for (const tabId of tabIds) {
       if (files.panels[tabId]?.documents.some((doc) => doc.saving)) return null
       for (const document of files.unsaved(tabId)) {
-        if (only && only !== document.id) continue
         // Never offer to save a draft through another endpoint or account.
         const savable = files.ownsDocument(tabId, document)
         const answer = await dialogs.ask({
@@ -54,7 +53,7 @@ export function useFileProtection() {
           })
       }
     }
-    const transfers = only ? [] : tabIds.flatMap((id) => files.activeTransfers(id))
+    const transfers = tabIds.flatMap((id) => files.activeTransfers(id))
     if (transfers.length) {
       const answer = await dialogs.ask({
         title: 'Arrêter les transferts en cours ?',
@@ -92,13 +91,5 @@ export function useFileProtection() {
     agreed.tabIds.forEach((tabId) => files.release(tabId))
     return true
   }
-  async function closeDocument(tabId: string, id: string) {
-    const decision = await decide([tabId], id)
-    const document = files.panels[tabId]?.documents.find((doc) => doc.id === id)
-    if (!decision || !document) return
-    const kept = decision.documents.find((doc) => doc.id === id)
-    if (kept && kept.content !== document.content) return closeDocument(tabId, id)
-    files.discardDocument(tabId, id)
-  }
-  return { protect: (tabIds: string[]) => decide(tabIds), current, release, closeDocument }
+  return { protect: decide, current, release }
 }

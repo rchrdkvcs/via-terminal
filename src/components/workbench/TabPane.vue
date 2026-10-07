@@ -1,13 +1,22 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import type { Tab } from '@/ipc/types'
+import { useSessions } from '@/stores/sessions'
 import { useWorkbench } from '@/stores/workbench'
 import ConnectionPanel from './ConnectionPanel.vue'
 import TerminalHost from './TerminalHost.vue'
 
+const FilePanel = defineAsyncComponent(() => import('@/components/files/FilePanel.vue'))
+const DocumentEditor = defineAsyncComponent(() => import('@/components/files/DocumentEditor.vue'))
+
 const props = defineProps<{ tab: Tab; inSplit?: boolean }>()
 const workbench = useWorkbench()
+const sessions = useSessions()
 const focused = computed(() => workbench.activeTab?.id === props.tab.id)
+const sessionId = computed(() => {
+  const runtime = sessions.runtime(props.tab.id)
+  return runtime.state === 'ready' ? runtime.sessionId : null
+})
 </script>
 
 <template>
@@ -23,7 +32,14 @@ const focused = computed(() => workbench.activeTab?.id === props.tab.id)
       :class="focused ? 'ring-primary/45' : 'ring-border'"
       aria-hidden="true"
     />
-    <div class="absolute inset-0 py-2 ps-3 pe-1">
+    <FilePanel v-if="tab.view?.kind === 'files'" :tab="tab" />
+    <DocumentEditor
+      v-else-if="tab.view?.kind === 'document'"
+      :tab-id="tab.id"
+      :path="tab.view.path"
+      :session-id="sessionId"
+    />
+    <div v-else class="absolute inset-0 py-2 ps-3 pe-1">
       <TerminalHost :tab-id="tab.id" />
     </div>
     <ConnectionPanel :tab="tab" />

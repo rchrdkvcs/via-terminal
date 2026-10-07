@@ -14,9 +14,10 @@ import UpdateButton from './UpdateButton.vue'
 
 const files = useFiles()
 const workbench = useWorkbench()
-const remote = computed(() =>
-  workbench.activeTab && workbench.activeTab.target.kind !== 'local' ? workbench.activeTab : null,
-)
+const remote = computed(() => {
+  const tab = workbench.activeTab
+  return tab && tab.target.kind !== 'local' && !tab.view ? tab : null
+})
 const filesShown = computed(
   () => !!remote.value && ui.route === 'workbench' && files.state(remote.value.id).visible,
 )
@@ -79,7 +80,7 @@ const tools = [
           </button>
         </TooltipTrigger>
         <TooltipContent side="bottom">{{
-          remote ? 'Explorateur distant' : 'Explorateur distant : onglets SSH uniquement'
+          remote ? 'Explorateur distant' : 'Explorateur distant : terminaux SSH uniquement'
         }}</TooltipContent>
       </Tooltip>
       <UpdateButton />

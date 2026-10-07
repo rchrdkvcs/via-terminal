@@ -32,7 +32,7 @@ export function useShortcuts() {
         if (space) spaces.activate(space.id)
       },
       sidebar: () => spaces.setSidebar({ visible: !spaces.sidebar.visible }),
-      search: () => tab && (ui.searching = true),
+      search: () => tab && !tab.view && (ui.searching = true),
       copy: () => {
         const selection = tab && terminals.selection(tab.id)
         if (selection) void navigator.clipboard.writeText(selection)

@@ -12,10 +12,6 @@ export const isDirty = (document: RemoteDocument) => document.content !== docume
 export const OWNER_CHANGED =
   'Le serveur ou le compte a changé. Ce document appartient à la connexion précédente.'
 export function documentActions(state: (id: string) => FileState) {
-  function selectDocument(tabId: string, id: string) {
-    const panel = state(tabId)
-    if (panel.documents.some((doc) => doc.id === id)) panel.activeDocument = id
-  }
   function editDocument(tabId: string, id: string, content: string) {
     const document = state(tabId).documents.find((doc) => doc.id === id)
     if (document) document.content = content
@@ -30,21 +26,13 @@ export function documentActions(state: (id: string) => FileState) {
   }
   async function openDocument(tabId: string, sessionId: string, path: string) {
     const panel = state(tabId)
-    const existing = panel.documents.find((doc) => doc.path === path)
-    if (existing) {
-      panel.activeDocument = existing.id
-      return
-    }
+    if (panel.documents.some((doc) => doc.path === path)) return
     panel.sessionId = sessionId
     const generation = panel.connectionGeneration
     try {
       const text = await filesApi.request(sessionId, { operation: 'read', path })
       if (panel.connectionGeneration !== generation) return
-      const found = panel.documents.find((doc) => doc.path === path)
-      if (found) {
-        panel.activeDocument = found.id
-        return
-      }
+      if (panel.documents.some((doc) => doc.path === path)) return
       panel.owner ??= text.owner
       const document = {
         ...text,
@@ -55,7 +43,6 @@ export function documentActions(state: (id: string) => FileState) {
         conflict: false,
       }
       panel.documents.push(document)
-      panel.activeDocument = document.id
     } catch (cause) {
       if (panel.connectionGeneration === generation) panel.error = describeError(cause)
     }
@@ -125,20 +112,12 @@ export function documentActions(state: (id: string) => FileState) {
       document.error = describeError(cause)
     }
   }
-  function discardDocument(tabId: string, id: string) {
-    const panel = state(tabId)
-    panel.documents = panel.documents.filter((doc) => doc.id !== id)
-    if (panel.activeDocument === id)
-      panel.activeDocument = panel.documents[panel.documents.length - 1]?.id ?? null
-  }
   return {
-    selectDocument,
     editDocument,
     documentError,
     ownsDocument,
     openDocument,
     saveDocument,
     reloadDocument,
-    discardDocument,
   }
 }

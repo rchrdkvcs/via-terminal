@@ -1,5 +1,7 @@
-import type { Id, Target } from '@/ipc/types'
-import { newTabRow, rowOfTab } from '@/domain/space'
+import type { Id, Tab, TabView, Target } from '@/ipc/types'
+import { locate, newTabRow, rowOfTab, tabs } from '@/domain/space'
+import { placeFor } from '@/domain/drop'
+import { clone } from '@/lib/clone'
 import type { Edge } from '@/domain/split'
 import type { WorkbenchParts } from './workbench-parts'
 
@@ -17,7 +19,7 @@ export function createTabOpening({
           {
             type: 'updateTab',
             tabId: options.replace,
-            patch: { target, title: null, remoteCwd: null },
+            patch: { target, title: null, remoteCwd: null, view: undefined },
           },
           space.id,
         )
@@ -29,6 +31,42 @@ export function createTabOpening({
     }
     const row = newTabRow({ id: crypto.randomUUID(), title: null, target })
     if (!spaces.dispatch({ type: 'open', row })) return
+    activate(row.id)
+    return row.id
+  }
+
+  /**
+   * Shows a remote explorer or document of `source`'s target in its own tab, right after
+   * `source` when that one is temporary. A document already open in the space is reused.
+   */
+  function openView(source: Tab, view: TabView): Id | undefined {
+    const space = spaces.spaceOf(source.id)
+    if (!space || source.target.kind === 'local') return
+    const same = JSON.stringify(source.target)
+    const existing =
+      view.kind === 'document' &&
+      tabs(space).find(
+        (tab) =>
+          tab.view?.kind === 'document' &&
+          tab.view.path === view.path &&
+          JSON.stringify(tab.target) === same,
+      )
+    if (existing) {
+      activate(existing.id)
+      return existing.id
+    }
+    const anchor = rowOfTab(space, source.id)
+    const to =
+      anchor && locate(space, anchor.id)?.area === 'temporary'
+        ? (placeFor(space, anchor.id, 'after') ?? undefined)
+        : undefined
+    const row = newTabRow({
+      id: crypto.randomUUID(),
+      title: null,
+      target: clone(source.target),
+      view,
+    })
+    if (!spaces.dispatch({ type: 'open', row, to }, space.id)) return
     activate(row.id)
     return row.id
   }
@@ -70,5 +108,5 @@ export function createTabOpening({
     return true
   }
 
-  return { open, openBeside, splitWith, detach }
+  return { open, openView, openBeside, splitWith, detach }
 }

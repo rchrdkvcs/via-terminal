@@ -12,18 +12,16 @@ import TerminalSearch from './TerminalSearch.vue'
 const workbench = useWorkbench()
 const files = useFiles()
 const FilePanel = defineAsyncComponent(() => import('@/components/files/FilePanel.vue'))
-const panel = computed(() =>
-  workbench.activeTab?.target.kind !== 'local' && workbench.activeTab
-    ? files.state(workbench.activeTab.id)
-    : null,
-)
+const panel = computed(() => {
+  const tab = workbench.activeTab
+  return tab && tab.target.kind !== 'local' && !tab.view ? files.state(tab.id) : null
+})
 const filePane = ref<{ resize: (size: number) => void }>()
 let previousSizes = [60, 40]
 function layout(sizes: number[]) {
   if (sizes.length === 2) previousSizes = sizes
 }
 const shown = computed(() => !!panel.value?.visible)
-const expanded = computed(() => shown.value && panel.value?.expanded)
 watch(shown, async (visible) => {
   const size = previousSizes[1]
   await nextTick()
@@ -33,7 +31,7 @@ watch(shown, async (visible) => {
 
 <template>
   <ResizablePanelGroup @layout="layout" direction="horizontal" class="relative h-full min-h-0">
-    <ResizablePanel :min-size="20" :class="expanded ? '!hidden' : !shown ? '!flex-[1_1_100%]' : ''">
+    <ResizablePanel :min-size="20" :class="!shown ? '!flex-[1_1_100%]' : ''">
       <div class="relative h-full min-h-0">
         <EmptyWorkbench v-if="!workbench.activeRow" class="rounded-xl bg-surface shadow-surface" />
         <SplitView v-else-if="workbench.activeRow.kind === 'split'" :split="workbench.activeRow" />
@@ -43,17 +41,12 @@ watch(shown, async (visible) => {
       </div>
     </ResizablePanel>
     <template v-if="shown && workbench.activeTab">
-      <ResizableHandle
-        v-show="!expanded"
-        class="w-2 shrink-0"
-        aria-label="Redimensionner l’explorateur distant"
-      />
+      <ResizableHandle class="w-2 shrink-0" aria-label="Redimensionner l’explorateur distant" />
       <ResizablePanel
         ref="filePane"
         :default-size="40"
         :min-size="30"
         class="overflow-hidden rounded-xl bg-rail shadow-surface"
-        :class="expanded ? '!flex-[1_1_100%]' : ''"
       >
         <FilePanel :tab="workbench.activeTab" />
       </ResizablePanel>
