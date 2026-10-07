@@ -49,7 +49,12 @@ function commitPersonal() {
   draft.value.credential = withUsername(draft.value.credential, username.value)
   emit('commit')
 }
-const personal = computed(() => !option.value || option.value.kind === 'key')
+const personal = computed(
+  () =>
+    !option.value ||
+    option.value.kind === 'key' ||
+    credentialUsername(draft.value.credential) !== null,
+)
 </script>
 
 <template>

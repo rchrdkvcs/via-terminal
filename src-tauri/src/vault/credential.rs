@@ -11,11 +11,15 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum HostCredential {
-    #[default]
-    Inherit,
+    Inherit {
+        #[serde(default)]
+        username: Option<String>,
+        #[serde(default)]
+        key: Option<Id>,
+    },
     Identity {
         id: Id,
     },
@@ -28,17 +32,23 @@ pub enum HostCredential {
     },
 }
 
+impl Default for HostCredential {
+    fn default() -> Self {
+        Self::Inherit {
+            username: None,
+            key: None,
+        }
+    }
+}
+
 impl HostCredential {
-    /// Reads the separate fields stored before the selector existed. A host
-    /// identity wins over older fields; any other host username or key is an
-    /// explicit credential that no longer mixes with group defaults.
     pub(super) fn from_legacy(own: bool, overrides: &Defaults, key_id: Option<Id>) -> Self {
         let username = overrides.username.clone();
-        match (overrides.identity_id.filter(|_| !own), key_id) {
-            (Some(id), _) => Self::Identity { id },
-            (None, Some(id)) => Self::Key { id, username },
-            (None, None) if own || username.is_some() => Self::Password { username },
-            (None, None) => Self::Inherit,
+        match (own, overrides.identity_id, key_id) {
+            (false, Some(id), _) => Self::Identity { id },
+            (false, None, key) => Self::Inherit { username, key },
+            (true, _, Some(id)) => Self::Key { id, username },
+            (true, _, None) => Self::Password { username },
         }
     }
 
@@ -66,6 +76,10 @@ impl HostCredential {
 
     pub(super) fn normalized(self) -> Self {
         match self {
+            Self::Inherit { username, key } => Self::Inherit {
+                username: input::trimmed(username),
+                key,
+            },
             Self::Key { id, username } => Self::Key {
                 id,
                 username: input::trimmed(username),
@@ -77,15 +91,17 @@ impl HostCredential {
         }
     }
 
-    pub(super) fn validate(&self, data: &VaultData) -> AppResult<()> {
-        if let Self::Key {
-            username: Some(username),
-            ..
+    pub(super) fn username(&self) -> Option<&str> {
+        match self {
+            Self::Inherit { username, .. }
+            | Self::Key { username, .. }
+            | Self::Password { username } => username.as_deref(),
+            Self::Identity { .. } => None,
         }
-        | Self::Password {
-            username: Some(username),
-        } = self
-        {
+    }
+
+    pub(super) fn validate(&self, data: &VaultData) -> AppResult<()> {
+        if let Some(username) = self.username() {
             input::validate_username(username)?;
         }
         self.validate_references(data)
@@ -96,7 +112,9 @@ impl HostCredential {
             Self::Identity { id } if !data.identities.iter().any(|i| i.id == *id) => {
                 Err(AppError::not_found("identité"))
             }
-            Self::Key { id, .. } if !data.keys.iter().any(|key| key.id == *id) => {
+            Self::Key { id, .. } | Self::Inherit { key: Some(id), .. }
+                if !data.keys.iter().any(|key| key.id == *id) =>
+            {
                 Err(AppError::not_found("clé"))
             }
             _ => Ok(()),
@@ -112,12 +130,14 @@ impl HostCredential {
     }
 
     pub(super) fn key_removed(&mut self, key_id: Id) {
-        if let Self::Key { id, username } = self {
-            if *id == key_id {
+        match self {
+            Self::Key { id, username } if *id == key_id => {
                 *self = Self::Password {
                     username: username.take(),
                 };
             }
+            Self::Inherit { key, .. } if *key == Some(key_id) => *key = None,
+            _ => {}
         }
     }
 
@@ -129,7 +149,11 @@ impl HostCredential {
             }
         }
         let (username, identity_id, key_id) = match self {
-            Self::Inherit => (inherited.username, inherited.identity_id, None),
+            Self::Inherit { username, key } => (
+                username.clone().map(host).or(inherited.username),
+                inherited.identity_id,
+                key.map(host),
+            ),
             Self::Identity { id } => match data.identities.iter().find(|i| i.id == *id) {
                 Some(identity) => (
                     Some(Sourced {
@@ -163,7 +187,7 @@ impl HostCredential {
         }
     }
 
-    fn password_owners(&self, host: Option<Id>, identity: Option<Id>) -> Vec<Id> {
+    pub(super) fn password_owners(&self, host: Option<Id>, identity: Option<Id>) -> Vec<Id> {
         let host = host.filter(|_| !matches!(self, Self::Identity { .. }));
         host.into_iter().chain(identity).collect()
     }

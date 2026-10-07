@@ -20,61 +20,28 @@ fn identity(vault: &Vault, username: &str, key_id: Option<Id>, password: &str) -
 }
 
 #[test]
-fn records_stored_before_the_selector_load_into_it() {
+fn a_record_stored_before_the_selector_loads_and_saves_in_the_new_shape() {
     let storage = Arc::new(Storage::memory().unwrap());
-    let ids: Vec<String> = (1..=7)
-        .map(|n| format!("00000000-0000-0000-0000-00000000000{n}"))
-        .collect();
-    let host = |id: &str, extra: serde_json::Value| {
-        let mut host = serde_json::json!({
-            "id": id, "groupId": null, "label": "a", "address": "a", "keyId": null,
-        });
-        host.as_object_mut()
-            .unwrap()
-            .extend(extra.as_object().unwrap().clone());
-        host
-    };
-    let overrides = |username: Option<&str>, identity: Option<&str>| serde_json::json!({ "username": username, "port": 2200, "identityId": identity });
-    let (identity, key) = (&ids[5], &ids[6]);
+    let id = uuid::Uuid::new_v4();
     storage
         .save(
             "vault",
-            &serde_json::json!({
-                "hosts": [
-                    host(&ids[0], serde_json::json!({})),
-                    host(&ids[1], serde_json::json!({ "overrides": overrides(Some("old"), Some(identity)), "keyId": key })),
-                    host(&ids[2], serde_json::json!({ "overrides": overrides(Some("root"), None), "keyId": key })),
-                    host(&ids[3], serde_json::json!({ "overrides": overrides(Some("root"), None) })),
-                    host(&ids[4], serde_json::json!({ "ownCredentials": true, "overrides": overrides(None, Some(identity)) })),
-                ],
-            }),
+            &serde_json::json!({ "hosts": [{
+                "id": id, "groupId": null, "label": "a", "address": "a", "keyId": null,
+                "overrides": { "username": "root", "port": 2200, "identityId": null },
+            }] }),
         )
         .unwrap();
     let secrets = Arc::new(Secrets::new(storage.clone(), &FixedKey(Some([3; 32]))));
     let vault = Vault::load(storage, secrets).unwrap();
-    let hosts = vault.view().unwrap().snapshot.data.hosts;
-    let (identity, key) = (identity.parse().unwrap(), key.parse().unwrap());
-    let root = Some("root".to_string());
+    let plan = vault.plan(id).unwrap();
+    assert_eq!((plan.username.as_deref(), plan.port), (Some("root"), 2200));
+    let host = &vault.view().unwrap().snapshot.data.hosts[0];
+    let saved = serde_json::to_value(host).unwrap();
     assert_eq!(
-        hosts
-            .iter()
-            .map(|h| h.credential.clone())
-            .collect::<Vec<_>>(),
-        vec![
-            HostCredential::Inherit,
-            HostCredential::Identity { id: identity },
-            HostCredential::Key {
-                id: key,
-                username: root.clone()
-            },
-            HostCredential::Password { username: root },
-            HostCredential::Password { username: None },
-        ]
+        saved["credential"],
+        serde_json::json!({ "kind": "inherit", "username": "root", "key": null })
     );
-    assert_eq!(hosts[0].port, None);
-    assert_eq!(hosts[1].port, Some(2200));
-    let saved = serde_json::to_value(&hosts[1]).unwrap();
-    assert_eq!(saved["credential"]["kind"], "identity");
     assert!(saved.get("ownCredentials").is_none() && saved.get("overrides").is_none());
 }
 

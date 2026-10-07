@@ -53,8 +53,9 @@ export function effective(
   let identityId: Sourced<Id> | null = null
   let keyId: Sourced<Id> | null = null
   if (credential.kind === 'inherit') {
-    username = groups.username
+    username = credential.username ? own(credential.username) : groups.username
     identityId = groups.identityId
+    keyId = credential.key ? own(credential.key) : null
   } else if (credential.kind === 'identity') {
     const identity = data.identities.find((candidate) => candidate.id === credential.id)
     if (identity) {
@@ -91,24 +92,26 @@ export function credentialOption(
 ): CredentialOption {
   if (credential.kind === 'identity' || credential.kind === 'key')
     return { kind: credential.kind, id: credential.id }
-  return credential.kind === 'inherit' && canInherit ? credential : null
+  if (credential.kind === 'inherit' && credential.key) return { kind: 'key', id: credential.key }
+  return credential.kind === 'inherit' && canInherit ? { kind: 'inherit' } : null
 }
 
 /** A newly chosen option keeps the username that was in effect when it needs one. */
 export function choose(option: CredentialOption, username: string | null): HostCredential {
   if (!option) return { kind: 'password', username }
   if (option.kind === 'key') return { kind: 'key', id: option.id, username }
+  if (option.kind === 'inherit') return { kind: 'inherit', username: null, key: null }
   return option
 }
 
 export function credentialUsername(credential: HostCredential): string | null {
-  return credential.kind === 'key' || credential.kind === 'password' ? credential.username : null
+  return credential.kind === 'identity' ? null : credential.username
 }
 
-/** Typing a username or password makes the credential the host's own. */
+/** Typing a username makes a plain inherited credential the host's own; older overrides stay inherited. */
 export function withUsername(credential: HostCredential, username: string | null): HostCredential {
-  if (credential.kind === 'key') return { ...credential, username }
-  if (credential.kind === 'password' || credential.kind === 'inherit')
+  if (credential.kind === 'identity') return credential
+  if (credential.kind === 'inherit' && !credential.username && !credential.key)
     return { kind: 'password', username }
-  return credential
+  return { ...credential, username }
 }

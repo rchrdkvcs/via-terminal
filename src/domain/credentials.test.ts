@@ -22,6 +22,8 @@ const { groups, identities, cases } = fixture as unknown as {
   cases: Case[]
 }
 
+const inherit: HostCredential = { kind: 'inherit', username: null, key: null }
+
 describe('effective', () => {
   it.each(cases.map((entry) => [entry.name, entry] as const))('%s', (_, entry) => {
     expect(effective({ groups, identities }, entry.host)).toEqual(entry.effective)
@@ -41,9 +43,13 @@ describe('credential options', () => {
   })
 
   it('shows an inherited credential as the password form when nothing is inherited', () => {
-    expect(credentialOption({ kind: 'inherit' }, true)).toEqual({ kind: 'inherit' })
-    expect(credentialOption({ kind: 'inherit' }, false)).toBeNull()
+    expect(credentialOption(inherit, true)).toEqual({ kind: 'inherit' })
+    expect(credentialOption(inherit, false)).toBeNull()
     expect(credentialOption({ kind: 'password', username: 'root' }, true)).toBeNull()
+  })
+
+  it('shows an older inherited key override as that key', () => {
+    expect(credentialOption({ ...inherit, key: 'k' }, true)).toEqual({ kind: 'key', id: 'k' })
   })
 
   it('keeps the username in effect when choosing a key or a password', () => {
@@ -54,11 +60,16 @@ describe('credential options', () => {
     })
     expect(choose(null, 'deploy')).toEqual({ kind: 'password', username: 'deploy' })
     expect(choose({ kind: 'identity', id: 'i' }, 'deploy')).toEqual({ kind: 'identity', id: 'i' })
+    expect(choose({ kind: 'inherit' }, 'deploy')).toEqual(inherit)
   })
 
   it('makes an inherited credential explicit once a username is typed', () => {
-    expect(withUsername({ kind: 'inherit' }, 'root')).toEqual({
+    expect(withUsername(inherit, 'root')).toEqual({
       kind: 'password',
+      username: 'root',
+    })
+    expect(withUsername({ ...inherit, username: 'old' }, 'root')).toEqual({
+      ...inherit,
       username: 'root',
     })
     expect(withUsername({ kind: 'identity', id: 'i' }, 'root')).toEqual({

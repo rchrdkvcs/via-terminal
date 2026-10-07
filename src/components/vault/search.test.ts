@@ -8,7 +8,7 @@ const host: Host = {
   label: 'Base de données',
   address: 'db.example.net',
   port: null,
-  credential: { kind: 'inherit' },
+  credential: { kind: 'inherit', username: null, key: null },
   tags: ['postgres', 'prod'],
   notes: 'not searched',
   createdAt: 0,

@@ -27,7 +27,7 @@ pub(super) fn host(address: &str) -> HostInput {
         label: String::new(),
         address: address.into(),
         port: None,
-        credential: HostCredential::Inherit,
+        credential: HostCredential::default(),
         tags: vec![],
         notes: String::new(),
         password: SecretUpdate::Keep,

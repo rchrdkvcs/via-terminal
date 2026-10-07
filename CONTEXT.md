@@ -83,7 +83,7 @@ The application-wide library of hosts, groups, identities, keys and known hosts,
 _Avoid_: Keychain (that is the OS store), resources
 
 **Host**:
-A saved SSH destination: an address with optional port, authentication choice, tags and notes. Its **host credential** either inherits the group defaults or chooses a vault identity, a vault key with its username, or a username and password. An explicit host credential replaces group authentication defaults; the port can still be inherited. A selected identity supplies its username and credential together. Records saved before the host credential existed are read as the credential the editor showed for them. Deleting a selected identity or key leaves its username and asks for a password.
+A saved SSH destination: an address with optional port, authentication choice, tags and notes. Its **host credential** either inherits the group defaults or chooses a vault identity, a vault key with its username, or a username and password. An explicit host credential replaces group authentication defaults; the port can still be inherited. A selected identity supplies its username and credential together. Records saved before the host credential existed keep their effective values: a username or key they stored on top of group defaults stays an override of that part only, and the group identity still applies. Deleting a selected identity or key leaves its username and asks for a password.
 _Avoid_: Server, resource, connection
 
 **Group**:

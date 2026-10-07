@@ -10,7 +10,11 @@ import { groupInput, hostInput } from './vault-inputs'
 const defaults = { username: null, port: null, identityId: null }
 
 function host(id: string, label: string): Host {
-  const base = { groupId: null, port: null, credential: { kind: 'inherit' } as const }
+  const base = {
+    groupId: null,
+    port: null,
+    credential: { kind: 'inherit', username: null, key: null } as const,
+  }
   const extra = { tags: [], notes: '' }
   return {
     ...base,

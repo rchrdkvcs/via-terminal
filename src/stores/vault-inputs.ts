@@ -10,7 +10,7 @@ export function hostInput(host: Host | undefined, groupId: Id | null = null): Ho
       label: '',
       address: '',
       port: null,
-      credential: { kind: 'inherit' },
+      credential: { kind: 'inherit', username: null, key: null },
       tags: [],
       notes: '',
       password: KEEP,

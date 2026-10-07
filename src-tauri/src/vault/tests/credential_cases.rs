@@ -14,8 +14,10 @@ struct Cases {
 #[derive(Deserialize)]
 struct Case {
     name: String,
+    legacy: Option<serde_json::Value>,
     host: CaseHost,
     effective: serde_json::Value,
+    passwords: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -38,19 +40,39 @@ fn hosts_resolve_the_shared_credential_cases() {
         ..VaultData::default()
     };
     for case in fixture.cases {
-        let host = Host {
-            id: uuid::Uuid::nil(),
-            group_id: case.host.group_id,
-            label: String::new(),
-            address: "a".into(),
-            port: case.host.port,
-            credential: case.host.credential,
-            tags: vec![],
-            notes: String::new(),
-            created_at: 0,
-            last_connected_at: None,
-        };
-        let effective = serde_json::to_value(resolve::effective(&data, &host)).unwrap();
-        assert_eq!(effective, case.effective, "{}", case.name);
+        let mut stored = serde_json::json!({
+            "id": uuid::Uuid::nil(),
+            "groupId": case.host.group_id,
+            "label": "a",
+            "address": "a",
+            "port": case.host.port,
+            "credential": case.host.credential,
+        });
+        if let Some(legacy) = &case.legacy {
+            let stored = stored.as_object_mut().unwrap();
+            stored.retain(|field, _| field != "port" && field != "credential");
+            stored.extend(legacy.as_object().unwrap().clone());
+        }
+        let host: Host = serde_json::from_value(stored).unwrap();
+        assert_eq!(host.credential, case.host.credential, "{}", case.name);
+        assert_eq!(host.port, case.host.port, "{}", case.name);
+        let effective = resolve::effective(&data, &host);
+        let identity = effective.identity_id.as_ref().map(|sourced| sourced.value);
+        let passwords: Vec<String> = host
+            .credential
+            .password_owners(Some(host.id), identity)
+            .into_iter()
+            .map(|id| match id == host.id {
+                true => "host".into(),
+                false => id.to_string(),
+            })
+            .collect();
+        assert_eq!(passwords, case.passwords, "{}", case.name);
+        assert_eq!(
+            serde_json::to_value(effective).unwrap(),
+            case.effective,
+            "{}",
+            case.name
+        );
     }
 }

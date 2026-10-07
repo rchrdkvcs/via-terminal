@@ -15,7 +15,7 @@ export interface Group {
 }
 
 export type HostCredential =
-  | { kind: 'inherit' }
+  | { kind: 'inherit'; username: string | null; key: Id | null }
   | { kind: 'identity'; id: Id }
   | { kind: 'key'; id: Id; username: string | null }
   | { kind: 'password'; username: string | null }
