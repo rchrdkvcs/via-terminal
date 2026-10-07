@@ -1,7 +1,4 @@
-export interface DroppedFile {
-  file: File | null
-  path: string
-}
+import type { DroppedFile } from '@/stores/files'
 interface Entry {
   name: string
   isFile: boolean
