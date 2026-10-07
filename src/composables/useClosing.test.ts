@@ -77,7 +77,7 @@ it.each(intents.filter((intent) => intent.confirms))(
     expect(useUi().confirmation).not.toBeNull()
     useUi().confirmation = null
     expect(intent.happened()).toBe(false)
-    expect(useFiles().panels.tab.documents).toEqual([document])
+    expect(useFiles().document('tab')).toBe(document)
     expect(document.content).toBe('draft')
   },
 )
@@ -90,10 +90,11 @@ it.each(intents)('$intent: happens once agreed, and releases explorers it ends',
   if (intent.confirms) useUi().confirmation!.run()
   await vi.waitFor(() => expect(intent.happened()).toBe(true))
   if (intent.intent === 'quit') {
-    expect(useFiles().panels.tab.documents).toHaveLength(1)
+    expect(useFiles().document('tab')?.content).toBe('draft')
     return
   }
   expect(useFiles().panels.tab).toBeUndefined()
+  expect(useFiles().document('tab')).toBeUndefined()
   expect([...mocks.stop.mock.calls, ...mocks.release.mock.calls]).toEqual([['tab']])
 })
 

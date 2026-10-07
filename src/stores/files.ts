@@ -3,18 +3,17 @@ import { reactive, watch } from 'vue'
 import { filesApi, type RemoteEntry, type RemoteOwner } from '@/ipc/files'
 import { describeError } from '@/ipc/client'
 import { useSessions } from './sessions'
-import { documentActions, isDirty, type RemoteDocument } from './file-documents'
+import { documentActions } from './file-document'
 import { transferActions, type Transfer } from './file-transfers'
-export type { RemoteDocument } from './file-documents'
+export type { RemoteDocument, Ownership } from './file-document'
 export type { Transfer, TransferState } from './file-transfers'
 export type { Preparation } from './file-preparation'
-/** The remote explorer of one tab. */
+/** The remote explorer of one tab; `owner` is its current connection's, once a reply told it. */
 export interface FileState {
   owner: RemoteOwner | undefined
   visible: boolean
   directory: string
   entries: RemoteEntry[]
-  documents: RemoteDocument[]
   busy: boolean
   error: string | null
   transfers: Transfer[]
@@ -32,7 +31,6 @@ const empty = (): FileState => ({
   visible: false,
   directory: '.',
   entries: [],
-  documents: [],
   busy: false,
   error: null,
   transfers: [],
@@ -67,6 +65,7 @@ export const useFiles = defineStore('files', () => {
     return panels[tabId]
   }
   const transfers = transferActions(panels, connection)
+  const documents = documentActions({ panels, ensure, connection })
   // Session ends and reconnections invalidate every reply still on its way.
   watch(
     () => Object.keys(panels).map((id) => [id, session(id)] as const),
@@ -76,6 +75,7 @@ export const useFiles = defineStore('files', () => {
         if (!link || link.sessionId === sessionId) continue
         const ended = link.sessionId !== null
         links.set(id, { sessionId, generation: ++generations })
+        panels[id].owner = undefined
         if (!ended) continue
         panels[id].busy = false
         transfers.interrupt(id)
@@ -111,13 +111,8 @@ export const useFiles = defineStore('files', () => {
     listings.delete(tabId)
     transfers.interrupt(tabId)
     transfers.forget(tabId)
+    documents.forget(tabId)
     delete panels[tabId]
-  }
-  function unsaved(tabId: string): RemoteDocument[] {
-    return panels[tabId]?.documents.filter(isDirty) ?? []
-  }
-  function hasChanges(tabId: string) {
-    return !!panels[tabId]?.documents.some((doc) => isDirty(doc) || doc.saving)
   }
   return {
     panels,
@@ -132,8 +127,6 @@ export const useFiles = defineStore('files', () => {
     },
     navigate,
     release,
-    unsaved,
-    hasChanges,
     reportError: (tabId: string, error: string) => {
       if (panels[tabId]) panels[tabId].error = error
     },
@@ -141,6 +134,6 @@ export const useFiles = defineStore('files', () => {
       if (panels[tabId]) panels[tabId].error = null
     },
     ...transfers.actions,
-    ...documentActions({ panels, ensure, connection }),
+    ...documents.actions,
   }
 })
