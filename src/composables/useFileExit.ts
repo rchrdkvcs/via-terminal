@@ -16,7 +16,7 @@ export function useFileExit() {
   let stopped: (() => void) | undefined,
     closing = false,
     pending = false
-  async function request(exit: boolean) {
+  async function request() {
     if (pending) return
     pending = true
     try {
@@ -27,8 +27,10 @@ export function useFileExit() {
         if (protection.current(decision)) break
       }
       closing = true
-      if (exit) await api.exit()
-      else await getCurrentWindow().close()
+      // This listener already vetoes the native close. Calling close() again only
+      // reaches destroy(), and destroying the last window is vetoed once more as
+      // an exit with no code. app_exit(0) is the exit that veto lets through.
+      await api.exit()
     } catch (cause) {
       closing = false
       notify.error(describeError(cause))
@@ -37,13 +39,13 @@ export function useFileExit() {
     }
   }
   const stopExit = on('app-exit-requested', () => {
-    void request(true)
+    void request()
   })
   void getCurrentWindow()
     .onCloseRequested((event) => {
       if (closing) return
       event.preventDefault()
-      void request(false)
+      void request()
     })
     .then((unlisten) => {
       stopped = unlisten
