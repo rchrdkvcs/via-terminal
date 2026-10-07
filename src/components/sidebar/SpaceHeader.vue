@@ -7,13 +7,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import type { Space } from '@/domain/space'
 import { useSidebarActions } from '@/composables/useSidebarActions'
 import { useSpaceRemoval } from '@/composables/useSpaceRemoval'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import { spaceIcon } from './spaceIcons'
 
-/** The active space's name above its pinned rows, with its menu. */
+/** A space's name above its pinned rows, with its menu. */
+defineProps<{ space: Space }>()
 const spaces = useSpaces()
 const ui = useUi()
 const actions = useSidebarActions()
@@ -26,14 +28,9 @@ function newFolder() {
 
 <template>
   <div class="group/space flex h-8 items-center gap-2 px-2 text-[13px] font-semibold">
-    <component
-      :is="spaceIcon(spaces.active.icon)"
-      :size="15"
-      :stroke-width="1.5"
-      class="text-ink-muted"
-    />
-    <span class="min-w-0 flex-1 truncate" @dblclick="ui.spaceForm = { id: spaces.active.id }">
-      {{ spaces.active.name }}
+    <component :is="spaceIcon(space.icon)" :size="15" :stroke-width="1.5" class="text-ink-muted" />
+    <span class="min-w-0 flex-1 truncate" @dblclick="ui.spaceForm = { id: space.id }">
+      {{ space.name }}
     </span>
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -43,7 +40,7 @@ function newFolder() {
         <Ellipsis :size="15" :stroke-width="1.5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" class="w-52">
-        <DropdownMenuItem @select="ui.spaceForm = { id: spaces.active.id }">
+        <DropdownMenuItem @select="ui.spaceForm = { id: space.id }">
           <Pencil :stroke-width="1.5" /> Modifier l’espace
         </DropdownMenuItem>
         <DropdownMenuItem @select="newFolder"
@@ -53,7 +50,7 @@ function newFolder() {
         <DropdownMenuItem
           :disabled="spaces.spaces.length <= 1"
           class="text-destructive"
-          @select="removal.request(spaces.active.id)"
+          @select="removal.request(space.id)"
         >
           <Trash2 :stroke-width="1.5" /> Supprimer l’espace
         </DropdownMenuItem>

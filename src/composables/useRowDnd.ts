@@ -30,6 +30,9 @@ interface Options {
   onDrop: (source: DragState, position: DropPosition) => void
 }
 
+/** Rows of a space out of sight sit in an inert panel and never take a drop. */
+const live = (element: Element) => !element.closest('[inert]')
+
 function positionFor(element: Element, clientY: number, into: boolean): DropPosition {
   const rect = element.getBoundingClientRect()
   const ratio = (clientY - rect.top) / rect.height
@@ -59,7 +62,7 @@ export function useRowDnd(element: Ref<HTMLElement | undefined>, options: Option
         element: el,
         canDrop: ({ source }) => {
           const data = source.data as unknown as DragState
-          return data.rowId !== options.id() && (options.canDrop?.(data) ?? true)
+          return live(el) && data.rowId !== options.id() && (options.canDrop?.(data) ?? true)
         },
         onDrag: ({ location, self, source }) => {
           const into = Boolean(options.acceptsInto?.(source.data as unknown as DragState))
@@ -104,10 +107,12 @@ export function useDropZone(
     options.onLeave?.()
   }
   onMounted(() => {
-    if (!element.value) return
+    const el = element.value
+    if (!el) return
     dispose = dropTargetForElements({
-      element: element.value,
-      canDrop: ({ source }) => options.canDrop?.(source.data as unknown as DragState) ?? true,
+      element: el,
+      canDrop: ({ source }) =>
+        live(el) && (options.canDrop?.(source.data as unknown as DragState) ?? true),
       onDrag: ({ source, location }) => {
         if (options.target)
           hint.value = { targetId: options.target(), position: options.position ?? 'after' }
