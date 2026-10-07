@@ -4,6 +4,7 @@ import type {
   SessionPromptEvent,
   SessionStateEvent,
   TerminalOutputEvent,
+  TrackpadSwipeEvent,
   VaultChangedEvent,
 } from './types'
 
@@ -12,6 +13,7 @@ interface EventMap {
   'session-state': SessionStateEvent
   'session-prompt': SessionPromptEvent
   'vault-changed': VaultChangedEvent
+  'trackpad-swipe': TrackpadSwipeEvent
 }
 
 type Handler<K extends keyof EventMap> = (payload: EventMap[K]) => void

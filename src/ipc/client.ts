@@ -13,6 +13,7 @@ import type {
   QuickTarget,
   Settings,
   Size,
+  SwipeRegion,
   VaultView,
 } from './types'
 
@@ -51,6 +52,8 @@ export const api = {
   bootstrap: () => call<Bootstrap>('app_bootstrap'),
   saveLayout: (layout: Layout) => call<void>('layout_save', { layout }),
   saveSettings: (settings: Settings) => call<Settings>('settings_save', { settings }),
+  swipeRegion: (region: SwipeRegion | null) => call<void>('swipe_region', { region }),
+  swipeHaptic: () => call<void>('swipe_haptic'),
 
   vault: {
     get: () => call<VaultView>('vault_get'),
