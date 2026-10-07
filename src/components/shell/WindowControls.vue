@@ -1,25 +1,21 @@
 <script setup lang="ts">
 import { Copy, Minus, Square, X } from '@lucide/vue'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { onMounted, ref } from 'vue'
 import { isNative } from '@/ipc/client'
 
 const maximized = ref(false)
 
-async function current() {
-  const { getCurrentWindow } = await import('@tauri-apps/api/window')
-  return getCurrentWindow()
-}
-
 async function act(action: 'minimize' | 'toggleMaximize' | 'close') {
   if (!isNative()) return
-  const window = await current()
+  const window = getCurrentWindow()
   await window[action]()
   maximized.value = await window.isMaximized()
 }
 
 onMounted(async () => {
   if (!isNative()) return
-  const window = await current()
+  const window = getCurrentWindow()
   maximized.value = await window.isMaximized()
   await window.onResized(async () => {
     maximized.value = await window.isMaximized()
