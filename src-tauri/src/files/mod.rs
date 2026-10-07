@@ -19,6 +19,7 @@ mod staging;
 mod transfers;
 mod upload;
 mod upload_file;
+mod walk;
 use crate::{
     error::{AppError, AppResult},
     sessions::events::EventSink,
@@ -108,3 +109,5 @@ mod upload_mode_tests;
 
 #[cfg(test)]
 mod retry_noop_tests;
+#[cfg(test)]
+mod walk_tests;
