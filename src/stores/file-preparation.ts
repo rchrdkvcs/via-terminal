@@ -1,6 +1,6 @@
 import type { TransferPlan } from '@/ipc/files'
 import { discard, type Tracked, type Transfer, type TransferState } from './file-transfer-model'
-import type { FileState } from './files'
+import type { Connection, FileState } from './files'
 /** A drop being staged. Every step must check `active()`; the store cleans up the rest. */
 export interface Preparation {
   readonly id: string
@@ -13,31 +13,28 @@ export interface Preparation {
 /** The transfer store's bookkeeping that a preparation hands over to its upload. */
 interface Ledger {
   panels: Record<string, FileState>
+  connection(tabId: string): Connection | null
   tracked: Map<string, Tracked>
   show(tabId: string, id: string, patch: Partial<Transfer>): void
   end(id: string, state: TransferState, message?: string | null): void
   startTransfer(
     tabId: string,
-    sessionId: string,
     plan: Omit<TransferPlan, 'id' | 'owner'>,
     options: { id?: string; stagingId?: string },
   ): Promise<void>
 }
-export function preparation({ panels, tracked, show, end, startTransfer }: Ledger) {
+export function preparation({ panels, connection, tracked, show, end, startTransfer }: Ledger) {
   return function prepareTransfer(
     tabId: string,
-    sessionId: string,
     destination: string,
     total: number,
   ): Preparation | null {
-    const panel = panels[tabId]
-    if (!panel) return null
+    const link = connection(tabId)
+    if (!panels[tabId] || !link) return null
     const id = crypto.randomUUID()
-    panel.sessionId = sessionId
-    tracked.set(id, { tabId, sessionId, state: 'preparing' })
-    show(tabId, id, { sessionId, state: 'preparing', path: destination, total })
-    const active = () =>
-      tracked.get(id)?.state === 'preparing' && panels[tabId]?.sessionId === sessionId
+    tracked.set(id, { tabId, connection: link, state: 'preparing' })
+    show(tabId, id, { sessionId: link.sessionId, state: 'preparing', path: destination, total })
+    const active = () => tracked.get(id)?.state === 'preparing' && link.current()
     const preparation: Preparation = {
       id,
       active,
@@ -52,7 +49,7 @@ export function preparation({ panels, tracked, show, end, startTransfer }: Ledge
       async start(sources) {
         if (!active()) return end(id, 'cancelled')
         const plan = { direction: 'upload' as const, sources, destination }
-        await startTransfer(tabId, sessionId, plan, { id, stagingId: tracked.get(id)!.stagingId })
+        await startTransfer(tabId, plan, { id, stagingId: tracked.get(id)!.stagingId })
       },
       fail: (message) => end(id, 'failed', message),
     }

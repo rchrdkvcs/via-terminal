@@ -63,7 +63,7 @@ components/
   command/          command bar
   workbench/        panes, split view, connection panel and prompts
   files/            explorer, CodeMirror documents and transfer controls; useFileOperations
-                    and useFileTransfers start operations from the explorer's scope
+                    and useFileTransfers start operations on the explorer's current connection
   vault/            vault page
   settings/         settings page
   ui/               shadcn-vue primitives
@@ -91,4 +91,4 @@ The terminal registry exposes tab-level search, selection and paste operations. 
 
 **Remote files.** Each SSH actor opens one lazy SFTP service on its authenticated handle (`ssh/sftp.rs`). Opening is polled beside the shell reader, so a shell filling its channel cannot stall it; calls arriving meanwhile wait for that single attempt. The `files::Files` service answers typed requests with typed replies; transfer progress travels through `EventSink`. Atomic document replacement requires the OpenSSH extension and verified metadata. Remote names follow POSIX; only local names are checked against the platform.
 
-The in-memory `stores/files` keeps per-tab drafts, generation guards against stale replies, and every transfer plan: retry, drop preparation and staging cleanup are store operations, so a released explorer is never recreated by a late reply. `useFileProtection` turns closing questions into a decision that loses nothing; `release` applies it only after the tab, space, target or application actually closed, and asks again if a draft or transfer changed meanwhile. Pinned tab layout retains only `remoteCwd`, never documents. See ADR-0009 and ADR-0010.
+The in-memory `stores/files` keeps per-tab drafts and every transfer plan. It reads each tab's ready session from `stores/sessions` itself and keeps one connection generation per explorer, renewed when the session changes or the explorer is released; every reply, success or failure, applies only while its generation is current. Reading an explorer never creates it. Retry, drop preparation and staging cleanup are store operations, so a released explorer is never recreated by a late reply. `useFileProtection` turns closing questions into a decision that loses nothing; `release` applies it only after the tab, space, target or application actually closed, and asks again if a draft or transfer changed meanwhile. Pinned tab layout retains only `remoteCwd`, never documents. See ADR-0009 and ADR-0010.

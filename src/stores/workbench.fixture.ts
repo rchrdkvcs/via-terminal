@@ -25,7 +25,8 @@ vi.mock('./sessions', () => ({
     stop: mocks.stop,
     release: mocks.release,
     isLive: (id: string) => mocks.live.has(id),
-    runtime: (id: string) => ({ state: mocks.live.has(id) ? 'ready' : 'asleep' }),
+    runtime: (id: string) =>
+      mocks.live.has(id) ? { state: 'ready', sessionId: 'session' } : { state: 'asleep' },
     onEnded: mocks.onEnded,
     onHostSaved: mocks.onHostSaved,
     tabOf: mocks.tabOf,

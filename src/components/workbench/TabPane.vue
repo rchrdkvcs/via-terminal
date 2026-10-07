@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue'
 import type { Tab } from '@/ipc/types'
-import { useSessions } from '@/stores/sessions'
 import { useWorkbench } from '@/stores/workbench'
 import ConnectionPanel from './ConnectionPanel.vue'
 import TerminalHost from './TerminalHost.vue'
@@ -11,12 +10,7 @@ const DocumentEditor = defineAsyncComponent(() => import('@/components/files/Doc
 
 const props = defineProps<{ tab: Tab; inSplit?: boolean }>()
 const workbench = useWorkbench()
-const sessions = useSessions()
 const focused = computed(() => workbench.activeTab?.id === props.tab.id)
-const sessionId = computed(() => {
-  const runtime = sessions.runtime(props.tab.id)
-  return runtime.state === 'ready' ? runtime.sessionId : null
-})
 </script>
 
 <template>
@@ -37,7 +31,6 @@ const sessionId = computed(() => {
       v-else-if="tab.view?.kind === 'document'"
       :tab-id="tab.id"
       :path="tab.view.path"
-      :session-id="sessionId"
     />
     <div v-else class="absolute inset-0 py-2 ps-3 pe-1">
       <TerminalHost :tab-id="tab.id" />

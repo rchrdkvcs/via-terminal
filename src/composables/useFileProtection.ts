@@ -2,7 +2,6 @@ import { useFiles, type RemoteDocument } from '@/stores/files'
 import { useFileDialogs } from '@/stores/file-dialogs'
 import type { RemoteOwner } from '@/ipc/files'
 import { OWNER_CHANGED, isDirty } from '@/stores/file-documents'
-import { useSessions } from '@/stores/sessions'
 /**
  * What the user agreed to lose when closing explorers. Nothing is lost when deciding:
  * `release` applies it only after the closing succeeded, and asks again if any draft or
@@ -16,14 +15,8 @@ export interface Abandonment {
 export function useFileProtection() {
   const files = useFiles()
   const dialogs = useFileDialogs()
-  const sessions = useSessions()
   async function save(tabId: string, document: RemoteDocument): Promise<boolean> {
-    const runtime = sessions.runtime(tabId)
-    if (runtime.state !== 'ready' || !runtime.sessionId) {
-      files.documentError(tabId, document.id, 'Reconnectez le terminal avant d’enregistrer.')
-      return false
-    }
-    const saved = await files.saveDocument(tabId, runtime.sessionId, document.id)
+    const saved = await files.saveDocument(tabId, document.id)
     return saved && !isDirty(document)
   }
   async function decide(tabIds: string[]): Promise<Abandonment | null> {
