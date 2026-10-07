@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Size } from '@/ipc/types'
 import { deferred, mocks, output, prompt, size, state, tab } from './sessions.fixture'
 import { useSessions } from './sessions'
+import { useSpaces } from './spaces'
 
 describe('session opening lifecycle', () => {
   it.each(['stop', 'release'] as const)(
@@ -135,5 +136,120 @@ describe('session opening lifecycle', () => {
     await opening
     expect(mocks.close).toHaveBeenCalledExactlyOnceWith('old')
     expect(sessions.tabOf('old')).toBeUndefined()
+  })
+})
+
+describe('session events', () => {
+  it('does not replay output queued after an early terminal state', async () => {
+    const native = deferred<string>()
+    mocks.openLocal.mockReturnValue(native.promise)
+    const sessions = useSessions()
+    const ended = vi.fn()
+    sessions.onEnded(ended)
+    const opening = sessions.start(tab, null)
+    await Promise.resolve()
+    state('ended', 'exited')
+    output('ended')
+    prompt('ended')
+    state('ended', 'ready')
+    native.resolve('ended')
+    await opening
+    expect(ended).toHaveBeenCalledTimes(1)
+    expect(mocks.feed).not.toHaveBeenCalled()
+    expect(sessions.runtime(tab.id).state).toBe('exited')
+    expect(sessions.runtime(tab.id).prompt).toBeNull()
+  })
+
+  it('routes host-saved notifications received before open returns and ignores obsolete sessions', async () => {
+    const native = deferred<string>()
+    mocks.openLocal.mockReturnValue(native.promise)
+    const sessions = useSessions()
+    const saved = vi.fn()
+    const unsubscribe = sessions.onHostSaved(saved)
+    const opening = sessions.start(tab, null)
+    await Promise.resolve()
+    const hostSaved = mocks.handlers.get('vault-changed')!
+    hostSaved({ sessionId: 'new', hostId: 'host' } as never)
+    expect(saved).not.toHaveBeenCalled()
+    native.resolve('new')
+    await opening
+    expect(saved).toHaveBeenCalledExactlyOnceWith('tab', 'host')
+    sessions.stop(tab.id)
+    hostSaved({ sessionId: 'new', hostId: 'late-host' } as never)
+    expect(saved).toHaveBeenCalledTimes(1)
+    unsubscribe()
+  })
+
+  it('drops early host-saved notifications for an invalidated opening', async () => {
+    const native = deferred<string>()
+    mocks.openLocal.mockReturnValue(native.promise)
+    const sessions = useSessions()
+    const saved = vi.fn()
+    sessions.onHostSaved(saved)
+    const opening = sessions.start(tab, null)
+    await Promise.resolve()
+    mocks.handlers.get('vault-changed')!({ sessionId: 'old', hostId: 'host' } as never)
+    sessions.release(tab.id)
+    native.resolve('old')
+    await opening
+    expect(saved).not.toHaveBeenCalled()
+  })
+})
+
+describe('terminal input', () => {
+  function hydrate() {
+    useSpaces().hydrate({
+      activeSpaceId: 'space',
+      sidebar: { visible: true, width: 264 },
+      spaces: [
+        {
+          id: 'space',
+          name: 'Space',
+          icon: 'terminal',
+          defaultShell: 'space-shell',
+          pinned: [{ kind: 'tab', ...tab }],
+        },
+      ],
+    })
+  }
+
+  it('writes to a ready session and drops input otherwise', async () => {
+    mocks.openLocal.mockResolvedValue('live')
+    const sessions = useSessions()
+    sessions.input(tab.id, 'ls')
+    await sessions.start(tab, null)
+    sessions.input(tab.id, 'ls')
+    state('live', 'ready')
+    sessions.input(tab.id, 'ls')
+    sessions.input(tab.id, '\r')
+    expect(mocks.write.mock.calls).toEqual([
+      ['live', 'ls'],
+      ['live', '\r'],
+    ])
+  })
+
+  it.each(['exited', 'disconnected', 'failed'] as const)(
+    'reconnects a %s tab on Enter with its space default shell',
+    async (ended) => {
+      hydrate()
+      mocks.openLocal.mockResolvedValueOnce('old').mockResolvedValueOnce('new')
+      const sessions = useSessions()
+      await sessions.start(tab, null)
+      state('old', ended)
+      sessions.input(tab.id, 'x')
+      expect(mocks.openLocal).toHaveBeenCalledTimes(1)
+      sessions.input(tab.id, '\r')
+      await vi.waitFor(() => expect(sessions.runtime(tab.id).sessionId).toBe('new'))
+      expect(mocks.openLocal).toHaveBeenLastCalledWith('space-shell', null, size)
+      expect(mocks.write).not.toHaveBeenCalled()
+    },
+  )
+
+  it('leaves an asleep tab asleep on Enter', () => {
+    hydrate()
+    const sessions = useSessions()
+    sessions.input(tab.id, '\r')
+    expect(sessions.runtime(tab.id).state).toBe('asleep')
+    expect(mocks.openLocal).not.toHaveBeenCalled()
   })
 })

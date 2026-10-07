@@ -49,8 +49,7 @@ sessions/           live sessions behind tabs
 ipc/                typed commands and events, mirrors of the Rust wire types
 domain/             pure logic, no Vue: organize (intents), split, drop, search, quick-connect, palette
 stores/             spaces, sessions, workbench, vault, settings, ui, files (Pinia), and the
-                    store-private parts of sessions (session-events), workbench
-                    (workbench-opening, -lifecycle, -effects) and files (file-documents,
+                    store-private parts of workbench (workbench-opening, -lifecycle, -effects) and files (file-documents,
                     -transfers, -preparation, -transfer-model); file-dialogs queues
                     explorer questions
 terminal/           xterm instances keyed by tab, outside the Vue tree
@@ -73,7 +72,7 @@ components/
 
 **Tab lifecycle.** `stores/workbench` owns complete operations for closing tabs, removing spaces, transferring rows and opening beside an existing tab. It commits organization before starting or releasing sessions, owns successor focus, and exposes focus as read-only state. Compound organization intents and transfers publish only when every step succeeds. Confirmations and undo notifications remain in the interface's presentation code; their callers do not orchestrate runtime cleanup.
 
-**Sessions.** `stores/sessions` maps session ids to tabs and buffers events that arrive before `open` returns. `lib/session-routing` delivers an event only while its session is still bound to the tab, so an early exit drops the events queued after it. Renderers are keyed by tab in `terminal/registry`. Reconnecting therefore replaces the session without clearing the scrollback.
+**Sessions.** `stores/sessions` subscribes to session events, maps session ids to tabs and buffers events that arrive before `open` returns. It also owns terminal input: keystrokes go to a ready session, and Enter in an exited, disconnected or failed tab reconnects it. `lib/session-routing` delivers an event only while its session is still bound to the tab, so an early exit drops the events queued after it. Renderers are keyed by tab in `terminal/registry`. Reconnecting therefore replaces the session without clearing the scrollback.
 
 An opening attempt belongs to its tab until it succeeds or is invalidated by stop or release. A late native result is closed instead of attached; its events and errors cannot affect a replacement attempt.
 

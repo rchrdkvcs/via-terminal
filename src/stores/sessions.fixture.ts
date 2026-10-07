@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   feed: vi.fn(),
   release: vi.fn(),
   openLocal: vi.fn(),
+  write: vi.fn(),
   close: vi.fn(),
   handlers: new Map<string, (payload: never) => void>(),
 }))
@@ -16,7 +17,7 @@ vi.mock('@/terminal/registry', () => ({
   terminals: { measure: mocks.measure, feed: mocks.feed, release: mocks.release },
 }))
 vi.mock('@/ipc/client', () => ({
-  api: { session: { openLocal: mocks.openLocal, close: mocks.close } },
+  api: { session: { openLocal: mocks.openLocal, write: mocks.write, close: mocks.close } },
   describeError: (cause: Error) => cause.message,
 }))
 vi.mock('@/ipc/events', () => ({
@@ -67,4 +68,5 @@ beforeEach(() => {
   setActivePinia(createPinia())
   mocks.measure.mockResolvedValue(size)
   mocks.close.mockResolvedValue(undefined)
+  mocks.write.mockResolvedValue(undefined)
 })
