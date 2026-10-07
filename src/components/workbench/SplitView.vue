@@ -4,7 +4,6 @@ import type { Split } from '@/ipc/types'
 import { useSpaces } from '@/stores/spaces'
 import TabPane from './TabPane.vue'
 
-/** Two to four tabs side by side; sizes persist with the row. */
 const props = defineProps<{ split: Split }>()
 const spaces = useSpaces()
 

@@ -1,4 +1,3 @@
-/** Building one xterm instance with its addons. */
 import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
@@ -37,7 +36,6 @@ export function applyPresentation(terminal: Terminal, presentation: Presentation
 }
 
 function openLink(event: MouseEvent, uri: string) {
-  // Links open only on Ctrl/Cmd+click, so a stray click never leaves the app.
   if (!event.ctrlKey && !event.metaKey) return
   if (isNative()) void openUrl(uri).catch(() => undefined)
   else window.open(uri, '_blank', 'noopener,noreferrer')
@@ -65,14 +63,13 @@ export function createInstance(presentation: Presentation): Instance {
   let webgl: WebglAddon | undefined
   try {
     webgl = new WebglAddon()
-    // A lost GPU context leaves a blank canvas unless the DOM renderer takes over.
+
     webgl.onContextLoss(() => {
       webgl?.dispose()
       webgl = undefined
     })
     terminal.loadAddon(webgl)
   } catch {
-    // WebGL2 unavailable (software rendering, RDP): the DOM renderer stands in.
     webgl = undefined
   }
 

@@ -10,7 +10,6 @@ import VaultEmpty from './VaultEmpty.vue'
 import VaultListPane from './VaultListPane.vue'
 import VaultRow from './VaultRow.vue'
 
-/** Identities with their username and the credential they bring. */
 const vault = useVault()
 const state = useVaultState()
 const actions = useVaultActions()
@@ -28,7 +27,6 @@ const identities = computed(() => {
 const ids = computed(() => identities.value.map((identity) => identity.id))
 const keyLabel = (id: string | null) => vault.view.keys.find((key) => key.id === id)?.label
 
-/** Enter on an identity moves into its editor, the way Enter on a host connects. */
 function focusEditor() {
   document.getElementById('identity-label')?.focus()
 }

@@ -5,7 +5,6 @@ import AppSidebar from '@/components/sidebar/AppSidebar.vue'
 import { useSpaces } from '@/stores/spaces'
 import SidebarResizer from './SidebarResizer.vue'
 
-/** The sidebar beside the content, shown or hidden with its shortcut. */
 const spaces = useSpaces()
 const { width: windowWidth } = useWindowSize()
 const width = computed(() => Math.min(spaces.sidebar.width, Math.max(200, windowWidth.value * 0.4)))

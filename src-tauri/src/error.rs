@@ -1,7 +1,5 @@
 use serde::Serialize;
 
-/// The error every command returns. `code` is stable and machine readable;
-/// `message` is safe to show and never contains a secret.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, thiserror::Error)]
 #[serde(rename_all = "camelCase")]
 #[error("{code}: {message}")]

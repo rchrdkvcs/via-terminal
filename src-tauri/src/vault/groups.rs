@@ -47,7 +47,6 @@ impl Vault {
         })
     }
 
-    /// Hosts and sub-groups move up to the deleted group's parent.
     pub fn delete_group(&self, id: Id) -> AppResult<()> {
         self.commit(|data| {
             let group = data
@@ -94,7 +93,6 @@ impl Vault {
         })
     }
 
-    /// References from hosts and groups are cleared, never left dangling.
     pub fn delete_identity(&self, id: Id) -> AppResult<()> {
         self.commit_with_secrets(|data, secrets| {
             let before = data.identities.len();

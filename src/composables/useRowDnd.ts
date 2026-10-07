@@ -1,10 +1,3 @@
-/**
- * Pointer drag and drop of sidebar rows, on pragmatic-drag-and-drop.
- *
- * Rows only know how to describe themselves; the store decides what a drop
- * means by turning it into one `organize` intent. Nothing moves until the drop
- * is released on a valid target, and an invalid intent changes nothing.
- */
 import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { onBeforeUnmount, onMounted, ref, type Ref } from 'vue'
 import type { Id } from '@/ipc/types'
@@ -17,20 +10,18 @@ export interface DragState {
   isFolder: boolean
 }
 
-/** Shared across rows so every target can render the current hint. */
 export const dragging = ref<DragState | null>(null)
 export const hint = ref<{ targetId: Id; position: DropPosition } | null>(null)
 
 interface Options {
   id: () => Id
   isFolder?: boolean
-  /** Folders accept `into` in their middle band. */
+
   acceptsInto?: (source: DragState) => boolean
   canDrop?: (source: DragState) => boolean
   onDrop: (source: DragState, position: DropPosition) => void
 }
 
-/** Rows of a space out of sight sit in an inert panel and never take a drop. */
 const live = (element: Element) => !element.closest('[inert]')
 
 function positionFor(element: Element, clientY: number, into: boolean): DropPosition {
@@ -85,15 +76,11 @@ export function useRowDnd(element: Ref<HTMLElement | undefined>, options: Option
   onBeforeUnmount(() => cleanup.forEach((dispose) => dispose()))
 }
 
-/**
- * A whole region: the end of a list, the empty pinned area, the content edges.
- * With `target`, hovering it publishes that id as the current hint.
- */
 export function useDropZone(
   element: Ref<HTMLElement | undefined>,
   options: {
     target?: () => Id
-    /** How the hint reads against `target`; the end of a list by default. */
+
     position?: DropPosition
     canDrop?: (source: DragState) => boolean
     onOver?: (source: DragState, input: { clientX: number; clientY: number }) => void

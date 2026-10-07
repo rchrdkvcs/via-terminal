@@ -2,11 +2,6 @@ import { useEventListener } from '@vueuse/core'
 import { watch } from 'vue'
 import { useSettings } from '@/stores/settings'
 
-/**
- * How the window looks around its content: the theme class, switched without
- * every transition firing at once, and a quieter chrome while the window is
- * in the background, as on macOS.
- */
 export function useWindowAppearance() {
   const settings = useSettings()
   const root = document.documentElement

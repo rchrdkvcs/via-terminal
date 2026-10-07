@@ -23,7 +23,6 @@ import { useSettings } from '@/stores/settings'
 import { useSpaces, type SpaceDraft } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 
-/** Create or edit a space: a name, an icon and the shell its new tabs use. */
 const ui = useUi()
 const spaces = useSpaces()
 const settings = useSettings()

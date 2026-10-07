@@ -10,10 +10,6 @@ interface Step {
   shift?: boolean
 }
 
-/**
- * Replays wheel events on a fake clock that also fires the release timer,
- * through the swipe tracker; returns what the sidebar was told.
- */
 function replay(events: Step[], { phased = false } = {}) {
   let clock = 0
   let timer: { at: number; run: () => void } | null = null
@@ -75,12 +71,10 @@ function replay(events: Step[], { phased = false } = {}) {
   return { pans, commits, steps, prevented }
 }
 
-/** Finger motion: `count` events of `step` px, 16 ms apart. */
 function fingers(start: number, step: number, count: number): Step[] {
   return Array.from({ length: count }, (_, i) => ({ t: start + i * 16, dx: step }))
 }
 
-/** Inertia after the fingers leave: a tail that decays until it fades. */
 function inertia(start: number, from: number, decay = 0.93, count = 60): Step[] {
   return Array.from({ length: count }, (_, i) => ({
     t: start + i * 16,
@@ -88,7 +82,6 @@ function inertia(start: number, from: number, decay = 0.93, count = 60): Step[] 
   }))
 }
 
-/** A whole trackpad swipe: ~300 ms of fingers, then ~1 s of inertia. */
 function swipe(start: number, sign: 1 | -1): Step[] {
   return [...fingers(start, sign * 30, 18), ...inertia(start + 18 * 16, sign * 30)]
 }

@@ -1,4 +1,3 @@
-/** A vault backend whose saves stay pending until a test settles them, in order. */
 import { vi } from 'vitest'
 import { ref } from 'vue'
 import type { SecretUpdate } from '@/ipc/types'
@@ -22,7 +21,7 @@ export function deferredBackend() {
     (input: Record) =>
       new Promise<string | null>((resolve, reject) => calls.push({ input, resolve, reject })),
   )
-  /** Settle the oldest unsettled save and let the queue start the next one. */
+
   async function settle(result: string | null | Error) {
     const call = calls.shift()
     if (!call) throw new Error('no pending save')
@@ -38,7 +37,6 @@ export function record(id: string | null, name = 'one'): Record {
   return { id, name, password: { action: 'keep' } }
 }
 
-/** An editor over a record that the test can change "from elsewhere". */
 export function editor(initial: Record, save: (input: Record) => Promise<string | null>) {
   const stored = ref(initial)
   const validate = (input: Record) => (input.name ? null : 'Ajoutez un nom.')

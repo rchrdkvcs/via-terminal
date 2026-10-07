@@ -8,11 +8,6 @@ import DropLine from './DropLine.vue'
 import FolderItem from './FolderItem.vue'
 import RowItem from './RowItem.vue'
 
-/**
- * A list of rows: the pinned root, a folder's content, or the temporary
- * area. The space after the last row belongs to the list, so dropping there
- * appends, and an empty pinned area offers a clear place to pin.
- */
 const props = defineProps<{
   area: 'pinned' | 'temporary'
   folderId?: Id | null

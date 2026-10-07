@@ -1,8 +1,3 @@
-//! The questions authentication asks the user, on behalf of one session.
-//!
-//! Any answer other than the expected one, including the `Cancel` a closed
-//! session resolves to, stops the connection as cancelled.
-
 use super::{failure::Failure, ConnectPlan, Context};
 use crate::sessions::prompts::{Prompt, PromptAnswer, PromptField, Prompts};
 use russh::client::Prompt as Field;
@@ -43,7 +38,6 @@ impl Asker {
         }
     }
 
-    /// The typed password, and whether the user asked to remember it.
     pub async fn password(
         &self,
         username: &str,
@@ -61,7 +55,6 @@ impl Asker {
         }
     }
 
-    /// One keyboard-interactive round, one answer per field.
     pub async fn fields(
         &self,
         name: String,
@@ -87,7 +80,6 @@ impl Asker {
     }
 }
 
-/// One hidden field asking for a password, as PAM sends it.
 pub(super) fn is_password_round(prompts: &[Field]) -> bool {
     let [field] = prompts else { return false };
     let label = field.prompt.to_lowercase();

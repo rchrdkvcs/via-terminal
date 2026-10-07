@@ -1,6 +1,3 @@
-//! Drives a real hub against the test server: a recording sink, a fake vault,
-//! and helpers that wait for events with a deadline so a hang fails fast.
-
 use super::{
     test_server::{self, TestServer},
     test_store::FakeStore,
@@ -66,7 +63,6 @@ impl Harness {
         self.hub.open_ssh(plan, self.store.clone(), size).unwrap()
     }
 
-    /// The next prompt of `session` not answered yet.
     pub async fn prompt(&self, session: Uuid) -> (Uuid, Prompt) {
         eventually("a prompt", || {
             let answered = self.answered.lock().unwrap();
@@ -94,7 +90,6 @@ impl Harness {
         self.hub.answer(prompt_id, answer).unwrap();
     }
 
-    /// Waits for `state`, returning its message and exit code.
     pub async fn state(&self, session: Uuid, state: SessionState) -> (Option<String>, Option<i32>) {
         eventually(&format!("{state:?}"), || {
             self.recorder

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PIXEL_SIZE, THRESHOLD, createSwipeTracker, spring, type Pan } from './swipeTracker'
 
-/** Replays phased pans and returns what the sidebar was told. */
 function replay(pans: Pan[], { spaces = 3 } = {}) {
   const moves: number[] = []
   const ends: Array<{ commit: 1 | -1 | 0; velocity: number }> = []
@@ -19,7 +18,6 @@ function replay(pans: Pan[], { spaces = 3 } = {}) {
   return { moves, ends, crossings, begins, commits: ends.map((e) => e.commit) }
 }
 
-/** Fingers on the touchpad: `count` events of `step` px, 16 ms apart, then the lift. */
 function swipe(step: number, count: number, { start = 0, lift = 0 } = {}): Pan[] {
   const pans: Pan[] = Array.from({ length: count }, (_, i) => ({
     phase: i === 0 ? 'start' : 'update',
@@ -31,7 +29,6 @@ function swipe(step: number, count: number, { start = 0, lift = 0 } = {}): Pan[]
   return pans
 }
 
-/** A drag held still before the lift, so it ends without speed. */
 function held(step: number, count: number): Pan[] {
   const pans = swipe(step, count)
   const end = pans.pop()!
@@ -59,7 +56,6 @@ describe('swipe tracker', () => {
   })
 
   it('switches on a short, fast flick', () => {
-    // 60 px, well short of the threshold, at about 1.9 px/ms.
     const { commits, moves } = replay(swipe(30, 2))
     expect(Math.max(...moves)).toBeLessThan(THRESHOLD)
     expect(commits).toEqual([1])
@@ -89,7 +85,7 @@ describe('swipe tracker', () => {
 
   it('hands the speed of the fingers to the spring', () => {
     const { ends } = replay(swipe(-11, 10))
-    // 11 px per 16 ms is one swipe per second.
+
     expect(ends[0].velocity).toBeCloseTo((-11 / PIXEL_SIZE) * (1000 / 16))
   })
 

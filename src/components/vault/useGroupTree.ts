@@ -1,4 +1,3 @@
-/** What the group tree does: choose a group, fold it, create and rename groups in place. */
 import { api } from '@/ipc/client'
 import type { Id } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
@@ -11,7 +10,6 @@ export function useGroupTree() {
   const state = useVaultState()
   const actions = useVaultActions()
 
-  /** Shows the group's hosts and opens its defaults in the inspector. */
   function choose(id: Id | null) {
     state.scope.value = id
     state.selected.value = id
@@ -22,7 +20,6 @@ export function useGroupTree() {
     else state.collapsed.add(id)
   }
 
-  /** Creates "Nouveau groupe" right away, then lets the user name it in place. */
   async function add(parentId: Id | null) {
     const id = await actions.createGroup(parentId)
     if (!id) return

@@ -17,7 +17,6 @@ const store = useSettings()
 const presets = [1_000, 5_000, 10_000, 50_000, 100_000]
 const number = new Intl.NumberFormat('fr-FR')
 
-/** A value saved by an older build still shows up rather than going blank. */
 const scrollbackOptions = computed(() => {
   const current = store.settings.scrollback
   const values = presets.includes(current) ? presets : [...presets, current].sort((a, b) => a - b)

@@ -6,7 +6,6 @@ import { useSpaces } from '@/stores/spaces'
 import { useVault } from '@/stores/vault'
 import { useWorkbench } from '@/stores/workbench'
 
-/** What sidebar gestures and menus mean, as organize intents. */
 export function useSidebarActions() {
   const spaces = useSpaces()
   const workbench = useWorkbench()
@@ -29,13 +28,11 @@ export function useSidebarActions() {
     spaces.dispatch({ type: 'move', id: sourceId, to: { area: 'pinned', folderId, before: null } })
   }
 
-  /** Dropped on New tab: first of the temporary rows, where new tabs appear. */
   function dropAtStart(sourceId: Id) {
     const first = spaces.active.temporary[0]?.id ?? null
     spaces.dispatch({ type: 'move', id: sourceId, to: { area: 'temporary', before: first } })
   }
 
-  /** Dropped on an edge of the content: split with the visible row. Only a tab row can join. */
   function splitWithActive(sourceId: Id, edge: Edge) {
     const target = workbench.activeRow
     if (!target || target.id === sourceId) return
@@ -52,10 +49,6 @@ export function useSidebarActions() {
     return id
   }
 
-  /**
-   * Naming the tab of a host that only has an address names the host: there
-   * is one name, shown in the sidebar, the command bar and the vault alike.
-   */
   function rename(tabId: Id, title: string) {
     const value = title.trim()
     const target = findTab(spaces.active, tabId)?.target

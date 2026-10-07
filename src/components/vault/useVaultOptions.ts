@@ -1,4 +1,3 @@
-/** Choices offered by the inspector selects, and the group tree they derive from. */
 import { computed } from 'vue'
 import { useVault } from '@/stores/vault'
 import type { Id } from '@/ipc/types'
@@ -7,7 +6,7 @@ import { buildTree, flatten } from './tree'
 export interface Option {
   id: Id
   label: string
-  /** Indentation level, for groups shown as a hierarchy. */
+
   depth?: number
 }
 

@@ -3,13 +3,11 @@ import { newTabRow, rowOfTab } from '@/domain/space'
 import type { Edge } from '@/domain/split'
 import type { WorkbenchParts } from './workbench-parts'
 
-/** Internal placement and retargeting, accepted before session or focus effects. */
 export function createTabOpening({
   spaces,
   sessions,
   activate,
 }: Pick<WorkbenchParts, 'spaces' | 'sessions' | 'activate'>) {
-  /** Open `target` in a new temporary tab, or in place of `replace`. Returns the tab id. */
   function open(target: Target, options: { replace?: Id } = {}): Id | undefined {
     if (options.replace) {
       const space = spaces.spaceOf(options.replace)
@@ -31,7 +29,6 @@ export function createTabOpening({
     return row.id
   }
 
-  /** The row and split are committed together, before any session opens. */
   function openBeside(target: Target, anchorTabId: Id, edge: Edge = 'right'): Id | undefined {
     const space = spaces.spaceOf(anchorTabId)
     const anchor = space && rowOfTab(space, anchorTabId)
@@ -51,7 +48,6 @@ export function createTabOpening({
     return row.id
   }
 
-  /** Join a single-tab row, named by its tab id, to the row of `anchorTabId`. */
   function splitWith(sourceTabId: Id, anchorTabId: Id, edge: Edge = 'right'): boolean {
     const space = spaces.spaceOf(anchorTabId)
     const source = space && rowOfTab(space, sourceTabId)

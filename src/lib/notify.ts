@@ -1,7 +1,3 @@
-/**
- * Toasts, in one place so stores never import UI components and tests can
- * observe what the user would have been told.
- */
 import { toast } from 'vue-sonner'
 
 interface Action {

@@ -11,7 +11,6 @@ import type { CommandItem } from './types'
 
 const RECENT = 6
 
-/** Things the bar can open: a typed address, local shells, hosts, open tabs. */
 export function useCommandTargets() {
   const settings = useSettings()
   const spaces = useSpaces()

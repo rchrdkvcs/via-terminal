@@ -5,7 +5,6 @@ use super::{
 };
 use crate::{error::AppResult, secrets::Secrets, storage::BlobChange};
 
-/// Pending encrypted changes; plaintext never reaches Storage or VaultData.
 pub(super) struct SecretChanges<'a> {
     secrets: &'a Secrets,
     blobs: Vec<BlobChange>,
@@ -50,7 +49,6 @@ impl Vault {
         self.commit_with_secrets(|data, _| change(data))
     }
 
-    /// Validate a copy and prepare sealed changes, then persist together before publishing.
     pub(super) fn commit_with_secrets<T>(
         &self,
         change: impl FnOnce(&mut VaultData, &mut SecretChanges<'_>) -> AppResult<T>,

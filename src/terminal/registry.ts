@@ -1,11 +1,3 @@
-/**
- * Every live xterm instance, keyed by tab and kept outside the Vue tree.
- *
- * A renderer is moved between panes, never rebuilt, so scrollback survives
- * splits, space switches and reconnections. Output is coalesced and written
- * once per animation frame. Callbacks are injected by `configure` so this
- * module never depends on stores.
- */
 import type { Id, Size } from '@/ipc/types'
 import { concatBytes } from '@/lib/base64'
 import { applyPresentation, createInstance, type Instance } from './create'
@@ -38,16 +30,11 @@ class Registry {
     }
   }
 
-  /** The size to open a session at: the tab's own, or the last one measured. */
   sizeFor(tabId: Id): Size {
     const terminal = this.entries.get(tabId)?.terminal
     return terminal ? { cols: terminal.cols, rows: terminal.rows } : this.lastSize
   }
 
-  /**
-   * The tab's real size once its pane is laid out, so a shell starts at the
-   * width it will draw in (prompts with right-aligned parts break otherwise).
-   */
   async measure(tabId: Id): Promise<Size> {
     for (let frame = 0; frame < 12; frame += 1) {
       const entry = this.entries.get(tabId)
@@ -130,7 +117,7 @@ class Registry {
       this.lastSize = { cols, rows }
     })
     listen(terminal, tabId, () => this.callbacks)
-    // Cell metrics are wrong until the monospace face has loaded.
+
     void document.fonts?.ready.then(() => {
       if (this.entries.get(tabId) === entry) this.fit(entry)
     })
@@ -138,7 +125,6 @@ class Registry {
     return entry
   }
 
-  /** Deferred to the next frame: fitting inside a ResizeObserver loops. */
   private fit(entry: Entry) {
     if (entry.frame !== null) return
     entry.frame = requestAnimationFrame(() => {

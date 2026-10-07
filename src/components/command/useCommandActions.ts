@@ -19,7 +19,6 @@ import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
 import type { CommandItem } from './types'
 
-/** Actions reachable by name, so every gesture has a keyboard path. */
 export function useCommandActions() {
   const spaces = useSpaces()
   const ui = useUi()

@@ -16,7 +16,7 @@ pub struct Bootstrap {
     settings: Settings,
     vault: VaultView,
     shells: Vec<Shell>,
-    /// The shell used when neither the tab, its space nor settings name one.
+
     system_shell: Option<String>,
     platform: &'static str,
 }

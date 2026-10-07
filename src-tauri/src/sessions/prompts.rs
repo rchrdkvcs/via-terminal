@@ -1,9 +1,3 @@
-//! Questions a session asks the user, answered from the pane.
-//!
-//! A session awaits [`Prompts::ask`]; the interface replies through
-//! [`Prompts::answer`]. Closing a session withdraws its open prompts, which
-//! resolves them as [`PromptAnswer::Cancel`].
-
 use super::events::{Event, EventSink};
 use crate::error::{AppError, AppResult};
 use serde::{Deserialize, Serialize};
@@ -26,7 +20,7 @@ pub enum Prompt {
         port: u16,
         algorithm: String,
         fingerprint: String,
-        /// Present when the server key changed since it was trusted.
+
         previous_fingerprint: Option<String>,
     },
     Username {
@@ -36,7 +30,7 @@ pub enum Prompt {
         username: String,
         address: String,
         can_remember: bool,
-        /// The previous attempt with a stored or typed password failed.
+
         retry: bool,
     },
     Passphrase {
@@ -108,7 +102,7 @@ impl Prompts {
             .unwrap()
             .remove(&prompt_id)
             .ok_or_else(|| AppError::not_found("question"))?;
-        // The session may have ended meanwhile; nothing is waiting then.
+
         let _ = sender.send(answer);
         Ok(())
     }

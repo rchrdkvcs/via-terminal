@@ -1,11 +1,3 @@
-/**
- * Every change to a space's organization, as one closed set of intents.
- *
- * `apply` returns the next space, or `null` when the intent is invalid. An
- * invalid intent never produces a partial change, so a drag that ends on a
- * bad target simply leaves the sidebar as it was. Several intents apply as
- * one: all of them, or none.
- */
 import type { Folder, Id, Row, Tab } from '@/ipc/types'
 import { clone } from '@/lib/clone'
 import { insertAt, listOf, take } from './lists'
@@ -17,7 +9,6 @@ export type Place =
   | { area: 'temporary'; before: Id | null }
 
 export type Intent =
-  /** A new or transferred row: top of the temporary area unless placed. */
   | { type: 'open'; row: Row; to?: Place }
   | { type: 'move'; id: Id; to: Place }
   | { type: 'remove'; id: Id }
@@ -36,7 +27,6 @@ export function apply(space: Space, intent: Intent | readonly Intent[]): Space |
   return intents.every((change) => run(next, change)) ? next : null
 }
 
-/** Move a row to another space, keeping it pinned or temporary. Returns both spaces. */
 export function transfer(from: Space, to: Space, rowId: Id): [Space, Space] | null {
   const row = rows(from).find((candidate) => candidate.id === rowId)
   if (!row || from.id === to.id) return null
@@ -95,7 +85,7 @@ function move(space: Space, id: Id, to: Place): boolean {
   if (to.before === id) return true
   const entry = take(space, id)
   if (!entry) return false
-  // Folders only live at the pinned root; rows never contain folders.
+
   const root = to.area === 'pinned' && to.folderId === null
   if (isFolder(entry) && !root) return false
   const list = listOf(space, to.area, to.area === 'pinned' ? to.folderId : null)
@@ -104,7 +94,7 @@ function move(space: Space, id: Id, to: Place): boolean {
 
 function remove(space: Space, id: Id): boolean {
   if (take(space, id)) return true
-  // A tab inside a split: dropping it may dissolve the split.
+
   return dropTab(space, id)
 }
 

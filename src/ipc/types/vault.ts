@@ -1,5 +1,3 @@
-/** Mirrors `src-tauri/src/vault`: records only, never secrets. */
-
 import type { Id } from './layout'
 
 export interface Defaults {
@@ -79,9 +77,9 @@ export interface VaultView {
   identities: Identity[]
   keys: Key[]
   knownHosts: KnownHost[]
-  /** Hosts and identities with a remembered password. */
+
   passwords: Id[]
-  /** Keys with a remembered passphrase. */
+
   passphrases: Id[]
   secretsAvailable: boolean
   effective: Record<Id, Effective>

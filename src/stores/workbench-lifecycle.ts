@@ -4,7 +4,6 @@ import { placeFor } from '@/domain/drop'
 import { clone } from '@/lib/clone'
 import type { Closed, WorkbenchParts } from './workbench-parts'
 
-/** Internal ownership of removal, transfer, runtime cleanup and successor focus. */
 export function createTabLifecycle({
   spaces,
   sessions,
@@ -13,10 +12,6 @@ export function createTabLifecycle({
   activate,
   focusTerminal,
 }: WorkbenchParts) {
-  /**
-   * Move the whole row holding `tabOrRowId`, retaining each session and
-   * repairing source focus. A tab id is focused in the destination.
-   */
   function moveRow(tabOrRowId: Id, toSpaceId: Id): boolean {
     const space = spaces.spaceOf(tabOrRowId)
     const row = space && rowOf(space, tabOrRowId)
@@ -36,7 +31,6 @@ export function createTabLifecycle({
     return true
   }
 
-  /** Remove a tab and release its runtime only after organization accepts it. */
   function removeTab(tabId: Id, undoable = false): Closed | undefined {
     const space = spaces.spaceOf(tabId)
     const row = space && rowOfTab(space, tabId)
@@ -63,7 +57,6 @@ export function createTabLifecycle({
     }
   }
 
-  /** Running pinned tabs sleep; all other tabs leave the organization. */
   function closeTab(tabId: Id): Closed | undefined {
     const space = spaces.spaceOf(tabId)
     const row = space && rowOfTab(space, tabId)

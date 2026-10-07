@@ -5,11 +5,6 @@ import { Input } from '@/components/ui/input'
 import type { Id } from '@/ipc/types'
 import { step } from './navigation'
 
-/**
- * The middle pane of every section: a header with search and actions, then a
- * keyboard-driven list. Arrows move the selection, Enter activates it and
- * Delete asks to remove it.
- */
 const props = defineProps<{
   title: string
   ids: Id[]
@@ -54,7 +49,6 @@ function onSearchKeydown(event: KeyboardEvent) {
   }
 }
 
-/** The row Tab lands on: the selection, else the first row. */
 function tabbable(id: Id): boolean {
   const current =
     props.selected && props.ids.includes(props.selected) ? props.selected : props.ids[0]

@@ -13,7 +13,7 @@ export interface TabRuntime {
   message: string | null
   exitCode: number | null
   prompt: { id: Id; prompt: Prompt } | null
-  /** Title reported by the terminal (OSC 0/2), used unless the tab is renamed. */
+
   autoTitle: string | null
 }
 
@@ -28,14 +28,10 @@ const asleep = (): TabRuntime => ({
 
 export const LIVE: readonly TabState[] = ['connecting', 'verifying', 'authenticating', 'ready']
 
-/**
- * Live sessions per tab. Output and renderers are keyed by tab, so a
- * reconnection replaces the session while the scrollback stays in place.
- */
 export const useSessions = defineStore('sessions', () => {
   const runtimes = reactive<Record<Id, TabRuntime>>({})
   const { routing, onEnded, onHostSaved } = createSessionEvents(runtimes, LIVE)
-  // Only the latest opening attempt may attach a native session to its tab.
+
   const openings = new Map<Id, symbol>()
 
   function runtime(tabId: Id): TabRuntime {
@@ -69,7 +65,7 @@ export const useSessions = defineStore('sessions', () => {
         close(sessionId)
         return
       }
-      // The id goes on the tab first: early events are checked against it.
+
       runtimes[tab.id].sessionId = sessionId
       routing.bind(sessionId, tab.id)
     } catch (cause) {
@@ -93,7 +89,6 @@ export const useSessions = defineStore('sessions', () => {
       Object.assign(runtimes[tabId], { ...asleep(), autoTitle: runtimes[tabId].autoTitle })
   }
 
-  /** Stop and forget everything about a tab, renderer included. */
   function release(tabId: Id) {
     stop(tabId)
     delete runtimes[tabId]
@@ -125,7 +120,6 @@ export const useSessions = defineStore('sessions', () => {
 
   onScopeDispose(() => Object.keys(runtimes).forEach(release))
 
-  /** The tab a session belongs to, while it is live. */
   function tabOf(sessionId: Id): Id | undefined {
     return routing.tabOf(sessionId)
   }

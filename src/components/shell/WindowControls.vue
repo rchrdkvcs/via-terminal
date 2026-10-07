@@ -3,7 +3,6 @@ import { Copy, Minus, Square, X } from '@lucide/vue'
 import { onMounted, ref } from 'vue'
 import { isNative } from '@/ipc/client'
 
-/** Minimize, maximize and close for undecorated windows (Windows, Linux). */
 const maximized = ref(false)
 
 async function current() {

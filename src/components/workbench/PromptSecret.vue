@@ -7,7 +7,6 @@ import type { Prompt, PromptAnswer } from '@/ipc/types'
 
 type SecretPrompt = Extract<Prompt, { kind: 'username' | 'password' | 'passphrase' }>
 
-/** Username, password or key passphrase, typed in the pane, never in the terminal. */
 const props = defineProps<{ prompt: SecretPrompt }>()
 const emit = defineEmits<{ answer: [answer: PromptAnswer] }>()
 const value = ref('')

@@ -12,7 +12,6 @@ import { useKeyActions } from './useKeyActions'
 import { useVaultActions } from './useVaultActions'
 import VaultField from './VaultField.vue'
 
-/** A key's public half, which is what users come here to copy. */
 const props = defineProps<{ keyId: Id }>()
 const vault = useVault()
 const actions = useVaultActions()

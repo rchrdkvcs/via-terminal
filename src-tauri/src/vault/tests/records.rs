@@ -53,7 +53,6 @@ fn hosts_inherit_from_groups_and_identities() {
     assert_eq!(plan.username.as_deref(), Some("admin"));
     assert_eq!(plan.password.as_deref().map(|p| p.as_str()), Some("pw"));
 
-    // A group cannot move inside its own child.
     let cycle = GroupInput {
         id: Some(parent.id),
         parent_id: Some(child.id),
@@ -62,7 +61,6 @@ fn hosts_inherit_from_groups_and_identities() {
     };
     assert!(vault.save_group(cycle).is_err());
 
-    // Deleting the parent keeps the child and its host.
     vault.delete_group(parent.id).unwrap();
     assert_eq!(vault.plan(saved.id).unwrap().port, 22);
 }

@@ -1,6 +1,3 @@
-//! Inheritance: what a host actually uses once its groups and identity are
-//! taken into account, and where each value comes from.
-
 use super::model::{Group, Host, Id, Identity, VaultData};
 use serde::Serialize;
 
@@ -29,7 +26,6 @@ pub struct Effective {
     pub key_id: Option<Sourced<Id>>,
 }
 
-/// Inheritance levels from the most specific: the host, then each ancestor.
 enum Level<'a> {
     Host(&'a Host),
     Group(&'a Group),
@@ -38,7 +34,7 @@ enum Level<'a> {
 fn levels<'a>(data: &'a VaultData, host: &'a Host) -> Vec<Level<'a>> {
     let mut levels = vec![Level::Host(host)];
     let mut cursor = host.group_id;
-    // Bounded walk: validation forbids cycles, this guards against bad data.
+
     while let Some(id) = cursor.filter(|_| levels.len() <= data.groups.len() + 1) {
         let Some(group) = data.groups.iter().find(|group| group.id == id) else {
             break;

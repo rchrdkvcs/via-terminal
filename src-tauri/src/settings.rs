@@ -1,5 +1,3 @@
-//! Application preferences. Nothing about SSH lives here.
-
 use crate::{
     error::{AppError, AppResult},
     storage::Storage,
@@ -12,21 +10,20 @@ const DOCUMENT: &str = "settings";
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
-    /// `system`, `light` or `dark`.
     pub theme: String,
     pub font_family: String,
     pub font_size: u16,
     pub line_height: f32,
-    /// `block`, `bar` or `underline`.
+
     pub cursor_style: String,
     pub cursor_blink: bool,
     pub scrollback: u32,
     pub copy_on_select: bool,
-    /// Executable of the shell new local tabs use; `None` picks the system one.
+
     pub default_shell: Option<String>,
-    /// Save a quick-connect address as a host once authenticated.
+
     pub save_quick_connect: bool,
-    /// Ask before closing a tab whose session is running.
+
     pub confirm_close_running: bool,
 }
 

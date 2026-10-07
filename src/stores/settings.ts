@@ -19,7 +19,6 @@ export const defaultSettings: Settings = {
   confirmCloseRunning: false,
 }
 
-/** Preferences, plus what this machine offers (shells, platform). */
 export const useSettings = defineStore('settings', () => {
   const settings = ref<Settings>({ ...defaultSettings })
   const shells = ref<Shell[]>([])
@@ -39,7 +38,6 @@ export const useSettings = defineStore('settings', () => {
     platform.value = bootstrap.platform
   }
 
-  /** The shell a new local tab of a space uses. */
   function shellFor(spaceDefault: string | null): Shell | undefined {
     const wanted = spaceDefault ?? settings.value.defaultShell ?? systemShell.value
     return shells.value.find((shell) => shell.path === wanted) ?? shells.value[0]

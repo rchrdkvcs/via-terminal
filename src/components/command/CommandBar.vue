@@ -14,10 +14,6 @@ import { useUi } from '@/stores/ui'
 import CommandRow from './CommandRow.vue'
 import { useCommandResults } from './useCommandResults'
 
-/**
- * The command bar: one field for every way to open something. Arrow keys
- * move, Enter opens, Escape closes; the first line is always selected.
- */
 const ui = useUi()
 const query = ref('')
 const active = ref(0)
@@ -59,7 +55,6 @@ const showSection = (index: number) =>
 <template>
   <DialogRoot v-model:open="open">
     <DialogPortal>
-      <!-- Opened dozens of times a day: it appears at once, without motion. -->
       <DialogOverlay class="fixed inset-0 z-50 bg-black/15 dark:bg-black/35" />
       <DialogContent
         class="material-raised fixed start-1/2 top-[13vh] z-50 flex max-h-[min(580px,72vh)] w-[min(660px,calc(100vw-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-2xl text-popover-foreground outline-none"

@@ -1,5 +1,3 @@
-//! Local shells in a native PTY.
-
 use super::{
     events::{Event, EventSink, SessionState},
     shells::Shell,
@@ -83,8 +81,7 @@ pub fn spawn(
             }
         }
     });
-    // Waiting on the child, not on EOF: ConPTY keeps the pipe open after the
-    // shell exits until the master is dropped, which `ended` does.
+
     std::thread::spawn(move || {
         let exit_code = child.wait().ok().map(|status| status.exit_code() as i32);
         std::thread::sleep(std::time::Duration::from_millis(60));
@@ -122,7 +119,6 @@ impl SessionIo for LocalSession {
     }
 
     fn close(&self) {
-        // The waiter thread observes the exit and reports it.
         let _ = self.killer.lock().unwrap().kill();
     }
 }

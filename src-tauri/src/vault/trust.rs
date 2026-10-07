@@ -1,6 +1,3 @@
-//! The vault as the SSH client's store: verified server keys and secrets
-//! remembered after a successful authentication.
-
 use super::{
     model::{now_ms, Defaults, Host, Id, KnownHost, SecretKind},
     Vault,
@@ -55,8 +52,6 @@ impl ConnectionStore for Vault {
         }
         let saved = plan.host_id.is_none();
         self.commit_with_secrets(|data, secrets| {
-            // Authentication can finish after the user deleted its saved host.
-            // Only quick connect may create a host.
             if plan
                 .host_id
                 .is_some_and(|id| !data.hosts.iter().any(|host| host.id == id))

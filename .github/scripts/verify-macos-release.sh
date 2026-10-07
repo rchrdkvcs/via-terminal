@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-# Check the app inside the actual installer, before publishing that installer.
 shopt -s nullglob
 installers=(src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg)
 if [[ ${#installers[@]} -ne 1 ]]; then
@@ -23,5 +21,3 @@ if [[ ! -d "$app" ]]; then
   exit 1
 fi
 codesign --verify --deep --strict --verbose=2 "$app"
-# This release uses an ad-hoc signature without Apple notarization.
-# Gatekeeper approval is performed manually by the user after download.

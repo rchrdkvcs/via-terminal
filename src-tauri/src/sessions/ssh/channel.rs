@@ -1,9 +1,3 @@
-//! The shell channel: a PTY, a shell, and bytes both ways until one side ends.
-//!
-//! Input runs in its own task. Sending waits for window space, and the
-//! window adjustments that free it queue behind the output we read; reading
-//! in the same loop could deadlock a large paste against a chatty shell.
-
 use super::{closing, failure::Failure, handler::Client, Command, Context, Outcome, Size};
 use crate::sessions::events::{Event, SessionState};
 use russh::{
@@ -96,8 +90,6 @@ async fn forward_input(writer: ChannelWriteHalf<Msg>, mut commands: UnboundedRec
     }
 }
 
-/// The channel is gone: the shell exited, or the whole connection dropped.
-/// Without an exit status, a connection that ends right after tells them apart.
 async fn channel_ended(handle: &mut Handle<Client>, exit_code: Option<i32>) -> Outcome {
     if exit_code.is_some() {
         disconnect(handle).await;
@@ -113,6 +105,5 @@ async fn channel_ended(handle: &mut Handle<Client>, exit_code: Option<i32>) -> O
 }
 
 async fn disconnect(handle: &Handle<Client>) {
-    // Best effort: the connection may already be gone.
     let _ = handle.disconnect(Disconnect::ByApplication, "", "fr").await;
 }

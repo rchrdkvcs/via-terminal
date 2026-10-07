@@ -3,11 +3,6 @@ import { cva } from 'class-variance-authority'
 
 export { default as Button } from './Button.vue'
 
-/**
- * Buttons are made of the materials in `styles/materials.css`: the accent is
- * the one filled button of a view, `secondary` is a lit control, `ghost` a
- * quiet action that only shows on hover.
- */
 export const buttonVariants = cva(
   "press inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-[13px] font-medium outline-none disabled:pointer-events-none disabled:opacity-45 focus-visible:ring-3 focus-visible:ring-ring/30 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {

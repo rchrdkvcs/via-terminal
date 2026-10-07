@@ -6,7 +6,6 @@ import SplitView from './SplitView.vue'
 import TabPane from './TabPane.vue'
 import TerminalSearch from './TerminalSearch.vue'
 
-/** The active row of the active space: one terminal, or a split view. */
 const workbench = useWorkbench()
 </script>
 

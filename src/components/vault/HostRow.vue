@@ -6,7 +6,6 @@ import { useHostName } from '@/composables/useHostName'
 import { useVault } from '@/stores/vault'
 import VaultRow from './VaultRow.vue'
 
-/** A host in the list: name, where it connects, tags and how it authenticates. */
 const props = defineProps<{ host: Host; selected: boolean; tabbable: boolean }>()
 defineEmits<{ select: []; connect: [] }>()
 const vault = useVault()

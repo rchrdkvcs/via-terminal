@@ -29,8 +29,6 @@ fn label_or(label: &str, fallback: &str) -> String {
 }
 
 impl Vault {
-    /// Import a pasted or file-read private key. The text is stored as given,
-    /// so an encrypted key stays encrypted at rest.
     pub fn import_key(&self, import: KeyImport) -> AppResult<Key> {
         let text = Zeroizing::new(import.private_key.trim().to_string() + "\n");
         let passphrase = import.passphrase.as_deref().filter(|p| !p.is_empty());
@@ -91,7 +89,6 @@ impl Vault {
         })
     }
 
-    /// Hosts and identities using the key lose the reference.
     pub fn delete_key(&self, id: Id) -> AppResult<()> {
         self.commit_with_secrets(|data, secrets| {
             let before = data.keys.len();

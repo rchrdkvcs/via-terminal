@@ -1,9 +1,4 @@
 name: Release
-
-# Installers are built when a GitHub Release is published, then uploaded
-# onto that same release. Pushes and pull requests do not build packages.
-# Use workflow_dispatch with an existing release tag to rebuild its assets
-# or prepare a draft release before publication.
 on:
   release:
     types: [published]
@@ -118,7 +113,6 @@ jobs:
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Ad-hoc signing requires no Apple certificate or notarization account.
           APPLE_SIGNING_IDENTITY: '-'
         with:
           uploadUpdaterJson: false

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** An empty list as an invitation: what is missing, and the way to add it. */
 defineProps<{ title: string; description: string }>()
 </script>
 

@@ -1,6 +1,3 @@
-//! Every mutation returns the whole vault view, so the interface replaces its
-//! copy instead of patching it, plus the id of what was created or changed.
-
 use super::App;
 use crate::{
     error::AppResult,

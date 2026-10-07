@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { Prompt, PromptAnswer } from '@/ipc/types'
 
-/** Server challenges such as a one-time code. Answers are never stored. */
 const props = defineProps<{ prompt: Extract<Prompt, { kind: 'keyboardInteractive' }> }>()
 const emit = defineEmits<{ answer: [answer: PromptAnswer] }>()
 const values = ref(props.prompt.fields.map(() => ''))

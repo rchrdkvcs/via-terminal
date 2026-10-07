@@ -5,7 +5,6 @@ import { terminals } from '@/terminal/registry'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
 
-/** Find in the focused terminal's scrollback. */
 const ui = useUi()
 const workbench = useWorkbench()
 const query = ref('')

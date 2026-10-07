@@ -1,46 +1,31 @@
 import type { TrackpadSwipeEvent } from '@/ipc/types'
 
-/** One step of a touchpad swipe, as the OS phases it (or as wheel events are read). */
 export type Pan = TrackpadSwipeEvent
 
-/*
- * Values from Firefox's swipe tracker (widget/SwipeTracker.cpp and the
- * `widget.swipe.*` prefs), with the velocity weight Zen gives space swipes.
- */
-/** Finger travel, in px, that makes a whole swipe. */
 export const PIXEL_SIZE = 550
-/** Share of a whole swipe that switches once the fingers lift. */
+
 export const THRESHOLD = 0.25
-/** Weight of the fingers' speed, in swipes per second, when they lift. */
+
 const VELOCITY_CONTRIBUTION = 0.5
-/** Fingers lifting while moving back, however slowly, cancel. */
+
 const TWITCH_TOLERANCE = 1e-7
-/** Shortest time an event is taken to cover, so a burst does not read as a fling. */
+
 const MIN_ELAPSED = 8
 
 export interface SwipeSink {
-  /** Whether there is another space to swipe to; without one the gesture is ignored. */
   canSwipe(): boolean
-  /** The fingers landed and the swipe is on. */
+
   begin(): void
-  /** How far the swipe has gone, in whole swipes: positive towards the next space. */
+
   move(amount: number): void
-  /** The swipe crossed its threshold, one way or the other. */
+
   cross(): void
-  /** The fingers lifted past the threshold: switch, carrying their speed in swipes per second. */
+
   commit(direction: 1 | -1, velocity: number): void
-  /** The fingers lifted short of it: spring back, carrying their speed. */
+
   cancel(velocity: number): void
 }
 
-/**
- * Follows a phased touchpad gesture the way Firefox does for Zen's spaces.
- *
- * The first movement sets the direction, and the swipe never goes past its
- * start the other way. Lifting the fingers switches when the distance, plus
- * the speed they left with, reaches `THRESHOLD`; moving back at the end always
- * cancels. Momentum after the lift is not a swipe and never reaches here.
- */
 export function createSwipeTracker(sink: SwipeSink) {
   let tracking = false
   let direction: 1 | -1 | 0 = 0
@@ -69,7 +54,7 @@ export function createSwipeTracker(sink: SwipeSink) {
       success = now
       sink.cross()
     }
-    // Short of switching, never look as if it would.
+
     const shown =
       !now && Math.abs(amount) >= THRESHOLD ? Math.sign(amount) * 0.999 * THRESHOLD : amount
     sink.move(shown)
@@ -105,10 +90,6 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
-/**
- * A critically damped spring towards 0, in closed form: no bounce, and it
- * keeps whatever speed it is started with.
- */
 export function spring(from: number, velocity: number, omega: number) {
   const b = velocity + omega * from
   return (seconds: number) => {

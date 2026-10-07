@@ -5,7 +5,6 @@ import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
 
-/** Deleting a space stops its sessions; running ones ask first. */
 export function useSpaceRemoval() {
   const spaces = useSpaces()
   const sessions = useSessions()

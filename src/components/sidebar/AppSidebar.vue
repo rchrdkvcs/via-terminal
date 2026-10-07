@@ -5,10 +5,6 @@ import SpacePanel from './SpacePanel.vue'
 import SpaceSwitcher from './SpaceSwitcher.vue'
 import { useSpaceTrack } from './useSpaceTrack'
 
-/**
- * Below the window title bar: the active space (pinned rows, New tab, the
- * temporary rows), and the space switcher.
- */
 const spaces = useSpaces()
 const sidebar = ref<HTMLElement>()
 const { onWheel, place, moving } = useSpaceTrack(sidebar)
@@ -21,7 +17,6 @@ const { onWheel, place, moving } = useSpaceTrack(sidebar)
     aria-label="Barre latérale"
     @wheel="onWheel"
   >
-    <!-- Spaces sit side by side; a swipe pulls the next one in from its side. -->
     <div class="track grid min-h-0 flex-1" data-space-track>
       <SpacePanel
         v-for="space in spaces.spaces"

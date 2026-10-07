@@ -2,13 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { effectScope } from 'vue'
 import { deferredBackend, editor, record } from '@/test/vaultSaves'
 
-/** An editor that the test can close, as selecting another record does. */
 function closable(...args: Parameters<typeof editor>) {
   const scope = effectScope()
   return { ...scope.run(() => editor(...args))!, close: () => scope.stop() }
 }
 
-// The vault page remounts its editor on every selection: A → B → A.
 describe('useDraft saves shared between editors of one record', () => {
   it('saves a reopened editor after the closed one, in order', async () => {
     const backend = deferredBackend()
@@ -63,7 +61,7 @@ describe('useDraft saves shared between editors of one record', () => {
     void creator.commit()
     creator.close()
     await backend.settle('created')
-    // The created record opens in its own editor while the queue still runs.
+
     const opened = editor(record('created'), backend.save)
     opened.draft.value.name = 'edited'
     const edited = opened.autosave()

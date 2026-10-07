@@ -12,10 +12,6 @@ import PromptHostKey from './PromptHostKey.vue'
 import PromptInteractive from './PromptInteractive.vue'
 import PromptSecret from './PromptSecret.vue'
 
-/**
- * Everything a pane shows instead of, or over, its terminal: asleep, the
- * connection steps, a question from the server, or what went wrong.
- */
 const props = defineProps<{ tab: Tab }>()
 const sessions = useSessions()
 const workbench = useWorkbench()

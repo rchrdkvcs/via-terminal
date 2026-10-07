@@ -1,8 +1,3 @@
-//! Unlocking the plan's private key, asking for its passphrase when needed.
-//!
-//! The stored passphrase is tried first. A key that is merely unreadable is
-//! skipped without bothering the user; an encrypted one gets a few prompts.
-
 use super::{asker::Asker, PlanKey};
 use crate::sessions::prompts::{Prompt, PromptAnswer};
 use russh::keys::{decode_secret_key, Error, PrivateKey};
@@ -10,13 +5,11 @@ use zeroize::Zeroizing;
 
 const PASSPHRASE_ATTEMPTS: usize = 3;
 
-/// The decoded key, with the passphrase the user typed and asked to remember.
 pub(super) struct Unlocked {
     pub key: PrivateKey,
     pub remember: Option<Zeroizing<String>>,
 }
 
-/// `None` when the key cannot be used: unreadable, or the user gave up.
 pub(super) async fn unlock(key: &PlanKey, asker: &Asker) -> Option<Unlocked> {
     let stored = key
         .passphrase
@@ -54,9 +47,6 @@ pub(super) async fn unlock(key: &PlanKey, asker: &Asker) -> Option<Unlocked> {
     None
 }
 
-/// Whether failing to decode means a passphrase is missing or wrong, rather
-/// than the key being unusable. Encrypted PKCS#8 and PuTTY keys do not report
-/// `KeyIsEncrypted` without a passphrase, so their text is checked too.
 fn needs_passphrase(text: &str, error: &Error, passphrase_tried: bool) -> bool {
     passphrase_tried
         || matches!(error, Error::KeyIsEncrypted)

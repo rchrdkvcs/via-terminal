@@ -13,7 +13,6 @@ import SettingRow from '../SettingRow.vue'
 
 const store = useSettings()
 
-/** Select items cannot hold null, so "follow the system" gets a sentinel. */
 const SYSTEM = '__system__'
 
 const systemLabel = computed(() => `Shell du système (${store.shellName(store.systemShell)})`)

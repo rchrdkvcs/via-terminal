@@ -1,5 +1,3 @@
-//! A vault stand-in that answers with a fixed key status and records calls.
-
 use super::{ConnectPlan, ConnectionStore, HostKeyStatus, Remembered, ServerKey};
 use crate::error::AppResult;
 use std::sync::Mutex;
@@ -8,7 +6,7 @@ use uuid::Uuid;
 pub struct FakeStore {
     status: HostKeyStatus,
     pub trusted: Mutex<Vec<ServerKey>>,
-    /// Username and remembered password of each `authenticated` call.
+
     pub authenticated: Mutex<Vec<(String, Option<String>)>>,
 }
 

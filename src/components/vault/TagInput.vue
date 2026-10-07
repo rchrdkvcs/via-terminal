@@ -3,7 +3,6 @@ import { X } from '@lucide/vue'
 import { ref } from 'vue'
 import { addTags } from './format'
 
-/** Tags as chips: Enter or a comma adds, Backspace on empty removes the last. */
 defineProps<{ id: string }>()
 const model = defineModel<string[]>({ required: true })
 const emit = defineEmits<{ commit: [] }>()

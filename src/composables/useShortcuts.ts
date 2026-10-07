@@ -8,10 +8,6 @@ import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
 
-/**
- * Application shortcuts, caught in the capture phase so xterm never sees
- * them. Anything that does not match reaches the terminal untouched.
- */
 export function useShortcuts() {
   const settings = useSettings()
   const spaces = useSpaces()
@@ -53,7 +49,7 @@ export function useShortcuts() {
   function onKeydown(event: KeyboardEvent) {
     const found = match(event, settings.platform)
     if (!found) return
-    // Dialogs own the keyboard, except to open the command bar from one.
+
     const dialog = document.querySelector('[role="dialog"], [role="alertdialog"]')
     if (dialog && found.id !== 'newTab') return
     event.preventDefault()

@@ -6,10 +6,6 @@ import { Input } from '@/components/ui/input'
 import type { SecretUpdate } from '@/ipc/types'
 import VaultField from './VaultField.vue'
 
-/**
- * A remembered password is never shown or sent back: the field offers to
- * replace or forget it, and only a typed value or Oublier changes it.
- */
 const props = defineProps<{ id: string; stored: boolean; available: boolean }>()
 const emit = defineEmits<{ commit: [] }>()
 const model = defineModel<SecretUpdate>({ required: true })
@@ -20,7 +16,7 @@ const input = useTemplateRef<InstanceType<typeof Input>>('input')
 watch(text, (value) => {
   model.value = value ? { action: 'set', value } : { action: 'keep' }
 })
-// Once saved, the draft goes back to "keep": the typed value must go too.
+
 watch(model, (next) => {
   if (next.action === 'keep' && text.value) text.value = ''
   if (next.action === 'keep') replacing.value = false

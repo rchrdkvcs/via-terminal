@@ -18,7 +18,6 @@ import UsernameField from './UsernameField.vue'
 import { useVaultOptions } from './useVaultOptions'
 import VaultField from './VaultField.vue'
 
-/** A group's name and the defaults its hosts and sub-groups inherit. */
 const props = defineProps<{ groupId: Id }>()
 const vault = useVault()
 const tree = useGroupTree()

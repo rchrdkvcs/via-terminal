@@ -19,10 +19,6 @@ import { notify } from '@/lib/notify'
 import { useVault } from '@/stores/vault'
 import VaultField from './VaultField.vue'
 
-/**
- * Imports a private key by pasting it or choosing a file. Either way the
- * content is copied into the vault; the file itself is never referenced.
- */
 const open = defineModel<boolean>('open', { required: true })
 const emit = defineEmits<{ imported: [id: Id] }>()
 const vault = useVault()

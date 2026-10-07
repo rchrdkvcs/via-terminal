@@ -10,7 +10,6 @@ import { useSessions } from '@/stores/sessions'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
 
-/** An asleep or failed tab: what it is, and the one obvious next step. */
 const props = defineProps<{ tab: Tab; mode: 'asleep' | 'failed' }>()
 const sessions = useSessions()
 const ui = useUi()
