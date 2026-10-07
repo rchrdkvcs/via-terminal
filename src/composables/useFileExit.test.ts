@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent } from 'vue'
@@ -7,6 +6,7 @@ import WindowControls from '@/components/shell/WindowControls.vue'
 import type { RemoteDocument } from '@/stores/file-documents'
 import { useFiles } from '@/stores/files'
 import { useFileExit } from './useFileExit'
+import capability from '../../src-tauri/capabilities/default.json'
 
 /**
  * Tauri 2 close protocol, shared by the macOS traffic light and the Windows
@@ -91,10 +91,7 @@ vi.mock('@tauri-apps/api/window', () => {
 })
 
 function grantsDestroy(): boolean {
-  const capability = JSON.parse(
-    readFileSync(new URL('../../src-tauri/capabilities/default.json', import.meta.url), 'utf8'),
-  ) as { permissions: string[] }
-  return capability.permissions.includes('core:window:allow-destroy')
+  return (capability.permissions as readonly string[]).includes('core:window:allow-destroy')
 }
 
 beforeEach(() => {
