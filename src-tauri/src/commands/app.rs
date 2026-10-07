@@ -1,10 +1,6 @@
 use super::App;
 use crate::{
-    error::AppResult,
-    layout::Layout,
-    sessions::shells::{self, Shell},
-    settings::Settings,
-    vault::VaultView,
+    error::AppResult, layout::Layout, sessions::shells::Shell, settings::Settings, vault::VaultView,
 };
 use serde::Serialize;
 use tauri::State;
@@ -27,8 +23,8 @@ pub fn app_bootstrap(app: State<App>) -> AppResult<Bootstrap> {
         layout: app.layouts.load()?,
         settings: app.settings.get(),
         vault: app.vault.view()?,
-        system_shell: shells::default_path(&app.shells),
-        shells: app.shells.clone(),
+        system_shell: app.shells.system_default().map(|shell| shell.path.clone()),
+        shells: app.shells.list().to_vec(),
         platform: std::env::consts::OS,
     })
 }
@@ -46,8 +42,7 @@ pub fn settings_save(app: State<App>, settings: Settings) -> AppResult<Settings>
 /// Called only after frontend persistence has completed, before installing.
 #[tauri::command]
 pub fn app_prepare_update(app: State<App>) {
-    app.sessions.close_all();
-    app.staging.clear();
+    app.shutdown();
 }
 
 #[tauri::command]

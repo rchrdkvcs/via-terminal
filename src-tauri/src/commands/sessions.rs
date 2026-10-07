@@ -1,7 +1,7 @@
 use super::App;
 use crate::{
-    error::{AppError, AppResult},
-    sessions::{prompts::PromptAnswer, shells, LocalSpec, Size},
+    error::AppResult,
+    sessions::{prompts::PromptAnswer, LocalSpec, Size},
     vault::model::Id,
 };
 use serde::Deserialize;
@@ -17,17 +17,9 @@ pub struct LocalTarget {
 
 #[tauri::command]
 pub fn session_open_local(app: State<App>, target: LocalTarget, size: Size) -> AppResult<Id> {
-    let wanted = target
-        .shell
-        .or_else(|| app.settings.get().default_shell)
-        .or_else(|| shells::default_path(&app.shells))
-        .ok_or_else(|| AppError::new("no_shell", "aucun shell n’a été trouvé sur cette machine"))?;
     let shell = app
         .shells
-        .iter()
-        .find(|shell| shell.path == wanted)
-        .cloned()
-        .ok_or_else(|| AppError::new("no_shell", "ce shell n’est pas installé"))?;
+        .resolve(target.shell, app.settings.get().default_shell)?;
     app.sessions.open_local(
         LocalSpec {
             shell,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Folder, Row } from '@/ipc/types'
+import { LAYOUT_LIMITS } from './limits'
 import { apply, transfer, type Intent } from './organize'
 import { type Space, locate, rows, tabs } from './space'
 
@@ -144,6 +145,43 @@ describe('organize', () => {
     ])
     expect(rejected).toBeNull()
     expect(tabs(state)[0].title).toBeNull()
+  })
+})
+
+describe('layout limits', () => {
+  const { nameLength, titleLength } = LAYOUT_LIMITS
+
+  it('refuses tab titles the layout would reject', () => {
+    const state = space([], [tab('a')])
+    const title = (value: string) =>
+      apply(state, { type: 'updateTab', tabId: 'a', patch: { title: value } })
+    expect(title('t'.repeat(titleLength))).not.toBeNull()
+    expect(title('t'.repeat(titleLength + 1))).toBeNull()
+    expect(title('   ')).toBeNull()
+  })
+
+  it('refuses folder names the layout would reject', () => {
+    const state = space([folder('f')])
+    const rename = (name: string) => apply(state, { type: 'renameFolder', id: 'f', name })
+    expect(rename('n'.repeat(nameLength))).not.toBeNull()
+    expect(rename('n'.repeat(nameLength + 1))).toBeNull()
+    const long = { ...folder('g'), name: 'n'.repeat(nameLength + 1) }
+    expect(apply(state, { type: 'createFolder', folder: long, before: null })).toBeNull()
+  })
+
+  it('refuses split views outside the allowed tab count', () => {
+    const tooMany: Row = {
+      kind: 'split',
+      id: 'big',
+      direction: 'horizontal',
+      sizes: [1, 1, 1, 1, 1],
+      tabs: ['a', 'b', 'c', 'd', 'e'].map((id) => ({
+        id,
+        title: null,
+        target: { kind: 'local', shell: null, cwd: null },
+      })),
+    }
+    expect(apply(space(), { type: 'open', row: tooMany })).toBeNull()
   })
 })
 

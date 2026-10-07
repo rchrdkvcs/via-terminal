@@ -2,7 +2,6 @@
 import { Copy, Plug, Trash2 } from '@lucide/vue'
 import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
-import { api } from '@/ipc/client'
 import type { Id } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
 import { relativeTime } from './format'
@@ -25,7 +24,6 @@ const actions = useVaultActions()
 const { draft, error, saving, commit, autosave } = useDraft({
   kind: 'host',
   source: () => hostInput(props.hostId ? vault.host(props.hostId) : undefined, state.scope.value),
-  save: (input) => vault.mutate(() => api.vault.saveHost(input)),
   validate: requireAddress,
 })
 

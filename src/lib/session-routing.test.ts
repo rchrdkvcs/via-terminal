@@ -33,4 +33,15 @@ describe('SessionRouting', () => {
     routing.bind('s1', 't1')
     expect(seen).toEqual(['exit'])
   })
+
+  it('remembers only the most recently finished sessions', () => {
+    const routing = new SessionRouting(2)
+    const seen: string[] = []
+    for (const id of ['s1', 's2', 's3']) routing.finish(id)
+    routing.route('s3', () => seen.push('s3'))
+    routing.route('s2', () => seen.push('s2'))
+    routing.route('s1', () => seen.push('s1'))
+    for (const id of ['s1', 's2', 's3']) routing.bind(id, 't1')
+    expect(seen).toEqual(['s1'])
+  })
 })

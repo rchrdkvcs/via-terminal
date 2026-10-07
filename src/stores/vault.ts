@@ -2,7 +2,18 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '@/ipc/client'
 import { on } from '@/ipc/events'
-import type { Group, Host, Id, Mutation, VaultView } from '@/ipc/types'
+import type {
+  Group,
+  GroupInput,
+  Host,
+  HostInput,
+  Id,
+  IdentityInput,
+  Mutation,
+  VaultView,
+} from '@/ipc/types'
+import { groupInput, hostInput, identityInput } from './vault-inputs'
+import { createVaultSaves, type RecordKind, type SaveOutcome } from './vault-saves'
 
 const empty: VaultView = {
   groups: [],
@@ -14,7 +25,20 @@ const empty: VaultView = {
   passphrases: [],
   secretsAvailable: false,
   effective: {},
+  revision: -1,
 }
+
+const savers = {
+  host: (input: HostInput) => api.vault.saveHost(input),
+  group: (input: GroupInput) => api.vault.saveGroup(input),
+  identity: (input: IdentityInput) => api.vault.saveIdentity(input),
+} as const
+
+const removers = {
+  host: (id: Id) => api.vault.deleteHost(id),
+  group: (id: Id) => api.vault.deleteGroup(id),
+  identity: (id: Id) => api.vault.deleteIdentity(id),
+} as const
 
 export const useVault = defineStore('vault', () => {
   const view = ref<VaultView>(empty)
@@ -59,9 +83,14 @@ export const useVault = defineStore('vault', () => {
     return view.value.passwords.includes(id)
   }
 
+  /** A reply computed before the current view never replaces it. */
+  function apply(next: VaultView) {
+    if (next.revision >= view.value.revision) view.value = next
+  }
+
   function mutate(run: () => Promise<Mutation>): Promise<Id | null> {
     const operation = run().then((result) => {
-      view.value = result.vault
+      apply(result.vault)
       return result.id
     })
     pending.add(operation)
@@ -70,11 +99,57 @@ export const useVault = defineStore('vault', () => {
     return operation
   }
 
+  function current(kind: RecordKind, id: Id) {
+    if (kind === 'host') {
+      const found = host(id)
+      return found && hostInput(found)
+    }
+    if (kind === 'group') {
+      const found = group(id)
+      return found && groupInput(found)
+    }
+    const found = view.value.identities.find((candidate) => candidate.id === id)
+    return found && identityInput(found)
+  }
+
+  const saves = createVaultSaves({
+    save: (kind, input) => mutate(() => savers[kind](input as never)),
+    current: (kind, id) => current(kind, id) as never,
+  })
+
+  /** Every host, group or identity write goes through the per-record save queue. */
+  function save<T extends { id: Id | null }>(kind: RecordKind, owner: object, input: T) {
+    return saves.queue(kind, owner, input)
+  }
+
+  async function patched<T>(outcome: Promise<SaveOutcome<T>>): Promise<Id | null> {
+    const result = await outcome
+    if (!result.id && 'cause' in result) throw result.cause
+    return result.id
+  }
+
+  function createGroup(parentId: Id | null): Promise<Id | null> {
+    const defaults = { username: null, port: null, identityId: null }
+    return patched(save('group', {}, { id: null, parentId, name: 'Nouveau groupe', defaults }))
+  }
+
+  async function remove(kind: RecordKind, id: Id): Promise<Id | null> {
+    await saves.cancel(kind, id)
+    return mutate(() => removers[kind](id))
+  }
+
+  async function duplicateHost(id: Id): Promise<Id | null> {
+    await saves.settled('host', id)
+    return mutate(() => api.vault.duplicateHost(id))
+  }
+
   async function flush() {
+    await saves.flush()
     while (pending.size) {
       const results = await Promise.allSettled(pending)
       const failed = results.find((result) => result.status === 'rejected')
       if (failed?.status === 'rejected') throw failed.reason
+      await saves.flush()
     }
   }
 
@@ -83,31 +158,22 @@ export const useVault = defineStore('vault', () => {
     return Boolean(found && (!found.label || found.label === found.address))
   }
 
-  async function rename(id: Id, label: string) {
-    const found = host(id)
-    if (!found) return
-    await mutate(() =>
-      api.vault.saveHost({
-        id: found.id,
-        ownCredentials: found.ownCredentials,
-        groupId: found.groupId,
-        label,
-        address: found.address,
-        overrides: found.overrides,
-        keyId: found.keyId,
-        tags: found.tags,
-        notes: found.notes,
-        password: { action: 'keep' },
-      }),
-    )
+  async function rename(id: Id, label: string): Promise<Id | null> {
+    if (!host(id)) return null
+    return patched(saves.patch<HostInput>('host', id, (latest) => ({ ...latest, label })))
+  }
+
+  async function renameGroup(id: Id, name: string): Promise<Id | null> {
+    if (!group(id)) return null
+    return patched(saves.patch<GroupInput>('group', id, (latest) => ({ ...latest, name })))
   }
 
   async function refresh() {
-    view.value = await api.vault.get()
+    apply(await api.vault.get())
   }
 
   function hydrate(next: VaultView) {
-    view.value = next
+    apply(next)
   }
 
   on('vault-changed', () => void refresh().catch(() => undefined))
@@ -121,7 +187,12 @@ export const useVault = defineStore('vault', () => {
     recentHosts,
     hasPassword,
     isUnnamed,
+    save,
     rename,
+    renameGroup,
+    createGroup,
+    remove,
+    duplicateHost,
     mutate,
     flush,
     refresh,

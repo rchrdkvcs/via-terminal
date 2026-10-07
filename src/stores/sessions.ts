@@ -1,9 +1,13 @@
 import { defineStore } from 'pinia'
 import { onScopeDispose, reactive } from 'vue'
 import { api, describeError } from '@/ipc/client'
-import type { Id, Prompt, PromptAnswer, SessionState, Tab } from '@/ipc/types'
+import { on } from '@/ipc/events'
+import type { Id, Prompt, PromptAnswer, SessionState, SessionStateEvent, Tab } from '@/ipc/types'
+import { findTab } from '@/domain/space'
+import { decodeBase64 } from '@/lib/base64'
+import { SessionRouting } from '@/lib/session-routing'
 import { terminals } from '@/terminal/registry'
-import { createSessionEvents } from './session-events'
+import { useSpaces } from './spaces'
 
 export type TabState = SessionState | 'asleep'
 
@@ -17,6 +21,9 @@ export interface TabRuntime {
   autoTitle: string | null
 }
 
+type EndedListener = (tabId: Id, event: SessionStateEvent) => void
+type HostSavedListener = (tabId: Id, hostId: Id) => void
+
 const asleep = (): TabRuntime => ({
   sessionId: null,
   state: 'asleep',
@@ -26,13 +33,17 @@ const asleep = (): TabRuntime => ({
   autoTitle: null,
 })
 
-export const LIVE: readonly TabState[] = ['connecting', 'verifying', 'authenticating', 'ready']
+const LIVE: readonly TabState[] = ['connecting', 'verifying', 'authenticating', 'ready']
+const ENDED: readonly TabState[] = ['exited', 'disconnected', 'failed']
+const ENTER = String.fromCharCode(13)
 
 export const useSessions = defineStore('sessions', () => {
+  const spaces = useSpaces()
   const runtimes = reactive<Record<Id, TabRuntime>>({})
-  const { routing, onEnded, onHostSaved } = createSessionEvents(runtimes, LIVE)
-
+  const routing = new SessionRouting()
   const openings = new Map<Id, symbol>()
+  const endedListeners = new Set<EndedListener>()
+  const hostSavedListeners = new Set<HostSavedListener>()
 
   function runtime(tabId: Id): TabRuntime {
     return runtimes[tabId] ?? asleep()
@@ -100,9 +111,13 @@ export const useSessions = defineStore('sessions', () => {
     terminals.release(tabId)
   }
 
-  function write(tabId: Id, data: string) {
-    const sessionId = runtimes[tabId]?.sessionId
-    if (sessionId && runtime(tabId).state === 'ready') {
+  function input(tabId: Id, data: string) {
+    const { sessionId, state } = runtime(tabId)
+    if (data === ENTER && ENDED.includes(state)) {
+      const space = spaces.spaceOf(tabId)
+      const tab = space && findTab(space, tabId)
+      if (tab) void start(tab, space.defaultShell)
+    } else if (sessionId && state === 'ready') {
       void api.session.write(sessionId, data).catch(() => undefined)
     }
   }
@@ -123,11 +138,66 @@ export const useSessions = defineStore('sessions', () => {
     if (runtimes[tabId] && title) runtimes[tabId].autoTitle = title.slice(0, 200)
   }
 
-  onScopeDispose(() => Object.keys(runtimes).forEach(release))
-
   function tabOf(sessionId: Id): Id | undefined {
     return routing.tabOf(sessionId)
   }
+
+  function onEnded(listener: EndedListener): () => void {
+    endedListeners.add(listener)
+    return () => endedListeners.delete(listener)
+  }
+
+  function onHostSaved(listener: HostSavedListener): () => void {
+    hostSavedListeners.add(listener)
+    return () => hostSavedListeners.delete(listener)
+  }
+
+  function runtimeOf(tabId: Id, sessionId: Id): TabRuntime | undefined {
+    const current = runtimes[tabId]
+    return current?.sessionId === sessionId ? current : undefined
+  }
+
+  function applyState(tabId: Id, event: SessionStateEvent) {
+    const current = runtimeOf(tabId, event.sessionId)
+    if (!current) return
+    Object.assign(current, { state: event.state, message: event.message, exitCode: event.exitCode })
+    if (!LIVE.includes(event.state)) {
+      current.prompt = null
+      routing.finish(event.sessionId)
+      endedListeners.forEach((listener) => listener(tabId, event))
+    }
+  }
+
+  const unsubscribe = [
+    on('vault-changed', ({ sessionId, hostId }) => {
+      if (!hostId) return
+      routing.route(sessionId, (tabId) =>
+        hostSavedListeners.forEach((listener) => listener(tabId, hostId)),
+      )
+    }),
+    on('session-state', (event) =>
+      routing.route(event.sessionId, (tabId) => applyState(tabId, event)),
+    ),
+    on('terminal-output', ({ sessionId, dataBase64 }) => {
+      const bytes = decodeBase64(dataBase64)
+      routing.route(sessionId, (tabId) => terminals.feed(tabId, bytes))
+    }),
+    on('session-prompt', ({ sessionId, promptId, prompt }) =>
+      routing.route(sessionId, (tabId) => {
+        const current = runtimeOf(tabId, sessionId)
+        if (!current) return
+        if (prompt) current.prompt = { id: promptId, prompt }
+        else if (current.prompt?.id === promptId) current.prompt = null
+      }),
+    ),
+  ]
+
+  onScopeDispose(() => {
+    unsubscribe.forEach((stop) => stop())
+    endedListeners.clear()
+    hostSavedListeners.clear()
+    Object.keys(runtimes).forEach(release)
+  })
 
   return {
     runtime,
@@ -135,7 +205,7 @@ export const useSessions = defineStore('sessions', () => {
     start,
     stop,
     release,
-    write,
+    input,
     resize,
     answer,
     setAutoTitle,

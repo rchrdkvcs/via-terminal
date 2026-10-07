@@ -84,6 +84,7 @@ export interface VaultView {
   passphrases: Id[]
   secretsAvailable: boolean
   effective: Record<Id, Effective>
+  revision: number
 }
 
 export type SecretUpdate =

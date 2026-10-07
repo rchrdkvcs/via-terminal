@@ -3,7 +3,6 @@ import { Trash2 } from '@lucide/vue'
 import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { api } from '@/ipc/client'
 import type { Id } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
 import IconAction from './IconAction.vue'
@@ -27,7 +26,6 @@ const identity = computed(() => vault.view.identities.find((item) => item.id ===
 const { draft, error, saving, commit, autosave } = useDraft({
   kind: 'identity',
   source: () => identityInput(identity.value),
-  save: (input) => vault.mutate(() => api.vault.saveIdentity(input)),
   validate: requireUsername,
 })
 
