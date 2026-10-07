@@ -2,7 +2,6 @@
 import { Input } from '@/components/ui/input'
 import VaultField from './VaultField.vue'
 
-/** A username override: clearing the field means "inherit", stored as null. */
 withDefaults(defineProps<{ id: string; placeholder: string; label?: string }>(), {
   label: 'Utilisateur',
 })

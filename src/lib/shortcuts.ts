@@ -1,13 +1,3 @@
-/**
- * Every application shortcut, in one place: matched by `useShortcuts` and
- * listed in settings.
- *
- * Outside macOS, application shortcuts use Ctrl+Shift, as in Windows Terminal
- * and GNOME Terminal: Ctrl+W, Ctrl+D, Ctrl+L, Ctrl+K, Ctrl+T and Ctrl+B are
- * line-editing keys of the shell and must reach it untouched.
- */
-
-/** Key names pressed together; the last one is the key itself. */
 export type Combo = string[]
 
 export type ActionId =
@@ -102,7 +92,6 @@ function keyOf(event: KeyboardEvent): string {
   return event.key
 }
 
-/** The action a key press triggers, with the digit for `space`. */
 export function match(
   event: KeyboardEvent,
   platform: string,

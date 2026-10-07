@@ -1,4 +1,3 @@
-/** Lucide icon names offered for spaces, with their accessible names. */
 export const spaceIcons = [
   { id: 'terminal', label: 'Terminal' },
   { id: 'server', label: 'Serveur' },

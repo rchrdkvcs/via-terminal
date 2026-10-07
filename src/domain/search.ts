@@ -1,9 +1,3 @@
-/**
- * Ranking for the command bar. A query matches when its characters appear in
- * order; consecutive runs, word starts and earlier fields score higher, so
- * "pw" finds "prod-web" before "app-www".
- */
-
 function normalize(value: string): string {
   return value
     .normalize('NFD')
@@ -11,7 +5,6 @@ function normalize(value: string): string {
     .toLocaleLowerCase()
 }
 
-/** Score of `query` in one text, or 0 when it does not match. */
 export function scoreText(query: string, text: string): number {
   const needle = normalize(query).replace(/\s+/g, '')
   const haystack = normalize(text)
@@ -33,7 +26,6 @@ export function scoreText(query: string, text: string): number {
   return Math.min(score, 500)
 }
 
-/** Best score across fields; the first field (the name) weighs most. */
 export function scoreFields(query: string, fields: Array<string | null | undefined>): number {
   let best = 0
   fields.forEach((field, index) => {

@@ -1,8 +1,5 @@
-/**
- * Smoke check of the real application over CDP: local shell round trip,
- * command bar, pin, split, and restoration after a reload. It works in a
- * throwaway space so the user's own spaces are never touched.
- */
+
+
 import { connect } from './cdp.mjs'
 
 const app = await connect()

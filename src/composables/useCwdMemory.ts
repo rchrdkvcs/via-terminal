@@ -4,11 +4,6 @@ import { parseOsc7, parseOsc9 } from '@/lib/cwd'
 import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
 
-/**
- * A local tab follows its shell's working directory, so pinning it and
- * reopening it later lands where the work was. Only the directory is kept,
- * never what was typed.
- */
 export function useCwdMemory() {
   const settings = useSettings()
   const spaces = useSpaces()

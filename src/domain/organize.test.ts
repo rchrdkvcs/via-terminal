@@ -31,7 +31,7 @@ function space(pinned: Space['pinned'] = [], temporary: Row[] = []): Space {
 function must(state: Space, intent: Intent): Space {
   const next = apply(state, intent)
   expect(next).not.toBeNull()
-  // Identity invariant: every tab appears exactly once.
+
   const ids = tabs(next!).map((t) => t.id)
   expect(new Set(ids).size).toBe(ids.length)
   return next!
@@ -80,7 +80,7 @@ describe('organize', () => {
     state = must(state, { type: 'split', source: 'b', target: split.id, edge: 'right' })
     state = must(state, { type: 'split', source: 'd', target: split.id, edge: 'right' })
     expect(apply(state, { type: 'split', source: 'e', target: split.id, edge: 'right' })).toBeNull()
-    // A vertical edge on a horizontal split is refused rather than guessed.
+
     expect(apply(state, { type: 'split', source: 'e', target: split.id, edge: 'top' })).toBeNull()
   })
 

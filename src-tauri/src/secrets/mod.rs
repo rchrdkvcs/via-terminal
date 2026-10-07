@@ -1,11 +1,3 @@
-//! Encrypted secret storage.
-//!
-//! Secrets are sealed with ChaCha20-Poly1305 and stored as blobs. The 256-bit
-//! key comes from a [`KeySource`]: the OS keychain in the app, a fixed key in
-//! tests. Without a key, secrets are unavailable and callers must ask the user
-//! every time instead of storing anything in clear. Writes are only sealed
-//! here: the vault persists them in the same transaction as its document.
-
 mod keychain;
 
 use crate::{
@@ -24,7 +16,6 @@ pub use keychain::OsKeychain;
 
 const NONCE_LEN: usize = 12;
 
-/// Provides the master key, creating it on first use when the store allows.
 pub trait KeySource {
     fn master_key(&self) -> Option<Zeroizing<[u8; 32]>>;
 }
@@ -46,7 +37,6 @@ impl Secrets {
         self.cipher.is_some()
     }
 
-    /// Encrypt `secret` as a blob change, for the caller to persist with its document.
     pub(crate) fn seal(&self, id: &str, secret: &[u8]) -> AppResult<BlobChange> {
         let cipher = self.cipher()?;
         let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);

@@ -1,6 +1,3 @@
-//! What sessions tell the interface. The [`EventSink`] seam has a Tauri
-//! adapter in the app and a recording adapter in tests.
-
 use super::prompts::Prompt;
 use serde::Serialize;
 use uuid::Uuid;
@@ -8,19 +5,18 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SessionState {
-    /// Local process starting, or SSH resolving and opening the socket.
     Connecting,
-    /// SSH: checking the server key.
+
     Verifying,
-    /// SSH: trying credentials.
+
     Authenticating,
-    /// Input and output flow.
+
     Ready,
-    /// The process or remote shell ended on its own.
+
     Exited,
-    /// Could not start or connect.
+
     Failed,
-    /// SSH: the connection dropped while ready.
+
     Disconnected,
 }
 
@@ -41,13 +37,12 @@ pub enum Event {
         prompt_id: Uuid,
         prompt: Prompt,
     },
-    /// A prompt was withdrawn without an answer (session closed, timed out).
+
     PromptClosed {
         session_id: Uuid,
         prompt_id: Uuid,
     },
-    /// The vault changed as a side effect of a session (quick-connect save,
-    /// accepted key, remembered password).
+
     VaultChanged {
         session_id: Uuid,
         host_id: Option<Uuid>,

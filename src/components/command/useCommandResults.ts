@@ -15,7 +15,6 @@ const PLACEHOLDERS: Record<CommandMode['kind'], string> = {
   actions: 'Rechercher une action',
 }
 
-/** What the bar lists for a mode and query, and what choosing a line does. */
 export function useCommandResults(query: Ref<string>) {
   const ui = useUi()
   const spaces = useSpaces()
@@ -55,7 +54,6 @@ export function useCommandResults(query: Ref<string>) {
         ]
       case 'new':
         return [
-          // Typing a shell or host name means opening one; switching comes after.
           ...found.quick,
           ...found.shells,
           ...found.hosts,
@@ -65,7 +63,6 @@ export function useCommandResults(query: Ref<string>) {
     }
   })
 
-  /** Only a standalone tab of this space can join the view of another. */
   function canJoin(anchorTabId: Id, tabId: Id | undefined): boolean {
     const row = tabId ? rowOfTab(spaces.active, tabId) : undefined
     return row?.kind === 'tab' && row.id !== rowOfTab(spaces.active, anchorTabId)?.id
@@ -80,7 +77,7 @@ export function useCommandResults(query: Ref<string>) {
     const current = mode.value
     ui.closeCommand()
     if (item.run) return item.run()
-    // Opening anything brings the terminals back into view.
+
     ui.route = 'workbench'
     if (current.kind === 'split') splitWith(current.tabId, item)
     else if (item.tabId) workbench.activate(item.tabId)

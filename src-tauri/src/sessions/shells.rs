@@ -1,13 +1,9 @@
-//! Local shells installed on this machine. Only a detected executable may be
-//! launched: the interface names a shell, it never supplies a path.
-
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Shell {
-    /// The executable, as launched.
     pub path: String,
     pub name: String,
     pub args: Vec<String>,
@@ -43,7 +39,6 @@ pub fn detect() -> Vec<Shell> {
     shells
 }
 
-/// The user's login shell on Unix, PowerShell on Windows, else the first found.
 pub fn default_path(shells: &[Shell]) -> Option<String> {
     let preferred = if cfg!(windows) {
         None

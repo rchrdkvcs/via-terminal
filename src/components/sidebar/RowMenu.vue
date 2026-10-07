@@ -31,7 +31,6 @@ import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
 import { useTabClosing } from '@/composables/useTabClosing'
 
-/** Every row action, so nothing is reachable only by dragging. */
 const props = defineProps<{ tabId: Id }>()
 const spaces = useSpaces()
 const sessions = useSessions()

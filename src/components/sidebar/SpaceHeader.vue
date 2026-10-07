@@ -14,7 +14,6 @@ import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import { spaceIcon } from './spaceIcons'
 
-/** A space's name above its pinned rows, with its menu. */
 defineProps<{ space: Space }>()
 const spaces = useSpaces()
 const ui = useUi()

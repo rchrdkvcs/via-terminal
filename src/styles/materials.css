@@ -1,9 +1,3 @@
-/*
-  Materials: the few recipes every control is made of. Edges are 1px inner
-  shadows, never borders, so they never shift layout and hug any radius.
-  Nothing but menus and dialogs casts a drop shadow.
-*/
-
 @utility material-control {
   background-color: var(--control);
   box-shadow: var(--shadow-control);
@@ -47,7 +41,6 @@
   }
 }
 
-/* A bordered region of the page (inspector), flat like the page itself. */
 @utility material-panel {
   background-color: var(--raised);
   box-shadow: var(--shadow-panel);
@@ -58,7 +51,6 @@
   box-shadow: var(--shadow-raised);
 }
 
-/* Pressed controls give a little: felt, not seen. */
 @utility press {
   &:active:not(:disabled) {
     scale: 0.96;
@@ -70,7 +62,6 @@
   }
 }
 
-/* Sidebar-like rows: quiet until hovered, lit when selected. */
 @utility row {
   border-radius: calc(var(--radius) - 2px);
   transition-property: background-color, color, box-shadow;
@@ -90,7 +81,6 @@
   }
 }
 
-/* Toasts share the raised material; the action is a lit control. */
 [data-sonner-toast][data-styled='true'] {
   box-shadow: var(--shadow-raised) !important;
   font-family: var(--font-sans);
@@ -108,18 +98,11 @@
   color: var(--ink-muted);
 }
 
-/* A window in the background keeps its content but quiets its chrome. */
 [data-inactive] aside[aria-label='Barre latérale'] {
   opacity: 0.72;
   transition: opacity 150ms var(--ease-out);
 }
 
-/*
-  Scrollbars: no native bars anywhere. A slim, rounded thumb floats on a
-  clear track, faint at rest and firmer under the pointer; there are no
-  arrows. The standard `scrollbar-*` properties are left unset on purpose:
-  Chromium ignores these pseudo-elements once they are set.
-*/
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -142,7 +125,6 @@
   display: none;
 }
 
-/* xterm draws its own scrollbar; give it the same thumb. */
 .xterm .xterm-scrollable-element > .scrollbar.vertical {
   width: 10px !important;
   background: transparent !important;

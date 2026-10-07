@@ -17,7 +17,7 @@ describe('useDraft failed saves', () => {
     const correction = autosave()
     await backend.settle(failure)
     expect(await first).toBeNull()
-    // The failure concerns a version the user has already replaced.
+
     expect(error.value).toBeNull()
     expect(saving.value).toBe(true)
     expect(backend.last()).toEqual({ ...record('a'), name: 'corrected' })

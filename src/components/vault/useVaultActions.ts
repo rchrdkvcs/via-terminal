@@ -1,7 +1,3 @@
-/**
- * Vault actions that are not field edits: connecting, duplicating, and every
- * deletion, each behind a confirmation that says what will happen next.
- */
 import { api, describeError } from '@/ipc/client'
 import type { Id, Mutation } from '@/ipc/types'
 import { notify } from '@/lib/notify'
@@ -13,7 +9,6 @@ export function useVaultActions() {
   const vault = useVault()
   const ui = useUi()
 
-  /** Run a mutation, telling the user if it failed. Resolves to the changed id. */
   async function run(task: () => Promise<Mutation>): Promise<Id | null> {
     try {
       return await vault.mutate(task)

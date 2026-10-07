@@ -1,11 +1,3 @@
-//! One connection from the first byte to its end, and the single place that
-//! reports how it ended.
-//!
-//! Everything before the shell is ready is raced against the user closing the
-//! tab, so a close during DNS, the handshake or a prompt ends at once and
-//! quietly. The handshake has its own timeout that stops counting once the
-//! server key is being verified: the user may take their time on that prompt.
-
 use super::{
     asker::Asker, auth, channel, closing, failure::Failure, handler::Client, ConnectPlan, Context,
     Link, Outcome, Size,
@@ -63,7 +55,7 @@ async fn prepare(
         .state(context.id, SessionState::Authenticating, None);
     let asker = Asker::new(context, plan);
     let (username, remembered) = auth::authenticate(&mut handle, plan, &asker).await?;
-    // A vault error must not cost the user a working session.
+
     if let Ok(Some(host_id)) = context.store.authenticated(plan, &username, remembered) {
         context.sink.emit(Event::VaultChanged {
             session_id: context.id,

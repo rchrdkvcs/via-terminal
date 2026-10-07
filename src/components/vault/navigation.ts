@@ -1,4 +1,3 @@
-/** Which row arrow keys, Home and End land on. Null means the key does not move. */
 export function step(ids: string[], current: string | null, key: string): string | null {
   if (!ids.length) return null
   const index = current ? ids.indexOf(current) : -1

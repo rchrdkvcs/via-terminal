@@ -1,5 +1,3 @@
-/** Mirrors `src-tauri/src/sessions` and `commands/emitter.rs`. */
-
 import type { Id } from './layout'
 
 export interface Size {
@@ -79,7 +77,6 @@ export interface SessionStateEvent {
   exitCode: number | null
 }
 
-/** `prompt: null` withdraws an open prompt. */
 export interface SessionPromptEvent {
   sessionId: Id
   promptId: Id

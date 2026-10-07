@@ -16,7 +16,6 @@ import VaultEmpty from './VaultEmpty.vue'
 import VaultListPane from './VaultListPane.vue'
 import VaultRow from './VaultRow.vue'
 
-/** Private keys held by the vault. Enter or double-click renames one in place. */
 const vault = useVault()
 const state = useVaultState()
 const actions = useVaultActions()

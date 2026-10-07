@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useSpaces } from '@/stores/spaces'
 
-/** Drag to resize, double-click to reset, arrows when focused. */
 const spaces = useSpaces()
 const DEFAULT = 264
 const clamp = (value: number) => Math.round(Math.min(480, Math.max(200, value)))

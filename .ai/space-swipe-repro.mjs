@@ -1,15 +1,5 @@
-/**
- * Trackpad space swipe over the sidebar, driven with real wheel input in a
- * headless Chromium (Blink, like WebView2), against `vite dev` on :1420.
- *
- *   node_modules/.bin/vite &          # or pnpm dev
- *   node .ai/space-swipe-repro.mjs
- *
- * Every wheel event goes through CDP `Input.dispatchMouseEvent` (mouseWheel),
- * so it is hit-tested, latched and routed by the browser exactly like a
- * touchpad event; nothing here builds a DOM WheelEvent. The pointer stays over
- * the sidebar rows and nothing is ever clicked. Exits 1 when a check fails.
- */
+
+
 import { chromium } from 'playwright-core'
 import { homedir } from 'node:os'
 
@@ -24,7 +14,6 @@ page.on('pageerror', (error) => errors.push(error.message))
 await page.goto(URL)
 await page.waitForFunction(() => window.__via?.spaces.spaces.length > 0)
 
-// Three spaces with rows, so the pointer sits on a row whatever space is shown.
 await page.evaluate(() => {
   const tab = (id) => ({ kind: 'tab', id, title: `Onglet ${id}`, target: { kind: 'local', shell: null, cwd: null } })
   const space = (id, name) => ({
@@ -41,7 +30,7 @@ await page.evaluate(() => {
     spaces: [space('a', 'Alpha'), space('b', 'Bravo'), space('c', 'Charlie')],
   })
   for (const s of spaces.spaces) s.temporary = [5, 6, 7].map((n) => tab(`${s.id}-t${n}`))
-  // Every change of the active space, in order.
+
   window.__switches = []
   let last = spaces.activeId
   spaces.$subscribe(() => {
@@ -52,7 +41,7 @@ await page.waitForTimeout(300)
 
 const cdp = await page.context().newCDPSession(page)
 const box = await page.locator('aside').boundingBox()
-// Over the second pinned row of the visible space.
+
 const x = Math.round(box.x + box.width / 2)
 const y = Math.round(box.y + 130)
 await page.mouse.move(x, y)
@@ -62,10 +51,6 @@ async function wheel(deltaX, deltaY = 0) {
   await cdp.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x, y, deltaX, deltaY })
 }
 
-/**
- * A touchpad swipe: finger motion, then an inertia tail that decays. `sign`
- * 1 is fingers moving left (deltaX > 0), which moves to the next space.
- */
 async function swipe(sign, { fingers = 14, step = 28, inertia = 40, decay = 0.9, settle = 500 } = {}) {
   for (let i = 0; i < fingers; i++) {
     await wheel(sign * step)
@@ -88,7 +73,7 @@ const report = (ok, line) => {
   results.push(ok)
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${line}`)
 }
-/** Runs a gesture and compares the switches it fired with `moves` from where it started. */
+
 async function check(name, run, moves) {
   const before = await state()
   let at = before.active
@@ -110,9 +95,7 @@ for (let i = 0; i < 5; i++) {
 for (let i = 0; i < 5; i++) {
   await check(`consecutive gesture ${i + 1}/5`, () => swipe(1), [1])
 }
-// The fingers land again while the previous swipe's inertia is still coming
-// in, as on a precision touchpad where inertia trails on for about a second:
-// the new swipe cuts the tail short without any quiet gap in between.
+
 for (let i = 0; i < 4; i++) {
   const d = i % 2 ? -1 : 1
   await check(`swipe while the last one's inertia still runs ${i + 1}/4`, () => swipe(d, { inertia: 25, decay: 0.96, settle: 0 }), [d])
@@ -131,7 +114,7 @@ await check('vertical scroll never switches', async () => {
   }
   await sleep(400)
 }, [])
-// Ctrl+wheel (mouse): one space per notch.
+
 await check('ctrl+wheel switches one space per notch', async () => {
   for (let i = 0; i < 2; i++) {
     await cdp.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x, y, deltaX: 0, deltaY: 100, modifiers: 2 })
@@ -139,8 +122,6 @@ await check('ctrl+wheel switches one space per notch', async () => {
   }
 }, [1, 1])
 
-// Mid-swipe, the spaces follow the fingers 1:1, and the row under the pointer survives the switch.
-/** Left edges of the visible panels against the track, by space id. */
 const panels = () =>
   page.evaluate(() => {
     const track = document.querySelector('[data-space-track]')
@@ -184,7 +165,6 @@ report(
 )
 report(await under.evaluate((node) => node.isConnected), 'the node under the pointer is still in the document after a switch')
 
-// A click in the switcher slides too, from the side the space lies on.
 const target = next(switched, -1)
 await page.locator(`nav[aria-label="Espaces"] button[aria-label="${{ a: 'Alpha', b: 'Bravo', c: 'Charlie' }[target]}"]`).click()
 await sleep(60)
@@ -202,7 +182,7 @@ const hidden = await page.evaluate(() => {
   return panels.length >= 2 && inactive.every((p) => p.inert && p.getAttribute('aria-hidden') === 'true')
 })
 report(hidden, 'inactive panels are inert and hidden from assistive tech')
-// Reduced motion: no tracking, the swipe still switches.
+
 await page.emulateMedia({ reducedMotion: 'reduce' })
 await sleep(100)
 for (let i = 0; i < 4; i++) {

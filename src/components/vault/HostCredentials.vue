@@ -8,19 +8,16 @@ import SecretField from './SecretField.vue'
 import { useVaultOptions } from './useVaultOptions'
 import VaultField from './VaultField.vue'
 
-/** How to authenticate: identity, key and password, each saying what applies when empty. */
 const props = defineProps<{ resolved: Inherited }>()
 const draft = defineModel<HostInput>({ required: true })
 const emit = defineEmits<{ commit: [] }>()
 const vault = useVault()
 const options = useVaultOptions()
 
-/** "Aucune", or the group's identity the host gets when this is left empty. */
 const inheritedIdentity = computed(() =>
   identityHint(vault.view, inherited(vault.view, draft.value.groupId).identityId),
 )
 
-/** An empty key falls back to the key of the identity in use. */
 const inheritedKey = computed(() => {
   const identityId = props.resolved.identityId?.value
   const identity = vault.view.identities.find((item) => item.id === identityId)

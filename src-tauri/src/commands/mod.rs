@@ -1,6 +1,3 @@
-//! Tauri commands: thin adapters from IPC to the modules. Every command
-//! returns `AppResult`, so the interface always gets `{ code, message }`.
-
 pub mod app;
 pub mod emitter;
 pub mod sessions;
@@ -20,7 +17,6 @@ pub struct App {
     pub shells: Vec<Shell>,
 }
 
-/// Registers every command; the list is the IPC surface of the application.
 pub fn handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
     tauri::generate_handler![
         app::app_bootstrap,

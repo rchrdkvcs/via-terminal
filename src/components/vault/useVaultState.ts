@@ -1,8 +1,3 @@
-/**
- * State shared by the vault page's panes. Section and selection live in
- * `useUi().vaultFocus` so the rest of the app can deep-link; the rest is
- * page-local and provided to descendants.
- */
 import { computed, inject, provide, reactive, ref, type InjectionKey } from 'vue'
 import type { Id } from '@/ipc/types'
 import { useUi } from '@/stores/ui'
@@ -29,12 +24,12 @@ function createState() {
       if (id) creating.value = false
     },
   })
-  /** A new host or identity is being drafted in the inspector. */
+
   const creating = ref(false)
-  /** The tree group whose hosts the list shows; null shows every host. */
+
   const scope = ref<Id | null>(null)
   const collapsed = reactive(new Set<Id>())
-  /** The group or key whose name is being edited in place. */
+
   const renaming = ref<Id | null>(null)
 
   const inspecting = computed<Inspecting>(() => {

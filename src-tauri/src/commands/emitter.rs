@@ -1,6 +1,3 @@
-//! Session events to Tauri events. Event names and payload shapes are part of
-//! the IPC contract mirrored in `src/ipc/events.ts`.
-
 use crate::sessions::{
     events::{Event, EventSink, SessionState},
     prompts::Prompt,
@@ -45,7 +42,6 @@ struct VaultChanged {
 
 impl EventSink for TauriSink {
     fn emit(&self, event: Event) {
-        // A closed window cannot receive events; nothing else can be done then.
         let _ = match event {
             Event::Output { session_id, data } => self.0.emit(
                 "terminal-output",

@@ -1,9 +1,3 @@
-//! The persisted part of the sidebar: spaces and their pinned rows.
-//!
-//! The interface owns organization rules (ADR-0008); this module only checks
-//! that what it is asked to persist is structurally sound, then stores it.
-//! Temporary tabs and sessions never reach this document.
-
 mod validate;
 
 use crate::{error::AppResult, storage::Storage};
@@ -100,7 +94,7 @@ pub enum Target {
     Host {
         host_id: Uuid,
     },
-    /// An address typed by hand that is not (yet) a vault host.
+
     Quick {
         address: String,
         port: Option<u16>,
@@ -137,7 +131,6 @@ impl Layouts {
         Self { storage }
     }
 
-    /// The saved layout, or a first-launch layout when none is valid.
     pub fn load(&self) -> AppResult<Layout> {
         let saved: Option<Layout> = self.storage.load(DOCUMENT).ok().flatten();
         match saved.filter(|layout| validate::check(layout).is_ok()) {

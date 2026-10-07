@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** The inspector frame: a titled header with actions, a scrolling form, an optional footer. */
 defineProps<{ title: string; subtitle?: string; error?: string | null }>()
 </script>
 

@@ -4,11 +4,6 @@ import { tabs } from '@/domain/space'
 import { useSpaces } from '@/stores/spaces'
 import { useVault } from '@/stores/vault'
 
-/**
- * The name to show for a host. A host saved by quick connect is labelled with
- * its bare address; when a tab opening it was given a name ("Code"), that name
- * says more than the address, so it wins until the host gets a real label.
- */
 export function useHostName() {
   const vault = useVault()
   const spaces = useSpaces()

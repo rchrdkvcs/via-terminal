@@ -1,8 +1,3 @@
-/**
- * PTY output crosses the IPC boundary as base64. `Uint8Array.from(binary, cb)`
- * invokes a JavaScript callback per byte, which dominates the frame budget once
- * a shell starts streaming; an indexed loop over the same string does not.
- */
 export function decodeBase64(value: string): Uint8Array {
   const binary = atob(value)
   const length = binary.length
@@ -11,7 +6,6 @@ export function decodeBase64(value: string): Uint8Array {
   return bytes
 }
 
-/** Join buffered chunks so xterm receives one write per animation frame. */
 export function concatBytes(chunks: Uint8Array[]): Uint8Array {
   if (chunks.length === 1) return chunks[0]
   let total = 0

@@ -6,7 +6,6 @@ defineProps<{
   description?: string
 }>()
 
-/** Ids handed to the control so its label and description are announced. */
 const id = useId()
 const labelId = `${id}-label`
 const descriptionId = `${id}-description`

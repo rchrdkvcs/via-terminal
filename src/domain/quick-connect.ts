@@ -1,7 +1,3 @@
-/**
- * Reading an address typed in the command bar: `host`, `user@host`,
- * `user@host:2222`, `[::1]:22`, or a pasted `ssh -p 2222 user@host`.
- */
 import type { QuickTarget } from '@/ipc/types'
 
 const HOST =
@@ -30,7 +26,7 @@ export function parseQuickConnect(input: string): QuickTarget | null {
   const [, user, host, inlinePort] = match
   const resolvedPort = port(flagPort ?? inlinePort)
   if (resolvedPort === undefined || !HOST.test(host)) return null
-  // A bare word is a search term, not an address, unless it looks like one.
+
   const looksLikeAddress = Boolean(user || inlinePort || flagPort || /[.:]/.test(host))
   if (!looksLikeAddress) return null
   return {

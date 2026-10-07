@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { Id } from '@/ipc/types'
 
-/** One row of a vault list. Hover actions go in the `actions` slot. */
 defineProps<{ id: Id; selected: boolean; tabbable: boolean }>()
 defineEmits<{ select: []; activate: [] }>()
 </script>

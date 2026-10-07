@@ -5,10 +5,6 @@ import { useTabLabel } from '@/composables/useTabLabel'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
 
-/**
- * Like a browser's address field: says where the current tab is connected, and opens
- * the command bar to change it (Ctrl+L), or to open something new.
- */
 const ui = useUi()
 const workbench = useWorkbench()
 const names = useTabLabel()

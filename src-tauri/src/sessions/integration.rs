@@ -1,18 +1,11 @@
-//! Shell integration: each shell reports its working directory at every
-//! prompt with OSC 7 (`ESC ] 7 ; file://host/path BEL`), so a tab can reopen
-//! where it was. The user's own configuration always loads first and keeps
-//! working; Via only adds a hook after it.
-
 use super::shells::Shell;
 use portable_pty::CommandBuilder;
 use std::path::PathBuf;
 
 const BASH_HOOK: &str = r#"printf '\033]7;file://localhost%s\007' "$PWD""#;
 
-/// One line: a multi-line argument is fragile on a Windows command line.
 const POWERSHELL_HOOK: &str = r#"$global:__viaPrompt = $function:prompt; function global:prompt { $l = $executionContext.SessionState.Path.CurrentLocation; $r = ''; if ($l.Provider.Name -eq 'FileSystem') { $r = "$([char]27)]7;file://localhost/$($l.ProviderPath -replace '\\', '/')$([char]7)" }; $r + (& $global:__viaPrompt) }"#;
 
-/// `$E]7;...$E\` in cmd's PROMPT syntax, then the usual `C:\path>`.
 const CMD_PROMPT: &str = r"$E]7;file://localhost/$P$E\$P$G";
 
 const ZSH_SOURCE: &str = r#"if [[ -f "$VIA_USER_ZDOTDIR/FILE" ]]; then
@@ -38,7 +31,6 @@ fn name(shell: &Shell) -> String {
         .to_ascii_lowercase()
 }
 
-/// Add the hook for `shell` to `command`. Unknown shells run untouched.
 pub fn apply(shell: &Shell, command: &mut CommandBuilder) {
     match name(shell).as_str() {
         "bash" => {
@@ -49,7 +41,7 @@ pub fn apply(shell: &Shell, command: &mut CommandBuilder) {
                 format!("{BASH_HOOK}; {existing}")
             };
             command.env("PROMPT_COMMAND", hook);
-            // Git Bash's profile jumps to $HOME unless told it was opened in place.
+
             command.env("CHERE_INVOKING", "1");
         }
         "pwsh" | "powershell" => {
@@ -72,7 +64,6 @@ pub fn apply(shell: &Shell, command: &mut CommandBuilder) {
     }
 }
 
-/// A private ZDOTDIR whose files load the user's own, then add the hook.
 fn zsh_dir() -> Option<PathBuf> {
     let dir = std::env::temp_dir()
         .join("via-shell-integration")

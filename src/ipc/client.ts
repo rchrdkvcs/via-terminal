@@ -17,7 +17,6 @@ import type {
   VaultView,
 } from './types'
 
-/** The interface also runs in a plain browser under `vite dev`. */
 export function isNative(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 }
@@ -36,7 +35,6 @@ export function errorCode(cause: unknown): string | null {
   return typeof cause === 'object' && cause && 'code' in cause ? String(cause.code) : null
 }
 
-/** A sentence for the user: Rust messages start in lower case. */
 export function describeError(cause: unknown): string {
   const raw =
     typeof cause === 'object' && cause && 'message' in cause

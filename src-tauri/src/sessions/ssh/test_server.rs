@@ -1,8 +1,3 @@
-//! A tiny in-process SSH server for the client's end-to-end tests.
-//!
-//! It accepts user `via` with password `pw`, grants a PTY and a shell, echoes
-//! every byte back, and ends the shell with status 0 on `exit\n`.
-
 use russh::{
     keys::{ssh_key::private::Ed25519Keypair, HashAlg, PrivateKey},
     server::{self, Auth, ChannelOpenHandle, Msg, Session},
@@ -14,7 +9,7 @@ use uuid::Uuid;
 
 pub struct TestServer {
     pub port: u16,
-    /// The host key as the client should report it, `SHA256:…`.
+
     pub fingerprint: String,
 }
 
@@ -55,7 +50,6 @@ impl server::Handler for Shell {
         Ok(if user == "via" && password == "pw" {
             Auth::Accept
         } else {
-            // Like OpenSSH, keep offering passwords; russh drops the method by default.
             Auth::Reject {
                 proceed_with_methods: Some(password_only()),
                 partial_success: false,

@@ -12,15 +12,11 @@ export interface SpaceDraft {
   defaultShell: string | null
 }
 
-/**
- * Spaces and their rows. Every organization change is an intent applied by
- * `domain/organize`; this store only adds persistence of the pinned part.
- */
 export const useSpaces = defineStore('spaces', () => {
   const spaces = ref<Space[]>([])
   const activeId = ref<Id>('')
   const sidebar = ref({ width: 264, visible: true })
-  /** Which way the last switch went, for the sidebar's slide. */
+
   const switchDirection = ref<1 | -1>(1)
 
   const active = computed(
@@ -31,7 +27,6 @@ export const useSpaces = defineStore('spaces', () => {
     return spaces.value.find((space) => space.id === id)
   }
 
-  /** The space that owns a row or a tab. */
   function spaceOf(id: Id): Space | undefined {
     return spaces.value.find((space) => locate(space, id) ?? rowOfTab(space, id))
   }
@@ -57,7 +52,6 @@ export const useSpaces = defineStore('spaces', () => {
     }, 250)
   }
 
-  /** Apply an intent to a space; `false` when it was invalid and nothing changed. */
   function dispatch(
     intent: Intent | readonly Intent[],
     spaceId: Id | undefined = active.value?.id,
@@ -99,7 +93,6 @@ export const useSpaces = defineStore('spaces', () => {
     persist()
   }
 
-  /** Remove organization only; workbench owns runtime cleanup. Never removes the last space. */
   function remove(id: Id) {
     if (spaces.value.length <= 1) return false
     const index = spaces.value.findIndex((space) => space.id === id)
@@ -119,7 +112,6 @@ export const useSpaces = defineStore('spaces', () => {
     persist()
   }
 
-  /** Move a row to another space, keeping it pinned or temporary. */
   function transfer(rowId: Id, toSpaceId: Id): boolean {
     const from = spaceOf(rowId)
     const destination = byId(toSpaceId)

@@ -1,6 +1,3 @@
-/** Small display and parsing helpers for vault records. */
-
-/** Keeps both ends of a fingerprint, which is how people compare them. */
 export function truncateMiddle(text: string, max = 24): string {
   if (text.length <= max) return text
   const keep = max - 1
@@ -34,7 +31,6 @@ export function formatDate(at: number): string {
   return dates.format(at)
 }
 
-/** Adds typed text as tags, split on commas, without blanks or duplicates. */
 export function addTags(tags: string[], text: string): string[] {
   const next = [...tags]
   for (const tag of text.split(',').map((part) => part.trim())) {
@@ -44,7 +40,6 @@ export function addTags(tags: string[], text: string): string[] {
   return next
 }
 
-/** A port typed by hand: empty means inherit, `undefined` means invalid. */
 export function parsePort(text: string): number | null | undefined {
   const trimmed = text.trim()
   if (!trimmed) return null

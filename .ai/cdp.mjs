@@ -1,8 +1,5 @@
-/**
- * Minimal CDP client for the running Via window (see lessons.md).
- * Start the app with:
- *   WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333 pnpm tauri dev
- */
+
+
 const PORT = process.env.CDP_PORT ?? '9333'
 const CODES = { Enter: [13, 'Enter'], Escape: [27, 'Escape'], Tab: [9, 'Tab'], ArrowDown: [40, 'ArrowDown'], ArrowUp: [38, 'ArrowUp'] }
 
@@ -38,7 +35,7 @@ export async function connect() {
       if (result.result?.exceptionDetails) throw new Error(result.result.exceptionDetails.exception?.description)
       return result.result?.result?.value
     },
-    /** A real key press, e.g. `Ctrl+Shift+T`, so capture-phase shortcuts are exercised. */
+
     async press(combo) {
       const parts = combo.split('+')
       const key = parts.pop()

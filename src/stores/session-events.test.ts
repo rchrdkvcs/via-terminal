@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { deferred, mocks, output, prompt, state, tab } from './sessions.fixture'
 import { useSessions } from './sessions'
 
-// Native events can arrive before `open` returns the session id they carry.
 describe('session events', () => {
   it('does not replay output queued after an early terminal state', async () => {
     const native = deferred<string>()

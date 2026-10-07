@@ -1,11 +1,3 @@
-//! The vault: hosts, groups, identities, keys and known hosts, shared by every
-//! space.
-//!
-//! Every mutation runs through [`Vault::commit`]: it validates against a copy,
-//! persists the copy and only then replaces the in-memory data, so a failed
-//! mutation never leaves a partial change behind. Secrets go to
-//! [`crate::secrets`] and never appear in the persisted document.
-
 mod connect;
 mod mutation;
 pub use connect::QuickTarget;
@@ -39,7 +31,7 @@ pub struct Vault {
 pub struct VaultView {
     #[serde(flatten)]
     pub snapshot: VaultSnapshot,
-    /// Effective values per host, with where each comes from.
+
     pub effective: HashMap<Id, resolve::Effective>,
 }
 

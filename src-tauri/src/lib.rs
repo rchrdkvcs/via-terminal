@@ -1,5 +1,3 @@
-//! Composition root: builds the modules once and hands them to Tauri.
-
 mod commands;
 pub mod error;
 pub mod layout;

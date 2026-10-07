@@ -3,14 +3,12 @@ use crate::error::AppResult;
 use rusqlite::params;
 use serde::Serialize;
 
-/// An opaque blob replacement or deletion, prepared before taking the SQLite lock.
 pub(crate) enum BlobChange {
     Put { key: String, value: Vec<u8> },
     Delete { key: String },
 }
 
 impl Storage {
-    /// Persist a document and its associated blobs as one SQLite transaction.
     pub(crate) fn save_with_blobs<T: Serialize>(
         &self,
         key: &str,

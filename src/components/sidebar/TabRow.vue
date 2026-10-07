@@ -13,7 +13,6 @@ import InlineRename from './InlineRename.vue'
 import RowMenu from './RowMenu.vue'
 import TabIcon from './TabIcon.vue'
 
-/** One tab: a full row, or a compact member inside a split row. */
 const props = defineProps<{ tab: Tab; compact?: boolean }>()
 const sessions = useSessions()
 const ui = useUi()

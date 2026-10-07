@@ -4,10 +4,6 @@ import { Server, Terminal, Zap } from '@lucide/vue'
 import type { Target } from '@/ipc/types'
 import type { TabState } from '@/stores/sessions'
 
-/**
- * What a tab connects to, and its state at a glance. Only connection progress
- * moves; a problem shows as a static dot so it never pulls the eye forever.
- */
 const props = defineProps<{ target: Target; state: TabState }>()
 
 const icon = computed(() =>

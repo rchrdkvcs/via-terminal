@@ -1,12 +1,7 @@
-/** Editable inputs built from vault records, the shape every save command takes. */
 import type { Group, GroupInput, Host, HostInput, Id, Identity, IdentityInput } from '@/ipc/types'
 
 const KEEP = { action: 'keep' } as const
 
-/**
- * The backend stores the address as the label when none is given. Showing it
- * empty keeps the address as a placeholder, and follows later address edits.
- */
 export function hostInput(host: Host | undefined, groupId: Id | null = null): HostInput {
   if (!host) {
     return {
@@ -43,7 +38,6 @@ export function groupInput(group: Group | undefined): GroupInput {
   }
 }
 
-/** Like hosts, an identity labelled with its username shows the label empty. */
 export function identityInput(identity: Identity | undefined): IdentityInput {
   return {
     id: identity?.id ?? null,

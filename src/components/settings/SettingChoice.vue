@@ -1,7 +1,6 @@
 <script setup lang="ts" generic="T extends string">
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
-/** A short exclusive choice, drawn as a macOS segmented control. */
 const props = defineProps<{
   options: { value: T; label: string }[]
   labelledby?: string
@@ -9,7 +8,6 @@ const props = defineProps<{
 
 const value = defineModel<T>({ required: true })
 
-/** Pressing the active item again emits an empty value; keep the choice instead. */
 function onUpdate(next: unknown) {
   const option = props.options.find((candidate) => candidate.value === next)
   if (option) value.value = option.value

@@ -7,7 +7,6 @@ import PortField from './PortField.vue'
 import UsernameField from './UsernameField.vue'
 import VaultField from './VaultField.vue'
 
-/** Where to connect: label, address, user and port, with inherited placeholders. */
 defineProps<{ inherited: Inherited }>()
 const draft = defineModel<HostInput>({ required: true })
 const emit = defineEmits<{ commit: [] }>()

@@ -6,7 +6,6 @@ fn secrets(key: Option<[u8; 32]>) -> (Arc<Storage>, Secrets) {
     (storage, secrets)
 }
 
-/// Persist a blob change the way the vault does, alongside a document.
 fn persist(storage: &Storage, change: AppResult<BlobChange>) -> AppResult<()> {
     storage.save_with_blobs("document", &(), &[change?])
 }

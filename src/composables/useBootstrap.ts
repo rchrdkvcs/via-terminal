@@ -13,7 +13,6 @@ import { useWorkbench } from '@/stores/workbench'
 
 const ENTER = String.fromCharCode(13)
 
-/** What the browser preview (`vite dev` without Tauri) starts with. */
 function previewBootstrap(): Bootstrap {
   const id = crypto.randomUUID()
   return {
@@ -30,10 +29,6 @@ function previewBootstrap(): Bootstrap {
   }
 }
 
-/**
- * Loads everything once, then keeps the window and the terminals in step
- * with settings and the active space.
- */
 export function useBootstrap() {
   const ready = ref(false)
   const failure = ref<string | null>(null)
@@ -46,7 +41,6 @@ export function useBootstrap() {
 
   terminals.configure({
     onData: (tabId, data) => {
-      // Enter in an ended or disconnected pane reconnects it, as the bar says.
       const state = sessions.runtime(tabId).state
       if (data === ENTER && ['exited', 'disconnected', 'failed'].includes(state)) {
         workbench.reconnect(tabId)
@@ -88,7 +82,7 @@ export function useBootstrap() {
   })
 
   void load()
-  // Dev-only handle for the CDP checks in `.ai/`.
+
   if (import.meta.env.DEV) {
     Object.assign(window, {
       __via: { spaces, sessions, workbench, settings, dnd: { dragging, hint } },

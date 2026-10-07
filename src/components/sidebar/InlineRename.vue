@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
 
-/** Enter commits, Escape cancels, blur commits. */
 const props = defineProps<{ value: string; label: string }>()
 const emit = defineEmits<{ commit: [value: string]; cancel: [] }>()
 const draft = ref(props.value)

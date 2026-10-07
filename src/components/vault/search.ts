@@ -1,7 +1,5 @@
-/** Host search: every word must appear in the label, address, user, tags or group path. */
 import type { Host } from '@/ipc/types'
 
-/** Case and accent insensitive, so "donnees" finds "Données". */
 export function normalize(text: string): string {
   return text
     .normalize('NFD')
@@ -11,7 +9,7 @@ export function normalize(text: string): string {
 
 export interface Searchable {
   host: Host
-  /** The effective username, inherited or not. */
+
   username: string | null
   groupPath: string[]
 }

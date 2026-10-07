@@ -11,7 +11,6 @@ import type { Id } from '@/ipc/types'
 import { useGroupTree } from './useGroupTree'
 import { useVaultState } from './useVaultState'
 
-/** The menu equivalent of the tree's pointer and keyboard shortcuts. */
 defineProps<{ groupId: Id; name: string }>()
 const state = useVaultState()
 const tree = useGroupTree()
@@ -25,7 +24,7 @@ const tree = useGroupTree()
     >
       <Ellipsis class="size-3.5" :stroke-width="1.5" />
     </DropdownMenuTrigger>
-    <!-- Returning focus to the trigger would blur, and end, an in-place rename. -->
+
     <DropdownMenuContent align="start" class="min-w-44" @close-auto-focus.prevent>
       <DropdownMenuItem @select="state.renaming.value = groupId">
         <Pencil :stroke-width="1.5" />

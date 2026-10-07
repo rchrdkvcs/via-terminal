@@ -11,7 +11,6 @@ use tauri::State;
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalTarget {
-    /// Executable of a detected shell; `None` uses the configured default.
     shell: Option<String>,
     cwd: Option<String>,
 }

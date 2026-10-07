@@ -1,11 +1,3 @@
-//! The user's turn: keyboard-interactive rounds, or a plain password prompt.
-//!
-//! Keyboard-interactive comes first when offered, since PAM-backed servers use
-//! it for passwords and second factors alike. A round made of one hidden
-//! password field is shown as the password prompt, so it can be remembered,
-//! and takes the stored password if that was not used yet. A server that
-//! lists keyboard-interactive but asks nothing falls back to `password`.
-
 use super::{
     asker::{is_password_round, Asker},
     auth::Chain,
@@ -17,10 +9,8 @@ const USER_ATTEMPTS: usize = 3;
 
 enum Round {
     Success,
-    Refused {
-        asked_user: bool,
-    },
-    /// Refused without a single question: the method is not really usable.
+    Refused { asked_user: bool },
+
     Silent,
 }
 

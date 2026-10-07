@@ -8,8 +8,6 @@ use zeroize::Zeroizing;
 const SERVICE: &str = "dev.viaterminal.desktop";
 const ACCOUNT: &str = "vault-master-key";
 
-/// The master key lives in Windows Credential Manager, the macOS Keychain or
-/// the Secret Service. It is generated on first launch.
 pub struct OsKeychain;
 
 impl KeySource for OsKeychain {
@@ -20,7 +18,7 @@ impl KeySource for OsKeychain {
             Err(keyring::Error::NoEntry) => {
                 let key = ChaCha20Poly1305::generate_key(&mut OsRng);
                 entry.set_secret(key.as_slice()).ok()?;
-                // Read back so a store that silently drops writes is detected now.
+
                 to_key(Zeroizing::new(entry.get_secret().ok()?))
             }
             Err(_) => None,

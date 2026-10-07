@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { useLocalStorage } from '@vueuse/core'
 
-/**
- * A detail panel floating over the page's right edge, like a sheet. Its
- * width follows the left edge when dragged and is remembered.
- */
 defineProps<{ label: string }>()
 const MIN = 340
 const MAX = 680

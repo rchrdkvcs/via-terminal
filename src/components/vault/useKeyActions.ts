@@ -1,4 +1,3 @@
-/** Key operations shared by the key list and the key inspector. */
 import { api } from '@/ipc/client'
 import type { Id, Key } from '@/ipc/types'
 import { notify } from '@/lib/notify'

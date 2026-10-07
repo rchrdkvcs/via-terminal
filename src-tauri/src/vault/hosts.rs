@@ -7,7 +7,6 @@ use crate::error::{AppError, AppResult};
 use uuid::Uuid;
 
 impl Vault {
-    /// Create (no `id`) or replace a host. The password follows `input.password`.
     pub fn save_host(&self, input: HostInput) -> AppResult<Host> {
         let address = input.address.trim().to_string();
         input::validate_address(&address)?;
@@ -64,7 +63,6 @@ impl Vault {
         })
     }
 
-    /// A copy right after the original, without its remembered password.
     pub fn duplicate_host(&self, id: Id) -> AppResult<Host> {
         self.commit(|data| {
             let index = data

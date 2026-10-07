@@ -1,10 +1,3 @@
-//! The authentication chain: saved key, saved password, then the user.
-//!
-//! A `none` request first learns which methods the server accepts; each step
-//! then runs only while the server still lists its method, and the chain stops
-//! at the first success. Secrets typed with "remember" are handed to the vault
-//! only once the whole authentication succeeded.
-
 use super::{
     asker::Asker,
     failure::{Failure, Method},
@@ -18,13 +11,12 @@ use russh::{
 };
 use std::sync::Arc;
 
-/// Where the chain stands: who, what the server still accepts, what was tried.
 pub(super) struct Chain<'a> {
     pub handle: &'a mut Handle<Client>,
     pub username: String,
     methods: MethodSet,
     tried: Vec<Method>,
-    /// A stored or typed password was refused, so prompts say "retry".
+
     pub password_failed: bool,
     pub remembered: Remembered,
 }
@@ -40,8 +32,6 @@ impl Chain<'_> {
         }
     }
 
-    /// `Ok(true)` once authenticated. A partial success keeps the chain going
-    /// with the methods the server asks for next.
     pub fn settle(&mut self, result: Result<AuthResult, russh::Error>) -> Result<bool, Failure> {
         match result.map_err(|error| Failure::from_russh(&error))? {
             AuthResult::Success => Ok(true),
@@ -52,7 +42,6 @@ impl Chain<'_> {
     }
 
     pub fn refused(&mut self, remaining_methods: MethodSet) -> Result<(), Failure> {
-        // russh reports a dropped connection as a failure with no methods.
         if self.handle.is_closed() {
             return Err(Failure::Closed);
         }
@@ -66,7 +55,6 @@ impl Chain<'_> {
         };
         self.attempt(Method::Key);
         let hash = if unlocked.key.algorithm().is_rsa() {
-            // Without the server's list, rsa-sha2-256 is the safe modern guess.
             match self.handle.best_supported_rsa_hash().await {
                 Ok(Some(hash)) => hash,
                 _ => Some(HashAlg::Sha256),

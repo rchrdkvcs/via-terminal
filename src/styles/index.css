@@ -97,7 +97,6 @@
     background: rgb(127 127 127 / 30%);
   }
 
-  /* xterm 6 keeps a legacy viewport painted black under the canvas. */
   .xterm .xterm-viewport {
     background-color: transparent !important;
   }

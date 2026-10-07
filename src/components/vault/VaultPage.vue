@@ -15,10 +15,6 @@ import KeyList from './KeyList.vue'
 import KnownHostList from './KnownHostList.vue'
 import { provideVaultState, type Section } from './useVaultState'
 
-/**
- * The vault: sections and groups in the rail, the current list in the
- * middle, and the selected item's inspector floating on the right.
- */
 const state = provideVaultState()
 const vault = useVault()
 
@@ -41,7 +37,7 @@ const lists = {
 }
 const list = computed(() => lists[state.section.value])
 const id = computed(() => state.selected.value ?? '')
-/** Remounting per item gives every editor a fresh draft and focus order. */
+
 const inspectorKey = computed(() => `${state.inspecting.value}:${state.selected.value ?? 'new'}`)
 </script>
 
