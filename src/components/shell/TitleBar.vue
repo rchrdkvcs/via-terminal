@@ -9,7 +9,7 @@ import AddressPill from './AddressPill.vue'
 import WindowControls from './WindowControls.vue'
 
 /**
- * The strip above the content: where the window is dragged from, the address
+ * The full-window strip above the sidebar and content: the drag region, the address
  * pill in the middle, then the vault, settings and window controls top right,
  * as Windows and Linux expect them. macOS keeps its own traffic lights on the left.
  */
@@ -30,19 +30,21 @@ const tools = [
 </script>
 
 <template>
-  <div data-tauri-drag-region class="grid h-10 shrink-0 grid-cols-3 items-center gap-2 px-1">
+  <div data-tauri-drag-region class="grid h-10 w-full shrink-0 grid-cols-3 items-center gap-2 px-1">
     <div
       data-tauri-drag-region
       class="flex h-full min-w-0 items-center"
-      :class="!spaces.sidebar.visible && settings.platform === 'macos' ? 'ps-[72px]' : ''"
+      :class="settings.platform === 'macos' ? 'ps-[72px]' : ''"
     >
       <button
-        v-if="!spaces.sidebar.visible"
         type="button"
         :class="button"
-        aria-label="Afficher la barre latérale"
+        :aria-label="
+          spaces.sidebar.visible ? 'Masquer la barre latérale' : 'Afficher la barre latérale'
+        "
+        :aria-expanded="spaces.sidebar.visible"
         :title="`Barre latérale (${kbd('sidebar')})`"
-        @click="spaces.setSidebar({ visible: true })"
+        @click="spaces.setSidebar({ visible: !spaces.sidebar.visible })"
       >
         <PanelLeft :size="15" :stroke-width="1.5" />
       </button>
