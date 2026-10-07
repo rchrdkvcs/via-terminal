@@ -1,98 +1,18 @@
-import type { Id } from './layout'
-
-export interface Size {
-  cols: number
-  rows: number
-}
-
-export type SessionState =
-  | 'connecting'
-  | 'verifying'
-  | 'authenticating'
-  | 'ready'
-  | 'exited'
-  | 'failed'
-  | 'disconnected'
-
-export interface PromptField {
-  label: string
-  echo: boolean
-}
-
-export type CredentialChoice =
-  | { kind: 'password'; username: string }
-  | { kind: 'identity'; id: Id }
-  | { kind: 'key'; id: Id; username: string }
-
-export type Prompt =
-  | {
-      kind: 'hostKey'
-      address: string
-      port: number
-      algorithm: string
-      fingerprint: string
-      previousFingerprint: string | null
-    }
-  | { kind: 'authentication'; address: string; username: string | null; canRemember: boolean }
-  | { kind: 'username'; address: string }
-  | { kind: 'password'; username: string; address: string; canRemember: boolean; retry: boolean }
-  | { kind: 'passphrase'; keyLabel: string; canRemember: boolean; retry: boolean }
-  | { kind: 'keyboardInteractive'; name: string; instructions: string; fields: PromptField[] }
-
-export type PromptAnswer =
-  | { kind: 'credential'; credential: CredentialChoice }
-  | { kind: 'authentication'; username: string; password: string; remember: boolean }
-  | { kind: 'accept' }
-  | { kind: 'cancel' }
-  | { kind: 'text'; value: string; remember: boolean }
-  | { kind: 'fields'; values: string[] }
-
-export interface QuickTarget {
-  address: string
-  port: number | null
-  username: string | null
-}
-
-export interface Shell {
-  path: string
-  name: string
-  args: string[]
-}
-
-export interface Settings {
-  theme: 'system' | 'light' | 'dark'
-  fontFamily: string
-  fontSize: number
-  lineHeight: number
-  cursorStyle: 'block' | 'bar' | 'underline'
-  cursorBlink: boolean
-  scrollback: number
-  copyOnSelect: boolean
-  defaultShell: string | null
-  saveQuickConnect: boolean
-  confirmCloseRunning: boolean
-  checkForUpdates: boolean
-}
-
-export interface TerminalOutputEvent {
-  sessionId: Id
-  dataBase64: string
-}
-
-export interface SessionStateEvent {
-  sessionId: Id
-  state: SessionState
-  message: string | null
-  exitCode: number | null
-}
-
-export interface SessionPromptEvent {
-  sessionId: Id
-  promptId: Id
-  prompt: Prompt | null
-}
-
-export interface VaultChangedEvent {
-  sessionId: Id
-  hostId: Id | null
-}
+export type {
+  CredentialChoice,
+  CursorStyle,
+  LocalTarget,
+  Prompt,
+  PromptAnswer,
+  PromptField,
+  QuickTarget,
+  SessionPromptEvent,
+  SessionState,
+  SessionStateEvent,
+  Settings,
+  Shell,
+  Size,
+  TerminalOutputEvent,
+  Theme,
+  VaultChangedEvent,
+} from '../bindings'

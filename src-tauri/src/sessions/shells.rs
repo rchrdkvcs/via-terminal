@@ -1,8 +1,9 @@
 use crate::error::{AppError, AppResult};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
+use ts_rs::TS;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Shell {
     pub path: String,

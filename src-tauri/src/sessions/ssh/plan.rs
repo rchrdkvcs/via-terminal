@@ -1,8 +1,9 @@
 use crate::error::AppResult;
+use ts_rs::TS;
 use uuid::Uuid;
 use zeroize::Zeroizing;
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, TS)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum CredentialChoice {
     Password { username: String },

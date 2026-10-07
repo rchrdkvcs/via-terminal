@@ -1,10 +1,11 @@
 use super::credential::HostCredential;
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 use uuid::Uuid;
 
 pub type Id = Uuid;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Group {
     pub id: Id,
@@ -16,7 +17,7 @@ pub struct Group {
     pub defaults: Defaults,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Defaults {
     pub username: Option<String>,
@@ -24,7 +25,7 @@ pub struct Defaults {
     pub identity_id: Option<Id>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", from = "StoredHost")]
 pub struct Host {
     pub id: Id,
@@ -86,7 +87,7 @@ impl From<StoredHost> for Host {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Identity {
     pub id: Id,
@@ -95,7 +96,7 @@ pub struct Identity {
     pub key_id: Option<Id>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Key {
     pub id: Id,
@@ -109,7 +110,7 @@ pub struct Key {
     pub created_at: i64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct KnownHost {
     pub id: Id,
@@ -121,7 +122,7 @@ pub struct KnownHost {
     pub added_at: i64,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultData {
     #[serde(default)]
@@ -136,7 +137,7 @@ pub struct VaultData {
     pub known_hosts: Vec<KnownHost>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultSnapshot {
     #[serde(flatten)]

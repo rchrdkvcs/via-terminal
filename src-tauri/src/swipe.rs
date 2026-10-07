@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
+use ts_rs::TS;
 
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, TS)]
+#[ts(rename = "SwipeRegion")]
 pub struct Region {
     pub x: f64,
     pub y: f64,
@@ -17,8 +19,9 @@ impl Region {
 
 static REGION: Mutex<Option<Region>> = Mutex::new(None);
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, TS)]
 #[serde(rename_all = "lowercase")]
+#[ts(rename = "SwipePhase")]
 pub enum Phase {
     Start,
     Update,
@@ -26,7 +29,8 @@ pub enum Phase {
     Cancel,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, TS)]
+#[ts(rename = "TrackpadSwipeEvent")]
 pub struct Pan {
     pub phase: Phase,
     pub dx: f64,

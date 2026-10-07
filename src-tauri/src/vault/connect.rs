@@ -8,8 +8,9 @@ use crate::{
     sessions::ssh::{ConnectPlan, PlanKey},
 };
 use serde::Deserialize;
+use ts_rs::TS;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct QuickTarget {
     pub address: String,
