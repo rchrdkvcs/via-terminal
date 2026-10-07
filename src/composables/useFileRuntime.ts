@@ -5,7 +5,7 @@ import { useFiles } from '@/stores/files'
 import { useFileDialogs } from '@/stores/file-dialogs'
 import { useSessions } from '@/stores/sessions'
 import { useSpaces } from '@/stores/spaces'
-import { findTab } from '@/domain/space'
+import { findTab, isPinned } from '@/domain/space'
 /** Routes native transfer events, asks collision questions and follows session changes. */
 export function useFileRuntime() {
   const files = useFiles(),
@@ -64,12 +64,16 @@ export function useFileRuntime() {
     },
   )
   watch(
-    () => Object.entries(files.panels).map(([id, panel]) => [id, panel.directory] as const),
+    () =>
+      Object.entries(files.panels).map(([id, panel]) => {
+        const space = spaces.spaceOf(id)
+        return [id, panel.directory, Boolean(space && isPinned(space, id))] as const
+      }),
     (directories) => {
-      for (const [id, remoteCwd] of directories) {
+      for (const [id, remoteCwd, pinned] of directories) {
         const space = spaces.spaceOf(id),
           tab = space && findTab(space, id)
-        if (tab && remoteCwd.startsWith('/') && tab.remoteCwd !== remoteCwd)
+        if (tab && !pinned && remoteCwd.startsWith('/') && tab.remoteCwd !== remoteCwd)
           spaces.dispatch({ type: 'updateTab', tabId: id, patch: { remoteCwd } }, space!.id)
       }
     },
