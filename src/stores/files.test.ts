@@ -1,46 +1,16 @@
-import { beforeEach, expect, it, vi } from 'vitest'
-import { createPinia, setActivePinia } from 'pinia'
+import { expect, it } from 'vitest'
+import { connect, deferred, draft, native, remoteText } from './files.fixture'
 import { useFiles } from './files'
-import { transferPlans, useFileTransfers } from '@/components/files/useFileTransfers'
-
-const native = vi.hoisted(() => ({ request: vi.fn(), pick: vi.fn(), stageDiscard: vi.fn() }))
-vi.mock('@/ipc/files', () => ({ filesApi: native }))
-vi.mock('@/ipc/events', () => ({ on: () => () => {} }))
-beforeEach(() => {
-  setActivePinia(createPinia())
-  vi.resetAllMocks()
-})
 
 it('keeps edits made during saving dirty and retains them after a failed save', async () => {
   const files = useFiles()
-  native.request.mockResolvedValueOnce({
-    path: '/config',
-    resolvedPath: '/config',
-    content: 'old',
-    permissions: 420,
-    uid: 1,
-    gid: 1,
-  })
-  await files.openDocument('tab', 'session', '/config')
-  const document = files.state('tab').documents[0]
-  document.content = 'first edit'
-  let complete!: (value: unknown) => void
-  native.request.mockReturnValueOnce(
-    new Promise((resolve) => {
-      complete = resolve
-    }),
-  )
-  const saving = files.saveDocument('tab', 'session', document.id)
+  const document = await draft('tab', 'first edit')
+  const saving = deferred()
+  native.request.mockReturnValueOnce(saving.promise)
+  const saved = files.saveDocument('tab', 'session', document.id)
   document.content = 'newer edit'
-  complete({
-    path: '/config',
-    resolvedPath: '/config',
-    content: 'first edit',
-    permissions: 420,
-    uid: 1,
-    gid: 1,
-  })
-  await saving
+  saving.resolve(remoteText('first edit'))
+  await saved
   expect(document.original).toBe('first edit')
   expect(document.content).toBe('newer edit')
   native.request.mockRejectedValueOnce({ code: 'file_io', message: 'interruption' })
@@ -51,18 +21,12 @@ it('keeps edits made during saving dirty and retains them after a failed save', 
 
 it('does not discard edits typed while a reload is waiting for the server', async () => {
   const files = useFiles()
-  native.request.mockResolvedValueOnce({ path: '/config', resolvedPath: '/config', content: 'old' })
-  await files.openDocument('tab', 'session', '/config')
-  const document = files.state('tab').documents[0]
-  let complete!: (value: unknown) => void
-  native.request.mockReturnValueOnce(
-    new Promise((resolve) => {
-      complete = resolve
-    }),
-  )
+  const document = await draft('tab', 'old')
+  const reading = deferred()
+  native.request.mockReturnValueOnce(reading.promise)
   const reloading = files.reloadDocument('tab', 'session', document.id)
   document.content = 'typed while waiting'
-  complete({ path: '/config', resolvedPath: '/config', content: 'remote' })
+  reading.resolve(remoteText('remote'))
   await reloading
   expect(document.content).toBe('typed while waiting')
   expect(document.original).toBe('old')
@@ -70,19 +34,11 @@ it('does not discard edits typed while a reload is waiting for the server', asyn
 
 it('refuses saving or reloading a retained draft on another server or account', async () => {
   const files = useFiles()
-  native.request.mockResolvedValueOnce({
-    owner: 'server-a',
-    path: '/config',
-    resolvedPath: '/config',
-    content: 'old',
-  })
-  await files.openDocument('tab', 'session-a', '/config')
-  const document = files.state('tab').documents[0]
-  document.content = 'draft from a'
+  const document = await draft('tab', 'draft from a')
   files.disconnect('tab')
-  native.request.mockResolvedValueOnce({ owner: 'server-b', path: '/', entries: [] })
-  await files.navigate('tab', 'session-b', '/')
+  await connect('tab', 'session-b', 'server-b')
   const count = native.request.mock.calls.length
+  expect(files.ownsDocument('tab', document)).toBe(false)
   expect(await files.saveDocument('tab', 'session-b', document.id)).toBe(false)
   await files.reloadDocument('tab', 'session-b', document.id)
   expect(native.request.mock.calls.length).toBe(count)
@@ -91,39 +47,58 @@ it('refuses saving or reloading a retained draft on another server or account', 
 
 it('does not resurrect the explorer when transfer startup fails after owner closure', async () => {
   const files = useFiles()
-  transferPlans.clear()
-  files.state('tab').directory = '/'
-  const transfers = useFileTransfers({ tabId: () => 'tab', sessionId: () => 'session' })
-  native.pick.mockResolvedValueOnce(['/local/config'])
-  let reject!: (cause: unknown) => void
-  native.request.mockReturnValueOnce(
-    new Promise((_, failure) => {
-      reject = failure
-    }),
-  )
-  const sending = transfers.upload(false)
-  await Promise.resolve()
-  expect(transferPlans.size).toBe(1)
+  await connect()
+  const starting = deferred()
+  native.request.mockReturnValueOnce(starting.promise)
+  const sending = files.startTransfer('tab', 'session', {
+    direction: 'upload',
+    sources: ['/local/config'],
+    destination: '/',
+  })
+  expect(files.hasTransfers('tab')).toBe(true)
   files.release('tab')
-  reject({ code: 'session_closed', message: 'closed' })
+  starting.reject({ code: 'session_closed', message: 'closed' })
   await sending
   expect(files.panels.tab).toBeUndefined()
-  expect(transferPlans.size).toBe(0)
 })
 
-it('ignores a local picker failure after its owner has closed', async () => {
+it('retries a transfer interrupted by disconnection with its original owner and progress', async () => {
   const files = useFiles()
-  files.state('tab')
-  const transfers = useFileTransfers({ tabId: () => 'tab', sessionId: () => 'session' })
-  let reject!: (cause: unknown) => void
-  native.pick.mockReturnValueOnce(
-    new Promise((_, failure) => {
-      reject = failure
+  await connect()
+  native.request.mockResolvedValueOnce(null)
+  await files.startTransfer('tab', 'session', {
+    direction: 'upload',
+    sources: ['/local/a', '/local/b'],
+    destination: '/',
+  })
+  const [shown] = files.state('tab').transfers
+  files.transferEvent('tab', {
+    ...shown,
+    state: 'running',
+    completedSources: ['/local/a'],
+    directories: {},
+  })
+  files.disconnect('tab')
+  expect(shown).toMatchObject({ state: 'failed', retryable: true })
+  // A late native cancellation must not drop the retry kept for the disconnected tab.
+  files.transferEvent('tab', {
+    ...shown,
+    state: 'cancelled',
+    message: 'Fichier temporaire restant possible : /remote/.partial',
+    completedSources: ['/local/a'],
+    directories: {},
+  })
+  expect(shown).toMatchObject({ state: 'failed', retryable: true })
+  expect(shown.message).toContain('/remote/.partial')
+  await connect('tab', 'session-2')
+  native.request.mockResolvedValueOnce(null)
+  await files.retryTransfer('tab', 'session-2', shown.id)
+  expect(native.request).toHaveBeenLastCalledWith(
+    'session-2',
+    expect.objectContaining({
+      operation: 'transfer',
+      owner: 'server-a',
+      completedSources: ['/local/a'],
     }),
   )
-  const picking = transfers.upload(false)
-  files.release('tab')
-  reject({ message: 'picker closed' })
-  await picking
-  expect(files.panels.tab).toBeUndefined()
 })

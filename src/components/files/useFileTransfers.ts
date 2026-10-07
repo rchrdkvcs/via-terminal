@@ -1,144 +1,96 @@
-import { filesApi, type RemoteEntry, type TransferEvent } from '@/ipc/files'
+import { filesApi, type RemoteEntry } from '@/ipc/files'
 import { describeError } from '@/ipc/client'
 import { useFiles } from '@/stores/files'
-import type { ExplorerContext } from './useFileOperations'
+import { explorerScope, reportError, type ExplorerContext } from './useFileOperations'
 import { droppedFiles } from './dropFiles'
-export interface TransferPlan {
-  owner?: string
-  directories?: Record<string, string>
-  completedSources?: string[]
-  direction: 'upload' | 'download'
-  sources: string[]
-  destination: string
-  stagingId?: string
-}
-export const transferPlans = new Map<
-  string,
-  { tabId: string; plan: TransferPlan; state: TransferEvent['state'] }
->()
+const STAGE_CHUNK = 256 * 1024
 export function useFileTransfers(context: ExplorerContext) {
   const files = useFiles()
-  async function start(plan: TransferPlan) {
-    const tabId = context.tabId(),
-      sessionId = context.sessionId()
-    if (!sessionId || !plan.sources.length) return
-    plan.owner ??= files.state(tabId).owner
-    const id = crypto.randomUUID()
-    transferPlans.set(id, { tabId, plan, state: 'running' })
-    files.state(tabId).sessionId = sessionId
-    files.transferEvent(tabId, {
-      id,
-      sessionId,
-      state: 'running',
-      path: plan.destination,
-      bytes: 0,
-      total: 0,
-      message: null,
-      skipped: [],
-    })
-    try {
-      await filesApi.request(sessionId, { operation: 'transfer', id, ...plan })
-    } catch (cause) {
-      const saved = transferPlans.get(id)
-      if (saved) saved.state = 'failed'
-      if (!files.panels[tabId]) {
-        if (plan.stagingId) await filesApi.stageDiscard(plan.stagingId).catch(() => undefined)
-        transferPlans.delete(id)
-        return
-      }
-      files.transferEvent(tabId, {
-        id,
-        sessionId,
-        state: 'failed',
-        path: plan.destination,
-        bytes: 0,
-        total: 0,
-        message: describeError(cause),
-        skipped: [],
-      })
-    }
-  }
   async function upload(directory: boolean) {
-    const tabId = context.tabId(),
-      sessionId = context.sessionId(),
-      panel = files.state(tabId),
-      destination = panel.directory
+    const scope = explorerScope(context)
+    if (!scope.sessionId) return
+    const destination = files.state(scope.tabId).directory
     try {
       const sources = await filesApi.pick(directory)
-      if (tabId !== context.tabId() || sessionId !== context.sessionId()) return
-      await start({ direction: 'upload', sources, destination })
+      if (sources.length && scope.current())
+        await files.startTransfer(scope.tabId, scope.sessionId, {
+          direction: 'upload',
+          sources,
+          destination,
+        })
     } catch (cause) {
-      panel.error = describeError(cause)
+      reportError(scope.tabId, cause)
     }
   }
   async function download(entries: RemoteEntry[]) {
-    const tabId = context.tabId(),
-      panel = files.state(tabId),
-      sessionId = context.sessionId()
+    const scope = explorerScope(context)
+    if (!scope.sessionId) return
     try {
-      const destinations = await filesApi.pick(true, true)
-      if (!destinations.length || tabId !== context.tabId() || sessionId !== context.sessionId())
-        return
-      await start({
-        direction: 'download',
-        sources: entries.map((entry) => entry.path),
-        destination: destinations[0],
-      })
+      const [destination] = await filesApi.pick(true, true)
+      if (destination && scope.current())
+        await files.startTransfer(scope.tabId, scope.sessionId, {
+          direction: 'download',
+          sources: entries.map((entry) => entry.path),
+          destination,
+        })
     } catch (cause) {
-      panel.error = describeError(cause)
+      reportError(scope.tabId, cause)
     }
   }
+  /** Stages a drop as a visible, cancellable preparation, then uploads it. */
   async function drop(event: DragEvent) {
-    const tabId = context.tabId(),
-      sessionId = context.sessionId(),
-      panel = files.state(tabId),
-      destination = panel.directory
-    if (!event.dataTransfer || !sessionId) return
-    let stagingId: string | undefined
-    panel.busy = true
+    const scope = explorerScope(context)
+    if (!event.dataTransfer || !scope.sessionId) return
+    const destination = files.state(scope.tabId).directory
+    let dropped: Awaited<ReturnType<typeof droppedFiles>>
     try {
-      const dropped = await droppedFiles(event.dataTransfer)
-      if (!dropped.length) return
-      stagingId = await filesApi.stageBegin()
+      dropped = await droppedFiles(event.dataTransfer)
+    } catch (cause) {
+      return reportError(scope.tabId, cause)
+    }
+    if (!dropped.length || !scope.current()) return
+    const total = dropped.reduce((sum, { file }) => sum + (file?.size ?? 0), 0)
+    const job = files.prepareTransfer(scope.tabId, scope.sessionId, destination, total)
+    if (!job) return
+    try {
+      const stagingId = await filesApi.stageBegin()
+      if (!job.stage(stagingId)) return
+      let copied = 0
       for (const { file, path } of dropped) {
+        if (!job.active()) return
         if (!file) {
           await filesApi.stageDirectory(stagingId, path)
           continue
         }
         if (file.size === 0) await filesApi.stageChunk(stagingId, path, [])
-        for (let offset = 0; offset < file.size; offset += 256 * 1024) {
-          const data = new Uint8Array(await file.slice(offset, offset + 256 * 1024).arrayBuffer())
+        for (let offset = 0; offset < file.size && job.active(); offset += STAGE_CHUNK) {
+          const data = new Uint8Array(await file.slice(offset, offset + STAGE_CHUNK).arrayBuffer())
           await filesApi.stageChunk(stagingId, path, Array.from(data))
+          job.progress((copied += data.length))
         }
       }
-      if (tabId !== context.tabId() || sessionId !== context.sessionId()) {
-        await filesApi.stageDiscard(stagingId)
-        return
-      }
-      const sources = await filesApi.stageFinish(stagingId)
-      await start({ direction: 'upload', sources, destination, stagingId })
+      if (!job.active()) return
+      await job.start(await filesApi.stageFinish(stagingId))
     } catch (cause) {
-      panel.error = describeError(cause)
-      if (stagingId) await filesApi.stageDiscard(stagingId).catch(() => undefined)
-    } finally {
-      panel.busy = false
+      job.fail(describeError(cause))
     }
   }
   async function cancel(id: string) {
-    const session = context.sessionId()
-    if (session)
-      await filesApi.request(session, { operation: 'cancel', id }).catch((cause) => {
-        files.state(context.tabId()).error = describeError(cause)
-      })
+    const scope = explorerScope(context)
+    await files
+      .cancelTransfer(scope.sessionId, id)
+      .catch((cause) => reportError(scope.tabId, cause))
   }
   async function retry(id: string) {
-    const saved = transferPlans.get(id)
-    if (saved?.tabId === context.tabId()) {
-      await start(saved.plan)
-      transferPlans.delete(id)
-      const panel = files.panels[saved.tabId]
-      if (panel) panel.transfers = panel.transfers.filter((job) => job.id !== id)
-    }
+    const scope = explorerScope(context)
+    if (scope.sessionId) await files.retryTransfer(scope.tabId, scope.sessionId, id)
   }
-  return { upload, download, drop, cancel, retry }
+  return {
+    upload,
+    download,
+    drop,
+    cancel,
+    retry,
+    clearFinished: () => files.clearFinishedTransfers(context.tabId()),
+  }
 }

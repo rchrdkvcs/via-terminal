@@ -1,52 +1,104 @@
-import { useFiles } from '@/stores/files'
+import { useFiles, type RemoteDocument } from '@/stores/files'
 import { useFileDialogs } from '@/stores/file-dialogs'
+import type { RemoteOwner } from '@/ipc/files'
+import { OWNER_CHANGED, isDirty } from '@/stores/file-documents'
 import { useSessions } from '@/stores/sessions'
+/**
+ * What the user agreed to lose when closing explorers. Nothing is lost when deciding:
+ * `release` applies it only after the closing succeeded, and asks again if any draft or
+ * transfer changed since.
+ */
+export interface Abandonment {
+  readonly tabIds: string[]
+  readonly documents: readonly { tabId: string; id: string; owner: RemoteOwner; content: string }[]
+  readonly transfers: readonly string[]
+}
 export function useFileProtection() {
   const files = useFiles()
   const dialogs = useFileDialogs()
   const sessions = useSessions()
-  async function documents(tabId: string, only?: string): Promise<boolean> {
-    const panel = files.panels[tabId]
-    if (!panel) return true
-    for (const document of panel.documents) {
-      if (only && only !== document.id) continue
-      if (document.saving) return false
-      if (document.content === document.original) continue
-      const answer = await dialogs.ask({
-        title: 'Modifications non enregistrées',
-        description: document.path,
-        actions: [
-          { label: 'Enregistrer', value: 'save' },
-          { label: 'Abandonner', value: 'discard', destructive: true },
-        ],
-      })
-      if (answer.choice === 'cancel') return false
-      if (answer.choice === 'save') {
-        const runtime = sessions.runtime(tabId)
-        if (runtime.state !== 'ready' || !runtime.sessionId) {
-          document.error = 'Reconnectez le terminal avant d’enregistrer.'
-          return false
-        }
-        if (!(await files.saveDocument(tabId, runtime.sessionId, document.id))) return false
-        if (document.content !== document.original) return false
-      } else document.content = document.original
+  async function save(tabId: string, document: RemoteDocument): Promise<boolean> {
+    const runtime = sessions.runtime(tabId)
+    if (runtime.state !== 'ready' || !runtime.sessionId) {
+      files.documentError(tabId, document.id, 'Reconnectez le terminal avant d’enregistrer.')
+      return false
     }
+    const saved = await files.saveDocument(tabId, runtime.sessionId, document.id)
+    return saved && !isDirty(document)
+  }
+  async function decide(tabIds: string[], only?: string): Promise<Abandonment | null> {
+    const documents: Abandonment['documents'][number][] = []
+    for (const tabId of tabIds) {
+      if (files.panels[tabId]?.documents.some((doc) => doc.saving)) return null
+      for (const document of files.unsaved(tabId)) {
+        if (only && only !== document.id) continue
+        // Never offer to save a draft through another endpoint or account.
+        const savable = files.ownsDocument(tabId, document)
+        const answer = await dialogs.ask({
+          title: 'Modifications non enregistrées',
+          description: savable ? document.path : `${document.path}\n${OWNER_CHANGED}`,
+          actions: [
+            ...(savable ? [{ label: 'Enregistrer et fermer', value: 'save' as const }] : []),
+            { label: 'Abandonner les modifications', value: 'discard' as const, destructive: true },
+          ],
+        })
+        if (answer.choice === 'cancel') return null
+        if (answer.choice === 'save') {
+          if (!(await save(tabId, document))) return null
+        } else
+          documents.push({
+            tabId,
+            id: document.id,
+            owner: document.owner,
+            content: document.content,
+          })
+      }
+    }
+    const transfers = only ? [] : tabIds.flatMap((id) => files.activeTransfers(id))
+    if (transfers.length) {
+      const answer = await dialogs.ask({
+        title: 'Arrêter les transferts en cours ?',
+        description:
+          'Les transferts et leurs préparations seront annulés. Les fichiers déjà transférés resteront à destination.',
+        actions: [{ label: 'Arrêter et continuer', value: 'stop', destructive: true }],
+      })
+      if (answer.choice !== 'stop') return null
+    }
+    return { tabIds, documents, transfers }
+  }
+  /** True while every draft and transfer the decision covers is unchanged and no other appeared. */
+  function current(decision: Abandonment): boolean {
+    return decision.tabIds.every((tabId) => {
+      if (files.panels[tabId]?.documents.some((doc) => doc.saving)) return false
+      const agreed = (doc: RemoteDocument) =>
+        decision.documents.some(
+          (kept) =>
+            kept.tabId === tabId &&
+            kept.id === doc.id &&
+            kept.owner === doc.owner &&
+            kept.content === doc.content,
+        )
+      return (
+        files.unsaved(tabId).every(agreed) &&
+        files.activeTransfers(tabId).every((id) => decision.transfers.includes(id))
+      )
+    })
+  }
+  /** Runs `close` once the decision is still current, then releases its explorers. */
+  async function release(decision: Abandonment, close: () => boolean): Promise<boolean> {
+    let agreed: Abandonment | null = decision
+    while (agreed && !current(agreed)) agreed = await decide(agreed.tabIds)
+    if (!agreed || !close()) return false
+    agreed.tabIds.forEach((tabId) => files.release(tabId))
     return true
   }
-  async function protect(tabIds: string[]): Promise<boolean> {
-    for (const id of tabIds) if (!(await documents(id))) return false
-    const active = tabIds.filter((id) => files.panels[id] && files.hasTransfers(id))
-    if (!active.length) return true
-    const answer = await dialogs.ask({
-      title: 'Arrêter les transferts en cours ?',
-      description:
-        'Les transferts seront annulés. Les fichiers déjà transférés resteront à destination.',
-      actions: [{ label: 'Arrêter et continuer', value: 'stop', destructive: true }],
-    })
-    return answer.choice === 'stop'
-  }
   async function closeDocument(tabId: string, id: string) {
-    if (await documents(tabId, id)) files.discardDocument(tabId, id)
+    const decision = await decide([tabId], id)
+    const document = files.panels[tabId]?.documents.find((doc) => doc.id === id)
+    if (!decision || !document) return
+    const kept = decision.documents.find((doc) => doc.id === id)
+    if (kept && kept.content !== document.content) return closeDocument(tabId, id)
+    files.discardDocument(tabId, id)
   }
-  return { protect, closeDocument }
+  return { protect: (tabIds: string[]) => decide(tabIds), current, release, closeDocument }
 }

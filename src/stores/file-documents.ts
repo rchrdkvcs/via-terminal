@@ -8,7 +8,26 @@ export interface RemoteDocument extends RemoteText {
   error: string | null
   conflict: boolean
 }
+export const isDirty = (document: RemoteDocument) => document.content !== document.original
+export const OWNER_CHANGED =
+  'Le serveur ou le compte a changé. Ce document appartient à la connexion précédente.'
 export function documentActions(state: (id: string) => FileState) {
+  function selectDocument(tabId: string, id: string) {
+    const panel = state(tabId)
+    if (panel.documents.some((doc) => doc.id === id)) panel.activeDocument = id
+  }
+  function editDocument(tabId: string, id: string, content: string) {
+    const document = state(tabId).documents.find((doc) => doc.id === id)
+    if (document) document.content = content
+  }
+  function documentError(tabId: string, id: string, error: string) {
+    const document = state(tabId).documents.find((doc) => doc.id === id)
+    if (document) document.error = error
+  }
+  /** Only the explorer's current endpoint and account may save or reload a document. */
+  function ownsDocument(tabId: string, document: RemoteDocument) {
+    return document.owner === state(tabId).owner
+  }
   async function openDocument(tabId: string, sessionId: string, path: string) {
     const panel = state(tabId)
     const existing = panel.documents.find((doc) => doc.path === path)
@@ -17,10 +36,10 @@ export function documentActions(state: (id: string) => FileState) {
       return
     }
     panel.sessionId = sessionId
-    const generation = panel.generation
+    const generation = panel.connectionGeneration
     try {
-      const text = await filesApi.request<RemoteText>(sessionId, { operation: 'read', path })
-      if (panel.generation !== generation) return
+      const text = await filesApi.request(sessionId, { operation: 'read', path })
+      if (panel.connectionGeneration !== generation) return
       const found = panel.documents.find((doc) => doc.path === path)
       if (found) {
         panel.activeDocument = found.id
@@ -38,7 +57,7 @@ export function documentActions(state: (id: string) => FileState) {
       panel.documents.push(document)
       panel.activeDocument = document.id
     } catch (cause) {
-      if (panel.generation === generation) panel.error = describeError(cause)
+      if (panel.connectionGeneration === generation) panel.error = describeError(cause)
     }
   }
   async function saveDocument(
@@ -50,9 +69,8 @@ export function documentActions(state: (id: string) => FileState) {
     const panel = state(tabId)
     const document = panel.documents.find((doc) => doc.id === id)
     if (!document || document.saving) return false
-    if (document.owner !== panel.owner) {
-      document.error =
-        'Le serveur ou le compte a changé. Ce document appartient à la connexion précédente.'
+    if (!ownsDocument(tabId, document)) {
+      document.error = OWNER_CHANGED
       return false
     }
     panel.sessionId = sessionId
@@ -61,7 +79,7 @@ export function documentActions(state: (id: string) => FileState) {
     document.error = null
     document.conflict = false
     try {
-      const saved = await filesApi.request<RemoteText>(sessionId, {
+      const saved = await filesApi.request(sessionId, {
         operation: 'save',
         document: { ...document, content },
         original: document.original,
@@ -89,18 +107,17 @@ export function documentActions(state: (id: string) => FileState) {
   async function reloadDocument(tabId: string, sessionId: string, id: string) {
     const panel = state(tabId)
     const document = panel.documents.find((doc) => doc.id === id)
-    if (!document || document.saving || document.owner !== panel.owner) return
+    if (!document || document.saving || !ownsDocument(tabId, document)) return
     const content = document.content
-    const generation = panel.generation
+    const generation = panel.connectionGeneration
     try {
-      const text = await filesApi.request<RemoteText>(sessionId, {
+      const text = await filesApi.request(sessionId, {
         operation: 'read',
         path: document.path,
       })
-      if (document.content !== content || panel.generation !== generation) return
+      if (document.content !== content || panel.connectionGeneration !== generation) return
       if (text.owner !== document.owner) {
-        document.error =
-          'Le serveur ou le compte a changé. Ce document appartient à la connexion précédente.'
+        document.error = OWNER_CHANGED
         return
       }
       Object.assign(document, text, { original: text.content, error: null, conflict: false })
@@ -114,5 +131,14 @@ export function documentActions(state: (id: string) => FileState) {
     if (panel.activeDocument === id)
       panel.activeDocument = panel.documents[panel.documents.length - 1]?.id ?? null
   }
-  return { openDocument, saveDocument, reloadDocument, discardDocument }
+  return {
+    selectDocument,
+    editDocument,
+    documentError,
+    ownsDocument,
+    openDocument,
+    saveDocument,
+    reloadDocument,
+    discardDocument,
+  }
 }

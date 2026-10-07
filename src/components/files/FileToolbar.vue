@@ -23,8 +23,8 @@ const button =
 </script>
 <template>
   <div
-    class="flex shrink-0 items-center gap-0.5 border-b border-hairline px-2 py-1.5"
-    role="toolbar"
+    class="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-hairline px-2 py-1.5"
+    role="group"
     aria-label="Opérations sur les fichiers"
   >
     <button

@@ -80,7 +80,7 @@ export function useCommandActions() {
         icon: FolderTree,
         run: () => {
           ui.route = 'workbench'
-          useFiles().state(tab.id).visible = true
+          useFiles().setVisible(tab.id, true)
         },
       })
     if (tab && row) {

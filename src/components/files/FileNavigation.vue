@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { ArrowUp, Eye, Maximize2, Minimize2, RefreshCw, X } from '@lucide/vue'
+import { ArrowUp, Eye, EyeOff, Maximize2, Minimize2, RefreshCw, X } from '@lucide/vue'
 import type { FileState } from '@/stores/files'
 const props = defineProps<{ name: string; panel: FileState; connected: boolean; hidden: boolean }>()
-const emit = defineEmits<{ navigate: [path: string]; hidden: [] }>()
+const emit = defineEmits<{ navigate: [path: string]; hidden: []; expand: []; hide: [] }>()
 const path = ref('')
 watch(
   () => props.panel.directory,
@@ -15,7 +15,7 @@ watch(
 const navigate = (directory: string) => emit('navigate', directory)
 const parent = () => navigate(props.panel.directory.replace(/\/[^/]+\/?$/, '') || '/')
 const button =
-  'press grid size-7 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40'
+  'press grid size-7 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-row-hover hover:text-foreground aria-pressed:bg-control aria-pressed:text-foreground aria-pressed:shadow-[var(--shadow-control)] focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40'
 </script>
 <template>
   <header class="flex h-10 shrink-0 items-center gap-2 border-b border-hairline px-3">
@@ -24,16 +24,19 @@ const button =
     </div>
     <button
       :class="button"
-      :aria-label="panel.expanded ? 'Réduire le panneau fichiers' : 'Agrandir le panneau fichiers'"
-      :title="panel.expanded ? 'Réduire' : 'Agrandir'"
-      @click="panel.expanded = !panel.expanded"
+      :aria-label="
+        panel.expanded ? 'Réduire l’explorateur distant' : 'Agrandir l’explorateur distant'
+      "
+      :title="panel.expanded ? 'Réduire et afficher le terminal' : 'Agrandir'"
+      @click="emit('expand')"
     >
       <Minimize2 v-if="panel.expanded" :size="14" /><Maximize2 v-else :size="14" />
     </button>
     <button
       :class="button"
       aria-label="Masquer l’explorateur distant"
-      @click="panel.visible = false"
+      title="Masquer"
+      @click="emit('hide')"
     >
       <X :size="14" />
     </button>
@@ -43,6 +46,7 @@ const button =
       type="button"
       :class="button"
       aria-label="Dossier parent"
+      title="Dossier parent"
       :disabled="!connected || panel.directory === '/'"
       @click="parent"
     >
@@ -52,13 +56,15 @@ const button =
       v-model="path"
       aria-label="Chemin distant"
       spellcheck="false"
-      class="material-field h-8 min-w-0 flex-1 rounded-md px-2 font-mono text-xs outline-none"
+      class="material-field h-8 min-w-0 flex-1 rounded-md px-2 font-mono text-xs outline-none disabled:opacity-60"
       :disabled="!connected"
+      @keydown.esc="path = panel.directory"
     />
     <button
       type="button"
       :class="button"
       aria-label="Actualiser les fichiers"
+      title="Actualiser"
       :disabled="!connected || panel.busy"
       @click="navigate(panel.directory)"
     >
@@ -68,10 +74,11 @@ const button =
       type="button"
       :class="button"
       aria-label="Afficher les fichiers cachés"
+      title="Afficher les fichiers cachés"
       :aria-pressed="hidden"
       @click="emit('hidden')"
     >
-      <Eye :size="14" />
+      <Eye v-if="hidden" :size="14" /><EyeOff v-else :size="14" />
     </button>
   </form>
 </template>

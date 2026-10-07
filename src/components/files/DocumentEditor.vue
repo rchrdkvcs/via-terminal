@@ -1,21 +1,32 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Save, X } from '@lucide/vue'
+import { computed, ref, useId, watch } from 'vue'
+import { Save } from '@lucide/vue'
 import { useFiles } from '@/stores/files'
+import { isDirty } from '@/stores/file-documents'
 import { useFileProtection } from '@/composables/useFileProtection'
 import { useFileDialogs } from '@/stores/file-dialogs'
+import DocumentTabs from './DocumentTabs.vue'
 import TextEditor from './TextEditor.vue'
 const props = defineProps<{ tabId: string; sessionId: string | null }>()
 const files = useFiles(),
   protection = useFileProtection(),
   dialogs = useFileDialogs()
+const id = useId()
 const panel = computed(() => files.state(props.tabId))
 const active = computed(() =>
   panel.value.documents.find((doc) => doc.id === panel.value.activeDocument),
 )
+const dirty = computed(() => !!active.value && isDirty(active.value))
+const stale = computed(() => !!active.value && active.value.owner !== panel.value.owner)
+const saved = ref<string | null>(null)
+watch(
+  () => [active.value?.id, active.value?.content],
+  () => (saved.value = null),
+)
 async function save() {
-  if (active.value && props.sessionId)
-    await files.saveDocument(props.tabId, props.sessionId, active.value.id)
+  const document = active.value
+  if (!document || !props.sessionId || stale.value) return
+  if (await files.saveDocument(props.tabId, props.sessionId, document.id)) saved.value = document.id
 }
 async function conflict(choice: 'reload' | 'overwrite') {
   const document = active.value,
@@ -24,13 +35,15 @@ async function conflict(choice: 'reload' | 'overwrite') {
   if (!document || !session) return
   const answer = await dialogs.ask({
     title:
-      choice === 'reload'
-        ? 'Abandonner vos modifications et recharger ?'
-        : 'Remplacer la version distante ?',
-    description: document.path,
+      choice === 'reload' ? 'Recharger la version distante ?' : 'Remplacer la version distante ?',
+    description:
+      document.resolvedPath +
+      (choice === 'reload'
+        ? '\nVos modifications non enregistrées de ce document seront perdues.'
+        : '\nLes changements faits sur le serveur depuis l’ouverture seront remplacés par votre version.'),
     actions: [
       {
-        label: choice === 'reload' ? 'Recharger' : 'Remplacer',
+        label: choice === 'reload' ? 'Recharger et abandonner' : 'Remplacer la version distante',
         value: 'confirm',
         destructive: true,
       },
@@ -40,6 +53,8 @@ async function conflict(choice: 'reload' | 'overwrite') {
   if (choice === 'reload') await files.reloadDocument(tabId, session, document.id)
   else await files.saveDocument(tabId, session, document.id, true)
 }
+const action =
+  'material-control press rounded-md px-2 py-1 text-xs focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40'
 </script>
 <template>
   <section
@@ -47,57 +62,63 @@ async function conflict(choice: 'reload' | 'overwrite') {
     class="flex h-full min-h-0 flex-col border-t border-hairline"
     aria-label="Documents distants"
   >
+    <DocumentTabs
+      :documents="panel.documents"
+      :active="panel.activeDocument"
+      :panel="id"
+      @select="files.selectDocument(tabId, $event)"
+      @close="protection.closeDocument(tabId, $event)"
+    />
     <div
-      class="flex shrink-0 items-center overflow-x-auto border-b border-hairline px-1"
-      role="tablist"
-      aria-label="Documents ouverts"
+      v-if="active"
+      :id="id"
+      role="tabpanel"
+      :aria-labelledby="`${id}-tab-${active.id}`"
+      class="flex min-h-0 flex-1 flex-col"
     >
-      <div
-        v-for="document in panel.documents"
-        :key="document.id"
-        class="flex shrink-0 items-center rounded-t-md"
-        :class="active?.id === document.id ? 'bg-row-selected' : ''"
-      >
+      <div class="flex shrink-0 flex-wrap items-start gap-x-2 px-3 py-1.5">
+        <p class="min-w-0 flex-1 basis-40 py-1 text-[11px] break-all text-ink-muted">
+          <template v-if="active.resolvedPath !== active.path"
+            >{{ active.path }} <span aria-hidden="true">→</span
+            ><span class="sr-only">, lien vers</span> </template
+          >{{ active.resolvedPath }}
+        </p>
+        <span role="status" class="py-1 text-[11px] whitespace-nowrap text-ink-muted">{{
+          active.saving
+            ? 'Enregistrement…'
+            : saved === active.id && !dirty
+              ? 'Enregistré'
+              : dirty && !sessionId
+                ? 'Reconnectez pour enregistrer'
+                : ''
+        }}</span>
         <button
           type="button"
-          role="tab"
-          :aria-selected="active?.id === document.id"
-          class="max-w-40 truncate px-2 py-2 text-xs focus-visible:outline-2 focus-visible:outline-ring"
-          :title="document.path"
-          @click="panel.activeDocument = document.id"
-        >
-          {{ document.path.split('/').pop()
-          }}{{ document.content !== document.original ? ' •' : '' }}
-        </button>
-        <button
-          class="me-1 grid size-6 place-items-center rounded hover:bg-row-hover focus-visible:outline-2 focus-visible:outline-ring"
-          :aria-label="`Fermer ${document.path}`"
-          :disabled="document.saving"
-          @click="protection.closeDocument(tabId, document.id)"
-        >
-          <X :size="12" />
-        </button>
-      </div>
-    </div>
-    <template v-if="active">
-      <div class="flex shrink-0 items-center gap-2 px-3 py-1.5">
-        <span
-          class="min-w-0 flex-1 truncate text-[11px] text-ink-muted"
-          :title="active.resolvedPath"
-          >{{ active.resolvedPath }}</span
-        ><button
-          class="material-control flex items-center gap-1.5 rounded-md px-2 py-1 text-xs focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40"
-          :disabled="!sessionId || active.saving || active.content === active.original"
+          :class="[action, 'flex shrink-0 items-center gap-1.5']"
+          :disabled="!sessionId || stale || active.saving || !dirty"
           @click="save"
         >
-          <Save :size="12" />{{ active.saving ? 'Enregistrement…' : 'Enregistrer' }}
+          <Save :size="12" aria-hidden="true" />Enregistrer
         </button>
       </div>
+      <p v-if="stale" class="shrink-0 px-3 pb-2 text-xs">
+        Ce document vient d’une connexion précédente (autre serveur ou compte). Il ne peut pas être
+        enregistré ici : copiez vos modifications ou fermez-le.
+      </p>
       <div v-if="active.error" class="shrink-0 px-3 pb-2 text-xs" role="alert">
-        <p>{{ active.error }}</p>
-        <div v-if="active.conflict" class="mt-1 flex gap-3">
-          <button class="underline" @click="conflict('reload')">Recharger</button
-          ><button class="underline" @click="conflict('overwrite')">Remplacer explicitement</button>
+        <p class="break-words">{{ active.error }}</p>
+        <div v-if="active.conflict" class="mt-1.5 flex flex-wrap gap-2">
+          <button type="button" :class="action" :disabled="!sessionId" @click="conflict('reload')">
+            Recharger la version distante
+          </button>
+          <button
+            type="button"
+            :class="action"
+            :disabled="!sessionId || stale"
+            @click="conflict('overwrite')"
+          >
+            Remplacer la version distante
+          </button>
         </div>
       </div>
       <TextEditor
@@ -105,9 +126,9 @@ async function conflict(choice: 'reload' | 'overwrite') {
         :content="active.content"
         :path="active.resolvedPath"
         class="min-h-0 flex-1"
-        @change="active.content = $event"
+        @change="files.editDocument(tabId, active.id, $event)"
         @save="save"
       />
-    </template>
+    </div>
   </section>
 </template>

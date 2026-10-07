@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { FolderTree, KeyRound, PanelLeft, Settings } from '@lucide/vue'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
@@ -13,11 +14,16 @@ import UpdateButton from './UpdateButton.vue'
 
 const files = useFiles()
 const workbench = useWorkbench()
+const remote = computed(() =>
+  workbench.activeTab && workbench.activeTab.target.kind !== 'local' ? workbench.activeTab : null,
+)
+const filesShown = computed(
+  () => !!remote.value && ui.route === 'workbench' && files.state(remote.value.id).visible,
+)
 function toggleFiles() {
-  const tab = workbench.activeTab
-  if (!tab || tab.target.kind === 'local') return
+  if (!remote.value) return
+  files.setVisible(remote.value.id, !filesShown.value)
   ui.route = 'workbench'
-  files.state(tab.id).visible = !files.state(tab.id).visible
 }
 const settings = useSettings()
 const spaces = useSpaces()
@@ -60,18 +66,21 @@ const tools = [
         <TooltipTrigger as-child>
           <button
             type="button"
-            :class="button"
+            :class="[
+              button,
+              'aria-disabled:opacity-40 aria-disabled:hover:bg-transparent aria-expanded:bg-control aria-expanded:text-foreground aria-expanded:shadow-[var(--shadow-control)]',
+            ]"
             aria-label="Explorateur distant"
-            :disabled="!workbench.activeTab || workbench.activeTab.target.kind === 'local'"
-            :aria-expanded="
-              workbench.activeTab ? files.state(workbench.activeTab.id).visible : false
-            "
+            :aria-disabled="!remote || undefined"
+            :aria-expanded="remote ? filesShown : undefined"
             @click="toggleFiles"
           >
             <FolderTree :size="15" :stroke-width="1.5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Explorateur distant</TooltipContent>
+        <TooltipContent side="bottom">{{
+          remote ? 'Explorateur distant' : 'Explorateur distant : onglets SSH uniquement'
+        }}</TooltipContent>
       </Tooltip>
       <UpdateButton />
       <Tooltip v-for="tool in tools" :key="tool.route">

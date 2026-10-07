@@ -1,10 +1,15 @@
 import { defineStore } from 'pinia'
 import { reactive } from 'vue'
-import { filesApi, type Listing, type RemoteEntry, type TransferEvent } from '@/ipc/files'
+import { filesApi, type RemoteEntry, type RemoteOwner } from '@/ipc/files'
 import { describeError } from '@/ipc/client'
-import { documentActions, type RemoteDocument } from './file-documents'
+import { documentActions, isDirty, type RemoteDocument } from './file-documents'
+import { transferActions, type Transfer } from './file-transfers'
+export type { RemoteDocument } from './file-documents'
+export type { Transfer, TransferState } from './file-transfers'
+export type { Preparation } from './file-preparation'
+/** The remote explorer of one tab. Its connection is `sessionId`, null while disconnected. */
 export interface FileState {
-  owner: string | undefined
+  owner: RemoteOwner | undefined
   visible: boolean
   expanded: boolean
   directory: string
@@ -14,8 +19,10 @@ export interface FileState {
   busy: boolean
   error: string | null
   generation: number
+  /** Invalidates document reads on disconnect, independently of directory refreshes. */
+  connectionGeneration: number
   sessionId: string | null
-  transfers: TransferEvent[]
+  transfers: Transfer[]
 }
 export const useFiles = defineStore('files', () => {
   const panels = reactive<Record<string, FileState>>({})
@@ -31,10 +38,12 @@ export const useFiles = defineStore('files', () => {
       busy: false,
       error: null,
       generation: 0,
+      connectionGeneration: 0,
       sessionId: null,
       transfers: [],
     })
   }
+  const transfers = transferActions(panels)
   async function navigate(tabId: string, sessionId: string, path: string) {
     const panel = state(tabId)
     const generation = ++panel.generation
@@ -42,7 +51,7 @@ export const useFiles = defineStore('files', () => {
     panel.error = null
     panel.sessionId = sessionId
     try {
-      const listing = await filesApi.request<Listing>(sessionId, { operation: 'list', path })
+      const listing = await filesApi.request(sessionId, { operation: 'list', path })
       if (panel.generation !== generation) return
       panel.owner = listing.owner
       panel.directory = listing.path
@@ -53,47 +62,53 @@ export const useFiles = defineStore('files', () => {
       if (panel.generation === generation) panel.busy = false
     }
   }
+  /** The session ended: keeps documents and failed transfers for a later connection. */
   function disconnect(tabId: string) {
     const panel = panels[tabId]
     if (!panel) return
     panel.generation++
+    panel.connectionGeneration++
     panel.sessionId = null
     panel.busy = false
-    panel.transfers.forEach((job) => {
-      if (job.state === 'running' || job.state === 'conflict')
-        Object.assign(job, {
-          state: 'failed',
-          message: 'Connexion interrompue. Vous pouvez réessayer après reconnexion.',
-        })
-    })
+    transfers.interrupt(tabId)
   }
+  /** The tab closed or changed target: forgets everything, including staged drops. */
   function release(tabId: string) {
     disconnect(tabId)
+    transfers.forget(tabId)
     delete panels[tabId]
   }
+  function unsaved(tabId: string): RemoteDocument[] {
+    return panels[tabId]?.documents.filter(isDirty) ?? []
+  }
   function hasChanges(tabId: string) {
-    return state(tabId).documents.some((doc) => doc.content !== doc.original || doc.saving)
-  }
-  function hasTransfers(tabId: string) {
-    return state(tabId).transfers.some((job) => ['running', 'conflict'].includes(job.state))
-  }
-  function transferEvent(tabId: string, event: TransferEvent) {
-    const panel = panels[tabId]
-    if (!panel) return
-    if (panel.sessionId !== event.sessionId) return
-    const transfer = panel.transfers.find((job) => job.id === event.id)
-    if (transfer) Object.assign(transfer, event)
-    else panel.transfers.push(event)
+    return !!panels[tabId]?.documents.some((doc) => isDirty(doc) || doc.saving)
   }
   return {
     panels,
     state,
+    setVisible: (tabId: string, visible: boolean) => {
+      state(tabId).visible = visible
+    },
+    toggleExpanded: (tabId: string) => {
+      const panel = state(tabId)
+      panel.expanded = !panel.expanded
+    },
+    hide: (tabId: string) => {
+      if (panels[tabId]) panels[tabId].visible = false
+    },
     navigate,
     disconnect,
     release,
+    unsaved,
     hasChanges,
-    hasTransfers,
-    transferEvent,
+    reportError: (tabId: string, error: string) => {
+      if (panels[tabId]) panels[tabId].error = error
+    },
+    dismissError: (tabId: string) => {
+      if (panels[tabId]) panels[tabId].error = null
+    },
+    ...transfers.actions,
     ...documentActions(state),
   }
 })

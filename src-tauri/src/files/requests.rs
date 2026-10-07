@@ -1,82 +1,68 @@
-use super::{model::Request, sftp_error, Files};
+use super::{
+    model::{Reply, Request},
+    sftp_error, Files,
+};
 use crate::error::{AppError, AppResult};
 use russh_sftp::protocol::FileAttributes;
-use serde_json::{json, Value};
 use std::sync::Arc;
 impl Files {
-    pub async fn execute(self: &Arc<Self>, request: Request) -> AppResult<Value> {
+    pub async fn execute(self: &Arc<Self>, request: Request) -> AppResult<Reply> {
         match request {
-            Request::List { path } => {
-                let path = self.resolve(&path).await?;
-                Ok(json!({"entries": self.list(&path).await?, "path": path, "owner": self.owner}))
-            }
-            Request::Read { path } => Ok(json!(self.read_document(&path).await?)),
+            Request::List { path } => Ok(Reply::Listing(self.listing(&path).await?)),
+            Request::Read { path } => Ok(Reply::Document(self.read_document(&path).await?)),
             Request::Save {
                 document,
                 original,
                 overwrite,
-            } => Ok(json!(
-                self.save_document(document, &original, overwrite).await?
+            } => Ok(Reply::Document(
+                self.save_document(document, &original, overwrite).await?,
             )),
-            Request::Create { path, directory } => {
-                self.create(&path, directory).await?;
-                Ok(Value::Null)
-            }
-            Request::Move { path, destination } => {
-                self.raw
-                    .rename(path, destination)
-                    .await
-                    .map_err(sftp_error)?;
-                Ok(Value::Null)
-            }
-            Request::Delete { path } => {
-                self.delete(&path).await?;
-                Ok(Value::Null)
-            }
+            Request::Create {
+                parent,
+                name,
+                directory,
+            } => self.create(&parent, &name, directory).await.map(done),
+            Request::Move { path, destination } => self
+                .raw
+                .rename(path, destination)
+                .await
+                .map_err(sftp_error)
+                .map(done),
+            Request::Delete { path } => self.delete(&path).await.map(done),
             Request::Chmod { path, permissions } => {
                 if permissions > 0o7777 {
                     return Err(AppError::invalid("Permissions Unix invalides"));
                 }
+                let attrs = FileAttributes {
+                    permissions: Some(permissions),
+                    ..Default::default()
+                };
                 self.raw
-                    .setstat(
-                        path,
-                        FileAttributes {
-                            permissions: Some(permissions),
-                            ..Default::default()
-                        },
-                    )
+                    .setstat(path, attrs)
                     .await
-                    .map_err(sftp_error)?;
-                Ok(Value::Null)
+                    .map_err(sftp_error)
+                    .map(done)
             }
-            Request::Transfer {
-                id,
-                direction,
-                sources,
-                destination,
-                completed_sources,
-                directories,
-                owner,
-            } => {
-                self.check_owner(&owner)?;
-                self.start_transfer(
-                    id,
-                    direction,
-                    sources,
-                    destination,
-                    completed_sources,
-                    directories,
-                )?;
-                Ok(Value::Null)
+            Request::Transfer(plan) => {
+                self.check_owner(&plan.owner)?;
+                self.start_transfer(plan).map(done)
             }
             Request::Cancel { id } => {
                 self.jobs.cancel(id);
-                Ok(Value::Null)
+                Ok(Reply::Done)
             }
-            Request::Resolve { id, choice, all } => {
-                self.jobs.resolve(id, choice, all)?;
-                Ok(Value::Null)
-            }
+            Request::Resolve { id, choice, all } => self.jobs.resolve(id, choice, all).map(done),
         }
+    }
+}
+fn done<T>(_: T) -> Reply {
+    Reply::Done
+}
+
+#[cfg(test)]
+impl Files {
+    /// Replies as the interface receives them.
+    pub(super) async fn json(self: &Arc<Self>, request: Request) -> AppResult<serde_json::Value> {
+        Ok(serde_json::to_value(self.execute(request).await?).unwrap())
     }
 }

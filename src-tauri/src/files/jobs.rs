@@ -1,4 +1,4 @@
-use super::model::{Collision, TransferEvent};
+use super::model::{Collision, TransferEvent, TransferState};
 use crate::{
     error::{AppError, AppResult},
     sessions::events::{Event, EventSink},
@@ -75,7 +75,7 @@ impl Job {
             _ => Ok(()),
         }
     }
-    pub fn emit(&self, state: &'static str, message: Option<String>) {
+    pub fn emit(&self, state: TransferState, message: Option<String>) {
         let mut event = self.event.lock().unwrap();
         event.state = state;
         event.message = message;
@@ -87,7 +87,7 @@ impl Job {
         event.bytes = 0;
         event.total = total;
         drop(event);
-        self.emit("running", None);
+        self.emit(TransferState::Running, None);
     }
     pub fn progress(&self, bytes: u64) {
         let mut event = self.event.lock().unwrap();
@@ -106,7 +106,7 @@ impl Job {
         let (tx, mut rx) = oneshot::channel();
         *self.decision.lock().unwrap() = Some(tx);
         self.event.lock().unwrap().path = path.into();
-        self.emit("conflict", None);
+        self.emit(TransferState::Conflict, None);
         let (choice, all) = loop {
             tokio::select! {
                 reply = &mut rx => { self.check()?; break reply.map_err(|_| AppError::new("file_cancelled", "Transfert annulé"))?; },
@@ -116,7 +116,7 @@ impl Job {
         if all {
             *self.policy.lock().unwrap() = Some(choice);
         }
-        self.emit("running", None);
+        self.emit(TransferState::Running, None);
         Ok(choice)
     }
 }

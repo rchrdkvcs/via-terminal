@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
+import { describe, expect, it, vi } from 'vitest'
 import type { SessionStateEvent } from '@/ipc/types'
 import { findTab } from '@/domain/space'
 import { mocks, row, setup } from './workbench.fixture'
@@ -48,4 +49,18 @@ describe('workbench reactions to sessions', () => {
     expect(mocks.start).not.toHaveBeenCalled()
     expect(mocks.live.has('quick')).toBe(true)
   })
+})
+
+it('keeps file explorer focus when only the active tab directory changes', async () => {
+  const { spaces, workbench } = setup([row('remote')])
+  workbench.activate('remote')
+  await nextTick()
+  await vi.runAllTimersAsync()
+  mocks.focus.mockClear()
+  expect(
+    spaces.dispatch({ type: 'updateTab', tabId: 'remote', patch: { remoteCwd: '/home/via/logs' } }),
+  ).toBe(true)
+  await nextTick()
+  await vi.runAllTimersAsync()
+  expect(mocks.focus).not.toHaveBeenCalled()
 })

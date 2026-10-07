@@ -1,4 +1,6 @@
-use super::{jobs::Job, model::Collision, sftp_error, valid_name, Files};
+use super::{
+    errors::kind_collision, jobs::Job, model::Collision, paths::local_name, sftp_error, Files,
+};
 use crate::error::{AppError, AppResult};
 use std::path::PathBuf;
 pub(super) fn local(error: std::io::Error) -> AppError {
@@ -65,7 +67,7 @@ impl Files {
                                 .as_ref()
                                 .is_some_and(|m| m.is_dir() && !m.is_symlink())
                             {
-                                return Err(AppError::new("file_collision", "Le remplacement d’un fichier ou lien par un dossier est refusé. Choisissez Ignorer ou Conserver les deux"));
+                                return Err(kind_collision(false));
                             }
                         }
                         Collision::KeepBoth => target = available_local(&target).await?,
@@ -85,9 +87,10 @@ impl Files {
                             job.skip(&source);
                             continue;
                         }
-                        Collision::Replace => {
-                            replace = true;
+                        Collision::Replace if existing.as_ref().is_some_and(|m| m.is_dir()) => {
+                            return Err(kind_collision(true));
                         }
+                        Collision::Replace => replace = true,
                         Collision::KeepBoth => {
                             target = available_local(&target).await?;
                         }
@@ -119,24 +122,4 @@ async fn available_local(path: &std::path::Path) -> AppResult<PathBuf> {
         "file_collision",
         "Aucun nom de destination disponible",
     ))
-}
-
-fn local_name(name: &str) -> AppResult<()> {
-    valid_name(name)?;
-    #[cfg(windows)]
-    {
-        let stem = name.split('.').next().unwrap_or("").to_ascii_uppercase();
-        if name.contains([':', '*', '?', '"', '<', '>', '|'])
-            || name.ends_with(['.', ' '])
-            || ["CON", "PRN", "AUX", "NUL"].contains(&stem.as_str())
-            || (stem.len() == 4
-                && (stem.starts_with("COM") || stem.starts_with("LPT"))
-                && matches!(stem.as_bytes()[3], b'1'..=b'9'))
-        {
-            return Err(AppError::invalid(
-                "Ce nom distant n’est pas un nom de fichier Windows valide",
-            ));
-        }
-    }
-    Ok(())
 }

@@ -1,21 +1,20 @@
-use super::{sftp_error, Files};
+use super::{join, paths::remote_name, sftp_error, Files};
 use crate::error::{AppError, AppResult};
 use russh_sftp::protocol::OpenFlags;
 impl Files {
-    pub async fn create(&self, path: &str, directory: bool) -> AppResult<()> {
+    pub async fn create(&self, parent: &str, name: &str, directory: bool) -> AppResult<()> {
+        remote_name(name)?;
+        let path = join(parent, name);
         if directory {
             self.raw
                 .mkdir(path, Default::default())
                 .await
                 .map_err(sftp_error)?;
         } else {
+            let flags = OpenFlags::WRITE | OpenFlags::CREATE | OpenFlags::EXCLUDE;
             let file = self
                 .raw
-                .open(
-                    path,
-                    OpenFlags::WRITE | OpenFlags::CREATE | OpenFlags::EXCLUDE,
-                    Default::default(),
-                )
+                .open(path, flags, Default::default())
                 .await
                 .map_err(sftp_error)?;
             self.raw.close(file.handle).await.map_err(sftp_error)?;

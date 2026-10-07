@@ -7,6 +7,7 @@ mod handler;
 mod interactive;
 mod keys;
 pub mod plan;
+mod sftp;
 
 pub use plan::*;
 
@@ -111,6 +112,8 @@ impl SessionIo for SshSession {
     }
 }
 
+#[cfg(test)]
+mod sftp_tests;
 #[cfg(test)]
 mod test_harness;
 #[cfg(test)]

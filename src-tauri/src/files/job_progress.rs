@@ -1,4 +1,4 @@
-use super::jobs::Job;
+use super::{jobs::Job, model::TransferState};
 impl Job {
     pub fn already_completed(&self, path: &str) -> bool {
         self.event
@@ -27,6 +27,6 @@ impl Job {
             .unwrap()
             .directories
             .insert(source.into(), target.into());
-        self.emit("running", None);
+        self.emit(TransferState::Running, None);
     }
 }

@@ -14,6 +14,8 @@ import DocumentEditor from './DocumentEditor.vue'
 import FileList from './FileList.vue'
 import FileToolbar from './FileToolbar.vue'
 import TransferList from './TransferList.vue'
+import FileStatus from './FileStatus.vue'
+import FileDropZone from './FileDropZone.vue'
 const props = defineProps<{ tab: Tab }>()
 const files = useFiles(),
   sessions = useSessions(),
@@ -34,8 +36,7 @@ watch(
   },
 )
 const selected = ref<string[]>([]),
-  hidden = ref(true),
-  dragging = ref(false)
+  hidden = ref(true)
 const context = { tabId: () => props.tab.id, sessionId: () => session.value }
 const operations = useFileOperations(context),
   transfers = useFileTransfers(context)
@@ -56,10 +57,7 @@ watch(
 )
 watch(
   () => panel.value.directory,
-  () => {
-    selected.value = []
-  },
-  { immediate: true },
+  () => (selected.value = []),
 )
 function navigate(directory: string) {
   selected.value = []
@@ -74,29 +72,13 @@ function open(entry: RemoteEntry) {
   if (entry.kind === 'directory' || entry.targetKind === 'directory') navigate(entry.path)
   else if (session.value) void files.openDocument(props.tab.id, session.value, entry.path)
 }
-function accepts(event: DragEvent) {
-  if (!event.dataTransfer?.types.includes('Files')) return
-  event.preventDefault()
-  event.stopPropagation()
-  dragging.value = true
-}
-async function drop(event: DragEvent) {
-  dragging.value = false
-  if (event.dataTransfer?.types.includes('Files')) {
-    event.preventDefault()
-    event.stopPropagation()
-    await transfers.drop(event)
-  }
-}
 </script>
 <template>
-  <section
-    class="relative flex h-full min-h-0 min-w-0 flex-col bg-surface"
+  <FileDropZone
+    :directory="panel.directory"
+    class="relative flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-surface"
     aria-label="Explorateur distant"
-    @dragenter="accepts"
-    @dragover="accepts"
-    @dragleave="dragging = false"
-    @drop="drop"
+    @drop="transfers.drop"
   >
     <FileNavigation
       :name="names.label(tab)"
@@ -105,6 +87,8 @@ async function drop(event: DragEvent) {
       :hidden="hidden"
       @navigate="navigate"
       @hidden="hidden = !hidden"
+      @expand="files.toggleExpanded(tab.id)"
+      @hide="files.hide(tab.id)"
     />
     <FileToolbar
       :count="selection.length"
@@ -116,14 +100,19 @@ async function drop(event: DragEvent) {
       @chmod="operations.change(selection[0], 'chmod')"
       @remove="operations.remove(selection)"
     />
-    <div v-if="!session" class="shrink-0 px-3 py-3 text-xs text-ink-muted">
-      <p>Connectez le terminal pour accéder aux fichiers.</p>
-      <button class="mt-2 underline" @click="workbench.reconnect(tab.id)">Connecter</button>
-    </div>
-    <p v-if="panel.error" role="alert" class="shrink-0 break-words px-3 py-2 text-xs">
-      {{ panel.error }}
-    </p>
-    <ResizablePanelGroup direction="vertical" class="min-h-0 flex-1">
+    <FileStatus
+      :state="sessions.runtime(tab.id).state"
+      :error="panel.error"
+      :connected="!!session"
+      @connect="workbench.reconnect(tab.id)"
+      @retry="navigate(panel.directory)"
+      @dismiss="files.dismissError(tab.id)"
+    />
+    <ResizablePanelGroup
+      direction="vertical"
+      class="flex-1"
+      :class="panel.documents.length ? 'min-h-72' : 'min-h-40'"
+    >
       <ResizablePanel :default-size="panel.documents.length ? 40 : 100" :min-size="15">
         <div class="flex h-full min-h-0 flex-col">
           <FileList
@@ -131,7 +120,10 @@ async function drop(event: DragEvent) {
             :selected="selected"
             :busy="panel.busy"
             :hidden="hidden"
+            :connected="!!session"
+            :failed="!!panel.error"
             @select="select"
+            @select-all="selected = $event"
             @open="open"
           />
         </div>
@@ -149,12 +141,7 @@ async function drop(event: DragEvent) {
       :connected="!!session"
       @cancel="transfers.cancel"
       @retry="transfers.retry"
+      @clear="files.clearFinishedTransfers(tab.id)"
     />
-    <div
-      v-if="dragging"
-      class="pointer-events-none absolute inset-2 grid place-items-center rounded-lg border-2 border-dashed border-ring bg-surface/90 text-sm"
-    >
-      Déposer dans {{ panel.directory }}
-    </div>
-  </section>
+  </FileDropZone>
 </template>

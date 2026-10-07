@@ -1,14 +1,13 @@
 use super::App;
 use crate::{
     error::{AppError, AppResult},
-    files::model::Request,
+    files::model::{Reply, Request},
 };
-use serde_json::Value;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 use uuid::Uuid;
 #[tauri::command]
-pub async fn session_files(app: State<'_, App>, id: Uuid, request: Request) -> AppResult<Value> {
+pub async fn session_files(app: State<'_, App>, id: Uuid, request: Request) -> AppResult<Reply> {
     app.sessions.files(id, request).await
 }
 #[tauri::command]

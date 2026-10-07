@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bindings, formatShortcut, keyLabels, match } from './shortcuts'
+import { appliesWhileEditing, bindings, formatShortcut, keyLabels, match } from './shortcuts'
 
 const press = (code: string, mods: Partial<KeyboardEvent> = {}, key = code) =>
   ({
@@ -44,5 +44,14 @@ describe('shortcuts', () => {
       const all = bindings.map((binding) => binding[platform].join('+'))
       expect(new Set(all).size).toBe(all.length)
     }
+  })
+
+  it('leaves tab, terminal and clipboard actions to text fields and the document editor', () => {
+    const retarget = match(press('KeyL', { metaKey: true }, 'l'), 'macos')!
+    const sidebar = match(press('KeyS', { metaKey: true }, 's'), 'macos')!
+    expect([retarget.id, sidebar.id].map(appliesWhileEditing)).toEqual([false, false])
+    expect(appliesWhileEditing(match(press('KeyT', { metaKey: true }, 't'), 'macos')!.id)).toBe(
+      true,
+    )
   })
 })

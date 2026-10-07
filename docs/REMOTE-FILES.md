@@ -23,6 +23,10 @@ Status: accepted and implemented. Platform acceptance scenarios below remain a m
 - Deletion is permanent, including non-empty directories, and requires confirmation identifying the path and the permanent nature of the operation.
 - Identify symbolic links and allow navigation to their targets. Deleting a link removes only the link; recursive transfers do not automatically follow symbolic links.
 - Skip symbolic links during recursive transfers and list skipped links in the transfer report.
+- A dropped upload shows a cancellable preparation, with progress, while its files are copied to local staging; it then continues as the upload. Cancelling or closing its tab discards the staging.
+- Replacing a directory with a file, or a file or link with a directory, is refused with a message suggesting Skip or Keep both.
+- Remote names follow POSIX: entries containing a backslash are listed, transferred and deleted like any other. Downloads still refuse names the local platform cannot represent.
+- Uploads replacing a file keep its permission bits, without setuid, setgid or sticky. New uploads selected with the native picker keep local permission bits without group or other write. Web drag-and-drop provides bytes but no original Unix mode: new dropped files use ordinary local staging permissions and do not retain executable bits. Use the picker to upload executable scripts, or explicitly set remote permissions after dropping.
 - Allow individual transfer cancellation and best-effort cleanup of incomplete temporary files. Report leftovers when cleanup cannot be completed; completed files remain at the destination.
 
 ## Documents and saving
@@ -31,7 +35,7 @@ Status: accepted and implemented. Platform acceptance scenarios below remain a m
 - Keep multiple documents open, with an indicator for unsaved changes.
 - Edit UTF-8 text files up to 5 MB (5,000,000 bytes). Binary, unsupported-encoding and larger files remain downloadable, with an explanation when editing is unavailable. Preserve existing line endings and any UTF-8 BOM; limit actual bytes read, not just the initial reported size.
 - On closing a modified document or its terminal tab, offer Save / Discard / Cancel. Hiding the panel or changing tabs preserves documents and unsaved edits.
-- Failed or canceled saving does not complete an attempted close. If disconnected, saving requires reconnection; the user can still explicitly discard or cancel closing.
+- Failed or canceled saving does not complete an attempted close. Choosing Discard loses nothing until every later question (another document, stopping transfers, closing a running session) is confirmed and the closing succeeds; edits made meanwhile are asked about again. If disconnected, saving requires reconnection; the user can still explicitly discard or cancel closing.
 - Detect remote changes before saving and require an explicit decision to reload or overwrite rather than silently replacing a changed file.
 - Save through an exclusive temporary file in the destination directory, then safe replacement. Preserve Unix permissions, owner and group; refuse saving if these guarantees or safe replacement cannot be met, and keep the edits.
 - The first version does not guarantee preservation of ACLs, extended attributes or hard-link relationships. Document this limitation; editing files that depend on these properties is outside this version's supported scope. Do not imply these properties can always be detected through SFTP.
@@ -102,6 +106,10 @@ Run these scenarios in the real application on supported platforms, using contro
 - Sanitized browser fixture (`.ai/remote-files-fixture.js`): top-right opening, 40% initial width, text opening/editing, Save/Discard/Cancel dialog, expanded/normal layout and macOS document save shortcut exercised. [Expanded explorer evidence](../.ai/evidence/remote-files/expanded.png).
 - Native development build compiled and launched without a reported startup error. Windows/Linux, native file pickers and OS drag/drop, application quit gestures, unsupported real servers and real network fault injection remain manual acceptance gates. The browser host became unavailable before command-bar gestures could be verified.
 
+Review corrections (2026-10-07, second pass): Discard is applied only after a successful close; SFTP opening no longer pauses the shell reader (regression: an in-process server floods the shell before confirming SFTP); POSIX names with backslashes are listed and deleted; uploads keep or set permission bits as above; dropped files show a cancellable preparation; staging cleanup is explicit and cannot block startup; Save is never offered for another owner; text fields and the document editor keep their own shortcuts. Wire replies are typed per operation.
+
 Retry state includes source-to-directory destinations so “Conserver les deux” continues in the selected folder. Retained documents and transfers carry the actual authenticated endpoint/account identity; native operations reject use on a different identity. These values and file contents remain in memory.
 
-Final automated checks: 196 frontend tests, 57 Rust tests and four release-script tests passed; production build, typecheck, lint, formatting and Clippy passed. A final picker-lifecycle regression was added after review and checked separately. Standards and spec review findings were corrected; neither axis retains a finding.
+Automated checks after integration: 220 frontend tests, 67 Rust tests and four release-script tests passed; production build, typecheck, lint, formatting and Clippy passed. Regression coverage includes cancellation preserving drafts, SFTP opening during a shell flood, drop preparation lifecycle, navigation retaining focus and accessible document navigation. Final independent review is tracked in the [review follow-up](../.ai/remote-files-review-followup.md); native acceptance scenarios above remain open.
+
+After a connection interruption, a late terminal event retains the failed, retryable row and adds any cleanup warning. A late completion does not silently relabel the interrupted operation as successful; retry uses completed-source progress, and an entirely completed selection finishes without copying or counting the files again.

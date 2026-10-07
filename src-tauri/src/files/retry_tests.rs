@@ -12,7 +12,7 @@ async fn retries_into_the_directory_chosen_by_keep_both_in_both_directions() {
     let (client, server) = tokio::io::duplex(256 * 1024);
     russh_sftp::server::run(server, Peer::new(true)).await;
     let recorder = Arc::new(Recorder::default());
-    let files = Files::from_stream(client, Uuid::new_v4(), recorder.clone())
+    let files = Files::from_stream(client, Uuid::new_v4(), Default::default(), recorder.clone())
         .await
         .unwrap();
     let root = std::env::temp_dir().join(format!("via-retry-test-{}", Uuid::new_v4()));
@@ -22,8 +22,9 @@ async fn retries_into_the_directory_chosen_by_keep_both_in_both_directions() {
         .await
         .unwrap();
     files
-        .execute(Request::Create {
-            path: "/folder".into(),
+        .json(Request::Create {
+            parent: "/".into(),
+            name: "folder".into(),
             directory: true,
         })
         .await
@@ -43,34 +44,38 @@ async fn retries_into_the_directory_chosen_by_keep_both_in_both_directions() {
         }
         let id = Uuid::new_v4();
         files
-            .execute(Request::Transfer {
+            .json(Request::Transfer(super::model::TransferPlan {
                 id,
                 direction,
                 sources: sources.clone(),
                 destination: destination.clone(),
                 completed_sources: vec![],
                 directories: Default::default(),
-                owner: String::new(),
-            })
+                owner: Default::default(),
+            }))
             .await
             .unwrap();
-        wait(&recorder, id, "conflict").await;
+        wait(&recorder, id, super::model::TransferState::Conflict).await;
         files
-            .execute(Request::Resolve {
+            .json(Request::Resolve {
                 id,
                 choice: Collision::KeepBoth,
                 all: true,
             })
             .await
             .unwrap();
-        wait(&recorder, id, "completed").await;
+        wait(&recorder, id, super::model::TransferState::Completed).await;
         let event = recorder
             .0
             .lock()
             .unwrap()
             .iter()
             .find_map(|event| match event {
-                Event::Files(p) if p.id == id && p.state == "completed" => Some(p.clone()),
+                Event::Files(p)
+                    if p.id == id && p.state == super::model::TransferState::Completed =>
+                {
+                    Some(p.clone())
+                }
                 _ => None,
             })
             .unwrap();
@@ -82,8 +87,9 @@ async fn retries_into_the_directory_chosen_by_keep_both_in_both_directions() {
             }
             Direction::Download => {
                 files
-                    .execute(Request::Create {
-                        path: "/folder (1)/later".into(),
+                    .json(Request::Create {
+                        parent: "/folder (1)".into(),
+                        name: "later".into(),
                         directory: false,
                     })
                     .await
@@ -92,29 +98,29 @@ async fn retries_into_the_directory_chosen_by_keep_both_in_both_directions() {
         }
         let retry = Uuid::new_v4();
         files
-            .execute(Request::Transfer {
+            .json(Request::Transfer(super::model::TransferPlan {
                 id: retry,
                 direction,
                 sources,
                 destination,
                 completed_sources: event.completed_sources,
                 directories: event.directories,
-                owner: String::new(),
-            })
+                owner: Default::default(),
+            }))
             .await
             .unwrap();
-        wait(&recorder, retry, "completed").await;
+        wait(&recorder, retry, super::model::TransferState::Completed).await;
         match direction {
             Direction::Upload => {
                 assert!(files
-                    .execute(Request::Read {
+                    .json(Request::Read {
                         path: "/folder/new".into()
                     })
                     .await
                     .is_err());
                 assert_eq!(
                     files
-                        .execute(Request::Read {
+                        .json(Request::Read {
                             path: "/folder (1)/new".into()
                         })
                         .await

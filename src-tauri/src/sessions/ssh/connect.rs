@@ -2,7 +2,10 @@ use super::{
     asker::Asker, auth, channel, closing, failure::Failure, handler::Client, ConnectPlan, Context,
     Link, Outcome, Size,
 };
-use crate::sessions::events::{Event, SessionState};
+use crate::{
+    files::Owner,
+    sessions::events::{Event, SessionState},
+};
 use russh::{client, Channel};
 use std::{
     sync::{
@@ -18,34 +21,16 @@ use tokio::{
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 
-pub(super) async fn run(plan: ConnectPlan, size: Size, context: Context, link: Link) {
-    let Link {
-        commands,
-        files,
-        mut closed,
-        ready,
-    } = link;
+pub(super) async fn run(plan: ConnectPlan, size: Size, context: Context, mut link: Link) {
     let prepared = tokio::select! {
         prepared = prepare(&plan, size, &context) => Some(prepared),
-        _ = closing(&mut closed) => None,
+        _ = closing(&mut link.closed) => None,
     };
     let outcome = match prepared {
         None => Outcome::Closed,
         Some(Err(failure)) => Outcome::Failed(failure),
         Some(Ok((handle, shell, owner))) => {
-            channel::pump(
-                handle,
-                shell,
-                Link {
-                    commands,
-                    files,
-                    ready,
-                    closed,
-                },
-                &context,
-                owner,
-            )
-            .await
+            channel::pump(handle, shell, link, &context, owner).await
         }
     };
     context.ending.ended();
@@ -56,7 +41,7 @@ async fn prepare(
     plan: &ConnectPlan,
     size: Size,
     context: &Context,
-) -> Result<(client::Handle<Client>, Channel<client::Msg>, String), Failure> {
+) -> Result<(client::Handle<Client>, Channel<client::Msg>, Owner), Failure> {
     let message = format!("Connexion à {}:{}…", plan.address, plan.port);
     context
         .sink
@@ -76,11 +61,8 @@ async fn prepare(
         });
     }
     let shell = channel::open(&handle, size).await?;
-    Ok((
-        handle,
-        shell,
-        serde_json::json!([plan.address, plan.port, username]).to_string(),
-    ))
+    let owner = Owner::new(&plan.address, plan.port, &username);
+    Ok((handle, shell, owner))
 }
 
 async fn tcp(address: &str, port: u16) -> Result<TcpStream, Failure> {

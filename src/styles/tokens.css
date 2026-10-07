@@ -40,6 +40,7 @@
   --state-live: #1f9d4b;
   --state-pending: #b7791f;
   --state-error: #d23f3a;
+  --destructive-foreground: #ffffff;
 }
 
 .dark {
@@ -81,6 +82,7 @@
   --state-live: #34c759;
   --state-pending: #ffb340;
   --state-error: #ff5f57;
+  --destructive-foreground: #141415;
 }
 
 :root,

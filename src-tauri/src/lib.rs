@@ -24,7 +24,7 @@ fn build(app: &tauri::AppHandle) -> Result<App, Box<dyn std::error::Error>> {
         vault: Arc::new(vault::Vault::load(storage, secrets)?),
         sessions: sessions::SessionHub::new(Arc::new(TauriSink(app.clone()))),
         shells: sessions::shells::detect(),
-        staging: files::Staging::new(app.path().app_cache_dir()?.join("file-drops"))?,
+        staging: files::Staging::new(app.path().app_cache_dir()?.join("file-drops")),
     })
 }
 
@@ -62,7 +62,9 @@ pub fn run() {
             let _ = handle.emit("app-exit-requested", ());
         }
         if matches!(event, tauri::RunEvent::Exit) {
-            handle.state::<App>().sessions.close_all();
+            let app = handle.state::<App>();
+            app.sessions.close_all();
+            app.staging.clear();
         }
     });
 }

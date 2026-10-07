@@ -42,12 +42,15 @@ export function installSessionEffects({
   })
 
   watch(
-    () => {
-      const tab = activeTab.value
-      return tab ? ([tab.id, sessions.runtime(tab.id).state] as const) : undefined
-    },
-    (current) => {
-      if (current?.[1] === 'ready') focusTerminal(current[0])
+    [
+      () => activeTab.value?.id,
+      () => {
+        const tab = activeTab.value
+        return tab ? sessions.runtime(tab.id).state : undefined
+      },
+    ],
+    ([id, state]) => {
+      if (id && state === 'ready') focusTerminal(id)
     },
   )
 }

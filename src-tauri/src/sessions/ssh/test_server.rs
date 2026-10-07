@@ -44,6 +44,8 @@ pub async fn start() -> TestServer {
 #[derive(Default)]
 struct Shell {
     channels: std::collections::HashMap<ChannelId, Channel<Msg>>,
+    shell: Option<ChannelId>,
+    flood: bool,
 }
 
 impl server::Handler for Shell {
@@ -64,8 +66,17 @@ impl server::Handler for Shell {
         &mut self,
         channel: Channel<Msg>,
         reply: ChannelOpenHandle,
-        _session: &mut Session,
+        session: &mut Session,
     ) -> Result<(), Self::Error> {
+        // Saturates the shell channel before confirming a later channel.
+        match self.shell {
+            Some(shell) if self.flood => {
+                for line in 0..500 {
+                    session.data(shell, format!("line {line}\n").into_bytes())?;
+                }
+            }
+            _ => self.shell = Some(channel.id()),
+        }
         self.channels.insert(channel.id(), channel);
         reply.accept().await;
         Ok(())
@@ -118,7 +129,10 @@ impl server::Handler for Shell {
         if !self.channels.contains_key(&channel) {
             return Ok(());
         }
-        if data == b"exit\n" {
+        if data == b"flood\n" {
+            self.flood = true;
+            session.data(channel, b"flooding\n".to_vec())?;
+        } else if data == b"exit\n" {
             session.exit_status_request(channel, 0)?;
             session.eof(channel)?;
             session.close(channel)?;

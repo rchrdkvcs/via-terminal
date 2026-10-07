@@ -10,10 +10,9 @@ import { flushVaultSaves } from '@/components/vault/saveQueue'
 
 export async function prepareUpdate() {
   const files = useFiles()
-  if (
-    Object.keys(files.panels).length &&
-    !(await useFileProtection().protect(Object.keys(files.panels)))
-  )
+  const protection = useFileProtection()
+  const decision = await protection.protect(Object.keys(files.panels))
+  if (!decision)
     throw new Error('La mise à jour a été annulée pour conserver les fichiers ouverts.')
   await prepareDrafts()
   await flushVaultSaves()
@@ -24,5 +23,7 @@ export async function prepareUpdate() {
   ])
   const failed = results.find((result) => result.status === 'rejected')
   if (failed?.status === 'rejected') throw failed.reason
+  if (!protection.current(decision))
+    throw new Error('Des fichiers ont changé pendant la préparation. Relancez la mise à jour.')
   await api.prepareUpdate()
 }

@@ -1,4 +1,8 @@
-use super::{closing, failure::Failure, handler::Client, Command, Context, Link, Outcome, Size};
+use super::{
+    closing, failure::Failure, handler::Client, sftp::LazyFiles, Command, Context, Link, Outcome,
+    Size,
+};
+use crate::files::Owner;
 use crate::sessions::events::{Event, SessionState};
 use russh::{
     client::{Handle, Msg},
@@ -34,7 +38,7 @@ pub(super) async fn pump(
     shell: Channel<Msg>,
     link: Link,
     context: &Context,
-    owner: String,
+    owner: Owner,
 ) -> Outcome {
     let Link {
         commands,
@@ -47,39 +51,11 @@ pub(super) async fn pump(
     ready.store(true, Ordering::Release);
     context.sink.state(context.id, SessionState::Ready, None);
     let mut exit_code = None;
-    let mut file_session: Option<std::sync::Arc<crate::files::Files>> = None;
-    let mut file_requests = tokio::task::JoinSet::new();
-    let outcome = loop {
+    let mut file_access = LazyFiles::new(&handle, context.id, owner, context.sink.clone());
+    let closed_by_user = loop {
         tokio::select! {
-            Some(call) = files.recv() => {
-                if file_session.is_none() {
-                    let opening = async {
-                        let mut channel = handle.channel_open_session().await.map_err(|_| crate::error::AppError::new("sftp_unavailable", "Le serveur refuse le canal SFTP"))?;
-                        channel.request_subsystem(true, "sftp").await.map_err(|_| crate::error::AppError::new("sftp_unavailable", "Le serveur ne propose pas SFTP"))?;
-                        loop {
-                            match channel.wait().await {
-                                Some(ChannelMsg::Success) => break,
-                                Some(ChannelMsg::Failure) | None => return Err(crate::error::AppError::new("sftp_unavailable", "Le serveur ne propose pas SFTP")),
-                                _ => {},
-                            }
-                        }
-                        let mut session = crate::files::Files::from_stream(channel.into_stream(), context.id, context.sink.clone()).await?;
-                        std::sync::Arc::get_mut(&mut session).unwrap().owner = owner.clone();
-                        Ok(session)
-                    };
-                    let opened = tokio::select! {
-                        result = tokio::time::timeout(Duration::from_secs(15), opening) => result.unwrap_or_else(|_| Err(crate::error::AppError::new("sftp_unavailable", "Le serveur SFTP ne répond pas"))),
-                        _ = closing(&mut closed) => Err(super::session_closed()),
-                    };
-                    match opened {
-                        Ok(session) => file_session = Some(session),
-                        Err(error) => { let _ = call.reply.send(Err(error)); continue; }
-                    }
-                }
-                let session = file_session.as_ref().unwrap().clone();
-                file_requests.spawn(async move { let result = session.execute(call.request).await; let _ = call.reply.send(result); });
-            },
-            Some(_) = file_requests.join_next(), if !file_requests.is_empty() => {},
+            Some(call) = files.recv() => file_access.call(call),
+            _ = file_access.progress() => {}
             message = reader.wait() => match message {
                 Some(ChannelMsg::Data { data }) | Some(ChannelMsg::ExtendedData { data, .. }) => {
                     context.sink.emit(Event::Output {
@@ -91,19 +67,22 @@ pub(super) async fn pump(
                     exit_code = i32::try_from(exit_status).ok();
                 }
                 Some(_) => {}
-                None => break channel_ended(&mut handle, exit_code).await,
+                None => break false,
             },
-            _ = closing(&mut closed) => {
-                break Outcome::Closed;
-            }
+            _ = closing(&mut closed) => break true,
         }
     };
-    if let Some(session) = file_session {
-        session
-            .shutdown(matches!(outcome, Outcome::Closed | Outcome::Exited(_)))
-            .await;
+    let (file_service, mut file_requests) = file_access.finish();
+    let outcome = if closed_by_user {
+        Outcome::Closed
+    } else {
+        channel_ended(&mut handle, exit_code).await
+    };
+    let graceful = matches!(outcome, Outcome::Closed | Outcome::Exited(_));
+    if let Some(service) = file_service {
+        service.shutdown(graceful).await;
     }
-    if matches!(outcome, Outcome::Closed | Outcome::Exited(_)) {
+    if graceful {
         disconnect(&handle).await;
     }
     file_requests.abort_all();

@@ -1,63 +1,63 @@
+//! Private local copies of files dropped in the interface, kept until their transfer
+//! completes, is cancelled or is abandoned. Cleanup is explicit: stale copies at launch,
+//! every copy at normal exit. Cleanup failures never prevent Via from starting.
+use super::paths::local_name;
 use crate::error::{AppError, AppResult};
 use std::{collections::HashMap, path::PathBuf, sync::Mutex};
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
+const CHUNK_LIMIT: usize = 256 * 1024;
 pub struct Staging {
     roots: Mutex<HashMap<Uuid, PathBuf>>,
     base: PathBuf,
 }
 impl Staging {
-    pub fn new(base: PathBuf) -> AppResult<Self> {
-        std::fs::create_dir_all(&base).map_err(io)?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&base, std::fs::Permissions::from_mode(0o700)).map_err(io)?;
-        }
-        for entry in std::fs::read_dir(&base).map_err(io)? {
-            let entry = entry.map_err(io)?;
-            if entry
-                .file_name()
-                .to_str()
-                .is_some_and(|name| Uuid::parse_str(name).is_ok())
-            {
-                std::fs::remove_dir_all(entry.path()).map_err(io)?;
-            }
-        }
-        Ok(Self {
+    /// Never fails: an unusable directory only makes later drops fail.
+    pub fn new(base: PathBuf) -> Self {
+        let staging = Self {
             roots: Mutex::new(HashMap::new()),
             base,
-        })
+        };
+        staging.clear();
+        staging
     }
-    pub async fn directory(&self, id: Uuid, relative: &str) -> AppResult<()> {
-        tokio::fs::create_dir_all(self.path(id, relative)?)
-            .await
-            .map_err(io)
-    }
-    fn path(&self, id: Uuid, relative: &str) -> AppResult<PathBuf> {
-        for name in relative.split('/') {
-            super::valid_name(name)?;
-            if name.contains(':') {
-                return Err(AppError::invalid("Nom local invalide"));
+    /// Removes every staged copy, best effort, including those left by a previous run.
+    pub fn clear(&self) {
+        self.roots.lock().unwrap().clear();
+        let Ok(entries) = std::fs::read_dir(&self.base) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let staged = entry
+                .file_name()
+                .to_str()
+                .is_some_and(|name| Uuid::parse_str(name).is_ok());
+            if staged {
+                let _ = std::fs::remove_dir_all(entry.path());
             }
         }
-        Ok(self.root(id)?.join(relative))
     }
     pub fn begin(&self) -> AppResult<Uuid> {
+        self.prepare()?;
         let id = Uuid::new_v4();
         let root = self.base.join(id.to_string());
         std::fs::create_dir(&root).map_err(io)?;
         self.roots.lock().unwrap().insert(id, root);
         Ok(id)
     }
+    pub async fn directory(&self, id: Uuid, relative: &str) -> AppResult<()> {
+        tokio::fs::create_dir_all(self.path(id, relative)?)
+            .await
+            .map_err(io)
+    }
     pub async fn chunk(&self, id: Uuid, relative: &str, data: Vec<u8>) -> AppResult<()> {
-        if data.len() > 256 * 1024 {
+        if data.len() > CHUNK_LIMIT {
             return Err(AppError::invalid("Bloc de fichier trop volumineux"));
         }
         let path = self.path(id, relative)?;
-        tokio::fs::create_dir_all(path.parent().unwrap())
-            .await
-            .map_err(io)?;
+        if let Some(parent) = path.parent() {
+            tokio::fs::create_dir_all(parent).await.map_err(io)?;
+        }
         let mut file = tokio::fs::OpenOptions::new()
             .append(true)
             .create(true)
@@ -67,8 +67,7 @@ impl Staging {
         file.write_all(&data).await.map_err(io)
     }
     pub fn finish(&self, id: Uuid) -> AppResult<Vec<String>> {
-        let root = self.root(id)?;
-        std::fs::read_dir(root)
+        std::fs::read_dir(self.root(id)?)
             .map_err(io)?
             .map(|entry| {
                 entry
@@ -83,6 +82,22 @@ impl Staging {
         }
         Ok(())
     }
+    fn prepare(&self) -> AppResult<()> {
+        std::fs::create_dir_all(&self.base).map_err(io)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let private = std::fs::Permissions::from_mode(0o700);
+            std::fs::set_permissions(&self.base, private).map_err(io)?;
+        }
+        Ok(())
+    }
+    fn path(&self, id: Uuid, relative: &str) -> AppResult<PathBuf> {
+        for name in relative.split('/') {
+            local_name(name)?;
+        }
+        Ok(self.root(id)?.join(relative))
+    }
     fn root(&self, id: Uuid) -> AppResult<PathBuf> {
         self.roots
             .lock()
@@ -92,16 +107,13 @@ impl Staging {
             .ok_or_else(|| AppError::not_found("Dépôt temporaire"))
     }
 }
-impl Drop for Staging {
-    fn drop(&mut self) {
-        for root in self.roots.get_mut().unwrap().values() {
-            let _ = std::fs::remove_dir_all(root);
-        }
-    }
-}
 fn io(error: std::io::Error) -> AppError {
     AppError::new(
         "file_local",
         format!("Préparation locale impossible : {error}"),
     )
 }
+
+#[cfg(test)]
+#[path = "staging_tests.rs"]
+mod tests;

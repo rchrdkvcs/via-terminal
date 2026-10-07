@@ -14,7 +14,7 @@ export const buttonVariants = cva(
         ghost:
           'text-ink-muted transition-[background-color,color] duration-100 hover:bg-row-hover hover:text-foreground',
         destructive:
-          'bg-state-error text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_0_0_1px_rgb(0_0_0/0.25),0_1px_2px_rgb(0_0_0/0.2)] transition-opacity duration-100 hover:opacity-90',
+          'bg-state-error text-destructive-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_0_0_1px_rgb(0_0_0/0.25),0_1px_2px_rgb(0_0_0/0.2)] transition-shadow duration-100 hover:shadow-control-hover',
         link: 'text-foreground underline-offset-4 hover:underline',
       },
       size: {

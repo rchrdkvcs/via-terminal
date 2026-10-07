@@ -1,4 +1,7 @@
+//! Wire types of the remote explorer, mirrored by `src/ipc/files.ts`.
+use super::Owner;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Debug, Deserialize)]
@@ -20,7 +23,8 @@ pub enum Request {
         overwrite: bool,
     },
     Create {
-        path: String,
+        parent: String,
+        name: String,
         directory: bool,
     },
     Move {
@@ -34,18 +38,7 @@ pub enum Request {
         path: String,
         permissions: u32,
     },
-    Transfer {
-        id: Uuid,
-        direction: Direction,
-        sources: Vec<String>,
-        destination: String,
-        #[serde(default)]
-        completed_sources: Vec<String>,
-        #[serde(default)]
-        directories: std::collections::HashMap<String, String>,
-        #[serde(default)]
-        owner: String,
-    },
+    Transfer(TransferPlan),
     Cancel {
         id: Uuid,
     },
@@ -55,11 +48,38 @@ pub enum Request {
         all: bool,
     },
 }
+/// Answer to a request: a listing, a document, or nothing for commands.
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum Reply {
+    Listing(Listing),
+    Document(Document),
+    Done,
+}
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferPlan {
+    pub id: Uuid,
+    pub owner: Owner,
+    pub direction: Direction,
+    pub sources: Vec<String>,
+    pub destination: String,
+    #[serde(default)]
+    pub completed_sources: Vec<String>,
+    #[serde(default)]
+    pub directories: HashMap<String, String>,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Listing {
+    pub owner: Owner,
+    pub path: String,
+    pub entries: Vec<Entry>,
+}
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Document {
-    #[serde(default)]
-    pub owner: String,
+    pub owner: Owner,
     pub path: String,
     pub resolved_path: String,
     pub content: String,
@@ -67,18 +87,26 @@ pub struct Document {
     pub uid: Option<u32>,
     pub gid: Option<u32>,
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum EntryKind {
+    File,
+    Directory,
+    Link,
+    Other,
+}
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Entry {
     pub name: String,
     pub path: String,
-    pub kind: &'static str,
-    pub target_kind: Option<&'static str>,
+    pub kind: EntryKind,
+    pub target_kind: Option<EntryKind>,
     pub size: u64,
     pub modified: Option<u32>,
     pub permissions: Option<u32>,
 }
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Direction {
     Upload,
@@ -91,17 +119,27 @@ pub enum Collision {
     Skip,
     KeepBoth,
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TransferState {
+    Running,
+    Conflict,
+    Completed,
+    Failed,
+    Cancelled,
+}
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferEvent {
     pub session_id: Uuid,
     pub id: Uuid,
-    pub state: &'static str,
+    pub direction: Direction,
+    pub state: TransferState,
     pub path: String,
     pub bytes: u64,
     pub total: u64,
     pub message: Option<String>,
     pub skipped: Vec<String>,
     pub completed_sources: Vec<String>,
-    pub directories: std::collections::HashMap<String, String>,
+    pub directories: HashMap<String, String>,
 }

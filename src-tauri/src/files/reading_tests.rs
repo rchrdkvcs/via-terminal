@@ -9,9 +9,14 @@ use uuid::Uuid;
 async fn client(peer: Peer) -> Arc<Files> {
     let (client, server) = tokio::io::duplex(256 * 1024);
     russh_sftp::server::run(server, peer).await;
-    Files::from_stream(client, Uuid::new_v4(), Arc::new(Recorder::default()))
-        .await
-        .unwrap()
+    Files::from_stream(
+        client,
+        Uuid::new_v4(),
+        Default::default(),
+        Arc::new(Recorder::default()),
+    )
+    .await
+    .unwrap()
 }
 #[tokio::test]
 async fn rejects_binary_and_invalid_utf8_without_lossy_conversion() {
@@ -21,7 +26,7 @@ async fn rejects_binary_and_invalid_utf8_without_lossy_conversion() {
         let files = client(peer).await;
         assert_eq!(
             files
-                .execute(Request::Read {
+                .json(Request::Read {
                     path: "/config".into()
                 })
                 .await
@@ -38,7 +43,7 @@ async fn limits_actual_bytes_read_when_the_file_outgrows_its_advertised_size() {
     let files = client(peer).await;
     assert_eq!(
         files
-            .execute(Request::Read {
+            .json(Request::Read {
                 path: "/config".into()
             })
             .await
@@ -54,7 +59,7 @@ async fn refuses_saving_without_owner_information_and_keeps_the_original() {
     peer.nodes.get_mut("/config").unwrap().attrs.gid = None;
     let files = client(peer).await;
     let read = files
-        .execute(Request::Read {
+        .json(Request::Read {
             path: "/config".into(),
         })
         .await
@@ -63,7 +68,7 @@ async fn refuses_saving_without_owner_information_and_keeps_the_original() {
     document.content = "changed".into();
     assert_eq!(
         files
-            .execute(Request::Save {
+            .json(Request::Save {
                 document,
                 original: "old\n".into(),
                 overwrite: false
@@ -75,7 +80,7 @@ async fn refuses_saving_without_owner_information_and_keeps_the_original() {
     );
     assert_eq!(
         files
-            .execute(Request::Read {
+            .json(Request::Read {
                 path: "/config".into()
             })
             .await

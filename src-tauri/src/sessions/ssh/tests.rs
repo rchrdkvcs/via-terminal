@@ -1,4 +1,5 @@
 use super::{test_harness::Harness, HostKeyStatus};
+use crate::files::model::Reply;
 use crate::sessions::{
     events::SessionState,
     prompts::{Prompt, PromptAnswer},
@@ -133,7 +134,7 @@ async fn sftp_reuses_the_authenticated_session_and_shell_exit_ends_file_access()
         )
         .await
         .unwrap();
-    assert_eq!(file["content"], "old\n");
+    assert!(matches!(file, Reply::Document(ref d) if d.content == "old\n"));
     assert_eq!(harness.store.authenticated.lock().unwrap().len(), 1);
     harness.hub.write(id, b"still running").unwrap();
     harness.output(id, "still running").await;

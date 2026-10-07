@@ -6,7 +6,7 @@ use super::{
 use crate::sessions::events::{recording::Recorder, Event};
 use std::sync::Arc;
 use uuid::Uuid;
-pub(super) async fn wait(recorder: &Recorder, id: Uuid, state: &str) {
+pub(super) async fn wait(recorder: &Recorder, id: Uuid, state: super::model::TransferState) {
     tokio::time::timeout(std::time::Duration::from_secs(5), async {
         loop {
             if recorder
@@ -29,7 +29,7 @@ async fn keep_both_and_cancelling_a_collision_leave_the_existing_file_intact() {
     let (client, server) = tokio::io::duplex(256 * 1024);
     russh_sftp::server::run(server, Peer::new(true)).await;
     let recorder = Arc::new(Recorder::default());
-    let files = Files::from_stream(client, Uuid::new_v4(), recorder.clone())
+    let files = Files::from_stream(client, Uuid::new_v4(), Default::default(), recorder.clone())
         .await
         .unwrap();
     let root = std::env::temp_dir().join(format!("via-collision-test-{}", Uuid::new_v4()));
@@ -38,30 +38,30 @@ async fn keep_both_and_cancelling_a_collision_leave_the_existing_file_intact() {
     tokio::fs::write(&source, b"uploaded").await.unwrap();
     let id = Uuid::new_v4();
     files
-        .execute(Request::Transfer {
+        .json(Request::Transfer(super::model::TransferPlan {
             id,
             direction: Direction::Upload,
             sources: vec![source.to_string_lossy().into()],
             destination: "/".into(),
             completed_sources: vec![],
             directories: Default::default(),
-            owner: String::new(),
-        })
+            owner: Default::default(),
+        }))
         .await
         .unwrap();
-    wait(&recorder, id, "conflict").await;
+    wait(&recorder, id, super::model::TransferState::Conflict).await;
     files
-        .execute(Request::Resolve {
+        .json(Request::Resolve {
             id,
             choice: Collision::KeepBoth,
             all: true,
         })
         .await
         .unwrap();
-    wait(&recorder, id, "completed").await;
+    wait(&recorder, id, super::model::TransferState::Completed).await;
     assert_eq!(
         files
-            .execute(Request::Read {
+            .json(Request::Read {
                 path: "/config".into()
             })
             .await
@@ -70,7 +70,7 @@ async fn keep_both_and_cancelling_a_collision_leave_the_existing_file_intact() {
     );
     assert_eq!(
         files
-            .execute(Request::Read {
+            .json(Request::Read {
                 path: "/config (1)".into()
             })
             .await
@@ -79,25 +79,22 @@ async fn keep_both_and_cancelling_a_collision_leave_the_existing_file_intact() {
     );
     let cancelled = Uuid::new_v4();
     files
-        .execute(Request::Transfer {
+        .json(Request::Transfer(super::model::TransferPlan {
             id: cancelled,
             direction: Direction::Upload,
             sources: vec![source.to_string_lossy().into()],
             destination: "/".into(),
             completed_sources: vec![],
             directories: Default::default(),
-            owner: String::new(),
-        })
+            owner: Default::default(),
+        }))
         .await
         .unwrap();
-    wait(&recorder, cancelled, "conflict").await;
-    files
-        .execute(Request::Cancel { id: cancelled })
-        .await
-        .unwrap();
-    wait(&recorder, cancelled, "cancelled").await;
+    wait(&recorder, cancelled, super::model::TransferState::Conflict).await;
+    files.json(Request::Cancel { id: cancelled }).await.unwrap();
+    wait(&recorder, cancelled, super::model::TransferState::Cancelled).await;
     let listing = files
-        .execute(Request::List { path: "/".into() })
+        .json(Request::List { path: "/".into() })
         .await
         .unwrap();
     assert!(!listing["entries"]
@@ -107,7 +104,7 @@ async fn keep_both_and_cancelling_a_collision_leave_the_existing_file_intact() {
         .any(|entry| entry["name"].as_str().unwrap().starts_with(".via-")));
     assert_eq!(
         files
-            .execute(Request::Read {
+            .json(Request::Read {
                 path: "/config".into()
             })
             .await

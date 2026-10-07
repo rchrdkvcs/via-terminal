@@ -6,7 +6,6 @@ import { useUi, type CommandMode } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
 import type { CommandItem } from './types'
 import { useFileProtection } from '@/composables/useFileProtection'
-import { useFiles } from '@/stores/files'
 import { useCommandActions } from './useCommandActions'
 import { useCommandTargets } from './useCommandTargets'
 
@@ -85,8 +84,13 @@ export function useCommandResults(query: Ref<string>) {
     if (current.kind === 'split') splitWith(current.tabId, item)
     else if (item.tabId) workbench.activate(item.tabId)
     else if (item.target && current.kind === 'replace') {
-      if (!(await protection.protect([current.tabId]))) return
-      if (workbench.open(item.target, { replace: current.tabId })) useFiles().release(current.tabId)
+      const target = item.target
+      const decision = await protection.protect([current.tabId])
+      if (decision)
+        await protection.release(
+          decision,
+          () => !!workbench.open(target, { replace: current.tabId }),
+        )
     } else if (item.target) workbench.open(item.target)
   }
 

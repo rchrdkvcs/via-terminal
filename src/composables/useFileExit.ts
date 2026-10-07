@@ -20,8 +20,12 @@ export function useFileExit() {
     if (pending) return
     pending = true
     try {
-      if (!(await protection.protect(Object.keys(files.panels)))) return
-      await Promise.all([spaces.flush(), settings.flush()])
+      for (;;) {
+        const decision = await protection.protect(Object.keys(files.panels))
+        if (!decision) return
+        await Promise.all([spaces.flush(), settings.flush()])
+        if (protection.current(decision)) break
+      }
       closing = true
       if (exit) await api.exit()
       else await getCurrentWindow().close()
