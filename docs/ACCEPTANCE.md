@@ -60,3 +60,7 @@ Each scenario is run in the real application, not only through unit tests. The b
 ## Privacy
 
 - After remembering a password, it cannot be found with `grep` in `via.sqlite`, and it never appears in the interface's devtools snapshot.
+
+## Remote files
+
+Run the platform and controlled-server scenarios in [REMOTE-FILES.md](REMOTE-FILES.md#acceptance-scenarios), including safe replacement refusal, target changes, collision choices, cancellation and network interruption. Browser fixtures verify presentation only; they do not replace native picker, operating-system drag/drop or fault-injection acceptance.

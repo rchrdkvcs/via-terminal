@@ -112,3 +112,6 @@ export function match(
   }
   return null
 }
+
+// This binding applies only while the remote document editor has focus.
+export const documentSaveKey = 'Mod-s'

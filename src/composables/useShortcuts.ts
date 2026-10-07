@@ -47,6 +47,19 @@ export function useShortcuts() {
   }
 
   function onKeydown(event: KeyboardEvent) {
+    const target = event.target instanceof Element ? event.target : null
+    if (
+      target?.closest('.cm-editor') &&
+      (event.metaKey || event.ctrlKey) &&
+      ['s', 'c', 'v', 'x', 'a', 'z', 'f'].includes(event.key.toLowerCase())
+    )
+      return
+    if (
+      target?.closest('input, textarea, [contenteditable="true"]') &&
+      !target.closest('.xterm') &&
+      ['c', 'v', 'x', 'a', 'z'].includes(event.key.toLowerCase())
+    )
+      return
     const found = match(event, settings.platform)
     if (!found) return
     if (document.querySelector('[data-update-dialog]')) {

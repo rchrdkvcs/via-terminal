@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
 import 'vue-sonner/style.css'
+import FileDialog from '@/components/files/FileDialog.vue'
 import CommandBar from '@/components/command/CommandBar.vue'
 import ConfirmDialog from '@/components/shell/ConfirmDialog.vue'
 import SidebarFrame from '@/components/shell/SidebarFrame.vue'
@@ -52,6 +53,7 @@ const ui = useUi()
         <CommandBar />
         <SpaceDialog />
         <ConfirmDialog />
+        <FileDialog />
         <UpdateDialog />
       </template>
       <div v-else-if="failure" class="grid flex-1 place-items-center p-8 text-center" role="alert">

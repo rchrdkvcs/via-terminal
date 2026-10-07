@@ -11,6 +11,7 @@ Via is an open-source terminal for Windows, macOS and Linux. Its sidebar organiz
 - An embedded SSH client. Via verifies server keys in the interface, can remember passwords and passphrases (encrypted, with the key held by the OS keychain), asks for 2FA codes, and reconnects in place.
 - A command bar (Ctrl+Shift+T, or ⌘T on macOS) to open a shell or a saved host, or to connect straight to `user@host:port`. Hosts you connect to this way join the vault.
 - Spaces tinted by their color, pinned tabs that come back asleep after a restart, split views of up to four tabs, and drag and drop.
+- Remote SFTP explorer: resize or expand beside an SSH terminal, transfer files/folders and edit UTF-8 documents with protected saves.
 - Signed in-app updates: a title-bar indicator announces new stable versions; download and restart when ready. Automatic startup checks can be disabled in Settings.
 
 The full behavior is in [docs/PRODUCT.md](docs/PRODUCT.md), the vocabulary in [CONTEXT.md](CONTEXT.md), the structure in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and the decisions in [docs/adr](docs/adr). Via never reads your `~/.ssh` directory; see [docs/PRIVACY.md](docs/PRIVACY.md).

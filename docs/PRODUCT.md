@@ -73,6 +73,10 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 - Keyboard-interactive challenges (2FA codes) are asked in the pane and never stored.
 - An unexpected disconnect keeps the output and shows Reconnect. Typing Enter in a disconnected pane also reconnects.
 
+## Remote files
+
+SSH tabs offer an independent remote explorer through the top-right file-tree icon or the command bar. Resize it beside the terminal or expand it across the content area. Create, move, delete and change permissions; transfer files and folders; view and explicitly save UTF-8 documents. Drafts remain in memory and closing asks before discarding them. Transfers report progress and support cancellation, retry and collision choices. Safe document replacement requires server support. See [REMOTE-FILES.md](REMOTE-FILES.md) for limits and acceptance scenarios.
+
 ## Vault
 
 A full page (sidebar stays) with:
@@ -108,7 +112,7 @@ A full page with General (default shell, behavior on close, quick-connect auto-s
 
 ## Outside this release
 
-SFTP, port forwarding, jump hosts and proxies, snippets, broadcast input, multiple windows, cloud sync, teams, AI, plugins, SSH agent forwarding, and importing system SSH configuration.
+Port forwarding, jump hosts and proxies, snippets, broadcast input, multiple windows, cloud sync, teams, AI, plugins, SSH agent forwarding, and importing system SSH configuration.
 
 ## Success criteria
 

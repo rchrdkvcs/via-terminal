@@ -21,6 +21,7 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 pub(super) async fn run(plan: ConnectPlan, size: Size, context: Context, link: Link) {
     let Link {
         commands,
+        files,
         mut closed,
         ready,
     } = link;
@@ -31,8 +32,20 @@ pub(super) async fn run(plan: ConnectPlan, size: Size, context: Context, link: L
     let outcome = match prepared {
         None => Outcome::Closed,
         Some(Err(failure)) => Outcome::Failed(failure),
-        Some(Ok((handle, shell))) => {
-            channel::pump(handle, shell, commands, &ready, closed, &context).await
+        Some(Ok((handle, shell, owner))) => {
+            channel::pump(
+                handle,
+                shell,
+                Link {
+                    commands,
+                    files,
+                    ready,
+                    closed,
+                },
+                &context,
+                owner,
+            )
+            .await
         }
     };
     context.ending.ended();
@@ -43,7 +56,7 @@ async fn prepare(
     plan: &ConnectPlan,
     size: Size,
     context: &Context,
-) -> Result<(client::Handle<Client>, Channel<client::Msg>), Failure> {
+) -> Result<(client::Handle<Client>, Channel<client::Msg>, String), Failure> {
     let message = format!("Connexion à {}:{}…", plan.address, plan.port);
     context
         .sink
@@ -63,7 +76,11 @@ async fn prepare(
         });
     }
     let shell = channel::open(&handle, size).await?;
-    Ok((handle, shell))
+    Ok((
+        handle,
+        shell,
+        serde_json::json!([plan.address, plan.port, username]).to_string(),
+    ))
 }
 
 async fn tcp(address: &str, port: u16) -> Result<TcpStream, Failure> {

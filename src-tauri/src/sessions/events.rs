@@ -22,6 +22,7 @@ pub enum SessionState {
 
 #[derive(Debug, Clone)]
 pub enum Event {
+    Files(crate::files::model::TransferEvent),
     Output {
         session_id: Uuid,
         data: Vec<u8>,

@@ -1,6 +1,7 @@
 import {
   Columns2,
   FolderPlus,
+  FolderTree,
   KeyRound,
   LayoutGrid,
   Pencil,
@@ -14,6 +15,7 @@ import { isPinned, rowOfTab } from '@/domain/space'
 import { useSidebarActions } from '@/composables/useSidebarActions'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
 import { useTabClosing } from '@/composables/useTabClosing'
+import { useFiles } from '@/stores/files'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
@@ -70,6 +72,17 @@ export function useCommandActions() {
         run: () => (ui.route = 'settings'),
       },
     ]
+    if (tab && tab.target.kind !== 'local')
+      items.unshift({
+        id: 'files',
+        section,
+        label: 'Ouvrir l’explorateur distant',
+        icon: FolderTree,
+        run: () => {
+          ui.route = 'workbench'
+          useFiles().state(tab.id).visible = true
+        },
+      })
     if (tab && row) {
       const pinned = isPinned(spaces.active, row.id)
       items.unshift(

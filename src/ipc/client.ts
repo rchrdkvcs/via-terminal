@@ -48,6 +48,7 @@ export function describeError(cause: unknown): string {
 
 export const api = {
   bootstrap: () => call<Bootstrap>('app_bootstrap'),
+  exit: () => call<void>('app_exit'),
   prepareUpdate: () => call<void>('app_prepare_update'),
   saveLayout: (layout: Layout) => call<void>('layout_save', { layout }),
   saveSettings: (settings: Settings) => call<Settings>('settings_save', { settings }),

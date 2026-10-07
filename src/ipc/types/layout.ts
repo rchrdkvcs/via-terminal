@@ -9,6 +9,7 @@ export interface Tab {
   id: Id
 
   title: string | null
+  remoteCwd?: string | null
   target: Target
 }
 

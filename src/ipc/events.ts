@@ -1,4 +1,5 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import type { TransferEvent } from './files'
 import { isNative } from './client'
 import type {
   SessionPromptEvent,
@@ -9,6 +10,8 @@ import type {
 } from './types'
 
 interface EventMap {
+  'app-exit-requested': null
+  'file-transfer': TransferEvent
   'terminal-output': TerminalOutputEvent
   'session-state': SessionStateEvent
   'session-prompt': SessionPromptEvent

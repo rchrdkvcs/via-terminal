@@ -32,7 +32,7 @@ pub async fn start() -> TestServer {
         while let Ok((socket, _)) = listener.accept().await {
             let config = config.clone();
             tokio::spawn(async move {
-                if let Ok(session) = server::run_stream(config, socket, Shell).await {
+                if let Ok(session) = server::run_stream(config, socket, Shell::default()).await {
                     let _ = session.await;
                 }
             });
@@ -41,7 +41,10 @@ pub async fn start() -> TestServer {
     TestServer { port, fingerprint }
 }
 
-struct Shell;
+#[derive(Default)]
+struct Shell {
+    channels: std::collections::HashMap<ChannelId, Channel<Msg>>,
+}
 
 impl server::Handler for Shell {
     type Error = russh::Error;
@@ -59,11 +62,28 @@ impl server::Handler for Shell {
 
     async fn channel_open_session(
         &mut self,
-        _channel: Channel<Msg>,
+        channel: Channel<Msg>,
         reply: ChannelOpenHandle,
         _session: &mut Session,
     ) -> Result<(), Self::Error> {
+        self.channels.insert(channel.id(), channel);
         reply.accept().await;
+        Ok(())
+    }
+
+    async fn subsystem_request(
+        &mut self,
+        channel: ChannelId,
+        name: &str,
+        session: &mut Session,
+    ) -> Result<(), Self::Error> {
+        if name == "sftp" {
+            session.channel_success(channel)?;
+            let stream = self.channels.remove(&channel).unwrap().into_stream();
+            russh_sftp::server::run(stream, crate::files::test_peer::Peer::new(true)).await;
+        } else {
+            session.channel_failure(channel)?;
+        }
         Ok(())
     }
 
@@ -95,6 +115,9 @@ impl server::Handler for Shell {
         data: &[u8],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
+        if !self.channels.contains_key(&channel) {
+            return Ok(());
+        }
         if data == b"exit\n" {
             session.exit_status_request(channel, 0)?;
             session.eof(channel)?;

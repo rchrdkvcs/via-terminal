@@ -68,7 +68,12 @@ export function newTabRow(tab: Tab): Row {
 }
 
 export function tabFromRow(row: Row & { kind: 'tab' }): Tab {
-  return { id: row.id, title: row.title, target: row.target }
+  return {
+    id: row.id,
+    title: row.title,
+    target: row.target,
+    ...(row.remoteCwd ? { remoteCwd: row.remoteCwd } : {}),
+  }
 }
 
 export function splitOf(space: Space, tabId: Id): Split | undefined {

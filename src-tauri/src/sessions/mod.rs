@@ -21,6 +21,13 @@ pub trait SessionIo: Send + Sync {
     fn resize(&self, size: Size) -> AppResult<()>;
 
     fn close(&self);
+
+    fn files(&self, _call: crate::files::Call) -> AppResult<()> {
+        Err(AppError::new(
+            "sftp_unavailable",
+            "Cet onglet ne propose pas SFTP",
+        ))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
@@ -100,6 +107,18 @@ impl SessionHub {
 
     pub fn write(&self, id: Uuid, data: &[u8]) -> AppResult<()> {
         self.get(id)?.write(data)
+    }
+
+    pub async fn files(
+        &self,
+        id: Uuid,
+        request: crate::files::model::Request,
+    ) -> AppResult<serde_json::Value> {
+        let (reply, receive) = tokio::sync::oneshot::channel();
+        self.get(id)?.files(crate::files::Call { request, reply })?;
+        receive
+            .await
+            .map_err(|_| AppError::new("session_closed", "La session SFTP est terminée"))?
     }
 
     pub fn resize(&self, id: Uuid, size: Size) -> AppResult<()> {

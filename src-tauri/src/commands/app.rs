@@ -48,3 +48,8 @@ pub fn settings_save(app: State<App>, settings: Settings) -> AppResult<Settings>
 pub fn app_prepare_update(app: State<App>) {
     app.sessions.close_all();
 }
+
+#[tauri::command]
+pub fn app_exit(app: tauri::AppHandle) {
+    app.exit(0);
+}

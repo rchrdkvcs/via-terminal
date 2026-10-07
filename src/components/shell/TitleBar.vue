@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { KeyRound, PanelLeft, Settings } from '@lucide/vue'
+import { FolderTree, KeyRound, PanelLeft, Settings } from '@lucide/vue'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
+import { useFiles } from '@/stores/files'
+import { useWorkbench } from '@/stores/workbench'
 import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
 import { useUi, type Route } from '@/stores/ui'
@@ -9,6 +11,14 @@ import AddressPill from './AddressPill.vue'
 import WindowControls from './WindowControls.vue'
 import UpdateButton from './UpdateButton.vue'
 
+const files = useFiles()
+const workbench = useWorkbench()
+function toggleFiles() {
+  const tab = workbench.activeTab
+  if (!tab || tab.target.kind === 'local') return
+  ui.route = 'workbench'
+  files.state(tab.id).visible = !files.state(tab.id).visible
+}
 const settings = useSettings()
 const spaces = useSpaces()
 const ui = useUi()
@@ -46,6 +56,23 @@ const tools = [
     </div>
     <AddressPill class="min-w-0 max-w-md justify-self-center" />
     <div data-tauri-drag-region class="flex h-full items-center justify-end gap-0.5">
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button
+            type="button"
+            :class="button"
+            aria-label="Explorateur distant"
+            :disabled="!workbench.activeTab || workbench.activeTab.target.kind === 'local'"
+            :aria-expanded="
+              workbench.activeTab ? files.state(workbench.activeTab.id).visible : false
+            "
+            @click="toggleFiles"
+          >
+            <FolderTree :size="15" :stroke-width="1.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Explorateur distant</TooltipContent>
+      </Tooltip>
       <UpdateButton />
       <Tooltip v-for="tool in tools" :key="tool.route">
         <TooltipTrigger as-child>

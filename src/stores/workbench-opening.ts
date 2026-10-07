@@ -14,7 +14,11 @@ export function createTabOpening({
       if (
         !space ||
         !spaces.dispatch(
-          { type: 'updateTab', tabId: options.replace, patch: { target, title: null } },
+          {
+            type: 'updateTab',
+            tabId: options.replace,
+            patch: { target, title: null, remoteCwd: null },
+          },
           space.id,
         )
       )

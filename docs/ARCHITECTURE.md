@@ -14,6 +14,7 @@ vault/              hosts, groups, identities, keys, known hosts
   connect.rs        host or typed address → connection plan
   trust.rs          the vault as the SSH client's store
 layout/             persisted spaces and pinned rows, structurally validated
+files/              lazy SFTP, safe document replacement, streamed transfers and drop staging
 settings.rs         preferences
 sessions/           live sessions behind tabs
   local.rs          shells in a native PTY (portable-pty)
@@ -51,6 +52,7 @@ components/
   sidebar/          rows, folders, space header and switcher
   command/          command bar
   workbench/        panes, split view, connection panel and prompts
+  files/            explorer, CodeMirror documents and transfer controls
   vault/            vault page
   settings/         settings page
   ui/               shadcn-vue primitives
@@ -75,3 +77,5 @@ The terminal registry exposes tab-level search, selection and paste operations. 
 - **Rust**: unit tests per module, plus an end-to-end SSH test against an in-process russh server (`sessions/ssh/tests.rs`).
 - **Interface**: Vitest on `domain/`, `lib/`, store lifecycle operations, asynchronous vault drafts and the terminal registry. Deferred native replies exercise opening/closing races; mocked renderer construction is an internal seam for registry tests. Store tests share their mocks through `stores/*.fixture.ts`; draft tests hold saves in `test/vaultSaves.ts`.
 - **Real application**: `.ai/cdp-smoke.mjs` drives the running window over CDP. See `.ai/lessons.md`.
+
+**Remote files.** Each SSH actor opens one lazy SFTP channel on its authenticated handle. The `files::Files` service handles typed requests; transfer progress travels through `EventSink`. Atomic document replacement requires the OpenSSH extension and verified metadata. The in-memory `stores/files` keeps per-tab drafts and generation guards against stale replies. Closing presentation paths use `useFileProtection`; native window closure and application quit use the same guard. Pinned tab layout retains only `remoteCwd`, never documents. See ADR-0009 and ADR-0010.

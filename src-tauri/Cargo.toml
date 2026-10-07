@@ -30,11 +30,13 @@ chacha20poly1305 = "0.10"
 zeroize = "1.9.0"
 async-trait = "0.1.92"
 russh = { version = "0.63", default-features = false, features = ["ring", "flate2", "rsa"] }
-tokio = { version = "1", features = ["sync", "time", "rt", "macros", "net"] }
+tokio = { version = "1", features = ["sync", "time", "rt", "macros", "net", "fs", "io-util"] }
 rand = "0.10"
 tauri-plugin-window-state = "2"
 tauri-plugin-updater = "2.13.1"
 tauri-plugin-process = "2.4.0"
+russh-sftp = "3"
+tauri-plugin-dialog = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
