@@ -76,13 +76,11 @@ export function useFileProtection() {
       )
     })
   }
-  /** Runs `close` once the decision is still current, then releases its explorers. */
+  /** Runs `close`, which releases the explorers, once the decision is still current. */
   async function release(decision: Abandonment, close: () => boolean): Promise<boolean> {
     let agreed: Abandonment | null = decision
     while (agreed && !current(agreed)) agreed = await decide(agreed.tabIds)
-    if (!agreed || !close()) return false
-    agreed.tabIds.forEach((tabId) => files.release(tabId))
-    return true
+    return !!agreed && close()
   }
   return { protect: decide, current, release }
 }

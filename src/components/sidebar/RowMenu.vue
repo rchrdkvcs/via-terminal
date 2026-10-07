@@ -29,14 +29,14 @@ import { useSessions } from '@/stores/sessions'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
-import { useTabClosing } from '@/composables/useTabClosing'
+import { useClosing } from '@/composables/useClosing'
 
 const props = defineProps<{ tabId: Id }>()
 const spaces = useSpaces()
 const sessions = useSessions()
 const ui = useUi()
 const workbench = useWorkbench()
-const closing = useTabClosing()
+const closing = useClosing()
 const kbd = useShortcutLabel()
 
 const tab = computed(() => findTab(spaces.active, props.tabId))
@@ -94,7 +94,7 @@ const otherSpaces = computed(() => spaces.spaces.filter((space) => space.id !== 
     <ContextMenuItem v-else @select="workbench.reconnect(tabId)">
       <RotateCw :stroke-width="1.5" /> {{ tab?.target.kind === 'local' ? 'Démarrer' : 'Connecter' }}
     </ContextMenuItem>
-    <ContextMenuItem @select="closing.close(tabId)">
+    <ContextMenuItem @select="closing.closeTab(tabId)">
       <X :stroke-width="1.5" /> Fermer
       <ContextMenuShortcut>{{ kbd('closeTab') }}</ContextMenuShortcut>
     </ContextMenuItem>

@@ -60,7 +60,6 @@ it('drafts are lost only when the closing succeeds, and later edits are asked ag
   await reply('discard')
   expect(await confirmed).toBe(true)
   expect(close).toHaveBeenCalledOnce()
-  expect(files.panels.tab).toBeUndefined()
 })
 
 it('never offers to save a draft through another endpoint or account', async () => {
