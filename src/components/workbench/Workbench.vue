@@ -35,7 +35,7 @@ watch(shown, async (visible) => {
   <ResizablePanelGroup @layout="layout" direction="horizontal" class="relative h-full min-h-0">
     <ResizablePanel :min-size="20" :class="expanded ? '!hidden' : !shown ? '!flex-[1_1_100%]' : ''">
       <div class="relative h-full min-h-0">
-        <EmptyWorkbench v-if="!workbench.activeRow" />
+        <EmptyWorkbench v-if="!workbench.activeRow" class="rounded-xl bg-surface shadow-surface" />
         <SplitView v-else-if="workbench.activeRow.kind === 'split'" :split="workbench.activeRow" />
         <TabPane v-else :key="workbench.activeRow.id" :tab="workbench.activeRow" />
         <SplitDropZones />
@@ -45,13 +45,14 @@ watch(shown, async (visible) => {
     <template v-if="shown && workbench.activeTab">
       <ResizableHandle
         v-show="!expanded"
-        class="bg-hairline"
+        class="w-2 shrink-0"
         aria-label="Redimensionner l’explorateur distant"
       />
       <ResizablePanel
         ref="filePane"
         :default-size="40"
         :min-size="30"
+        class="overflow-hidden rounded-xl bg-rail shadow-surface"
         :class="expanded ? '!flex-[1_1_100%]' : ''"
       >
         <FilePanel :tab="workbench.activeTab" />

@@ -12,15 +12,14 @@ const focused = computed(() => workbench.activeTab?.id === props.tab.id)
 
 <template>
   <div
-    class="relative h-full min-h-0 w-full min-w-0 overflow-hidden"
-    :class="inSplit ? 'rounded-lg' : ''"
+    class="relative h-full min-h-0 w-full min-w-0 overflow-hidden rounded-xl bg-surface shadow-surface"
     :data-focused="focused || undefined"
     :aria-label="inSplit ? 'Volet' : undefined"
     @pointerdown="!focused && workbench.activate(tab.id)"
   >
     <div
       v-if="inSplit"
-      class="pointer-events-none absolute inset-0 z-20 rounded-lg ring-1 ring-inset transition-[box-shadow] duration-150"
+      class="pointer-events-none absolute inset-0 z-20 rounded-xl ring-1 ring-inset transition-[box-shadow] duration-150"
       :class="focused ? 'ring-primary/45' : 'ring-border'"
       aria-hidden="true"
     />

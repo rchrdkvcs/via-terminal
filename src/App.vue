@@ -39,7 +39,12 @@ const ui = useUi()
             :class="spaces.sidebar.visible ? 'pe-2' : 'px-2'"
           >
             <main
-              class="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-surface text-surface-ink shadow-surface"
+              class="relative min-h-0 flex-1 text-surface-ink"
+              :class="
+                ui.route !== 'workbench'
+                  ? 'overflow-hidden rounded-xl bg-surface shadow-surface'
+                  : ''
+              "
             >
               <Workbench v-show="ui.route === 'workbench'" />
               <VaultPage v-if="ui.route === 'vault'" class="absolute inset-0 bg-surface" />
