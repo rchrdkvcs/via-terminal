@@ -12,11 +12,6 @@ export interface PageSection<T extends string = string> {
   count?: number
 }
 
-/**
- * The frame shared by full pages (vault, settings): a titled rail of
- * sections on the left, the page on the right, one way out. No borders:
- * the rail is told apart by its half-step tint.
- */
 defineProps<{ title: string; closeLabel: string; sections: PageSection<T>[] }>()
 const current = defineModel<T>({ required: true })
 const ui = useUi()
@@ -25,7 +20,6 @@ function close() {
   ui.route = 'workbench'
 }
 
-/** Escape leaves the page unless a field, menu or dialog is using it. */
 useEventListener(window, 'keydown', (event: KeyboardEvent) => {
   if (event.key !== 'Escape' || event.defaultPrevented) return
   const target = event.target instanceof Element ? event.target : null

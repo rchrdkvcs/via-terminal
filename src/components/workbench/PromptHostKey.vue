@@ -3,10 +3,6 @@ import { ShieldAlert, ShieldQuestion } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import type { Prompt, PromptAnswer } from '@/ipc/types'
 
-/**
- * A new or changed server key. A changed key is a possible attack, so it
- * reads as a warning and its confirmation names what it does.
- */
 defineProps<{ prompt: Extract<Prompt, { kind: 'hostKey' }> }>()
 const emit = defineEmits<{ answer: [answer: PromptAnswer] }>()
 </script>

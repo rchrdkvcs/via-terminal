@@ -37,7 +37,6 @@ const ui = useUi()
             class="flex min-w-0 flex-1 flex-col pb-2"
             :class="spaces.sidebar.visible ? 'pe-2' : 'px-2'"
           >
-            <!-- The terminal surface stays mounted under the vault and settings. -->
             <main
               class="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-surface text-surface-ink shadow-surface"
             >

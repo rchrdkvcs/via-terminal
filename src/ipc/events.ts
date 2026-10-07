@@ -4,6 +4,7 @@ import type {
   SessionPromptEvent,
   SessionStateEvent,
   TerminalOutputEvent,
+  TrackpadSwipeEvent,
   VaultChangedEvent,
 } from './types'
 
@@ -12,15 +13,11 @@ interface EventMap {
   'session-state': SessionStateEvent
   'session-prompt': SessionPromptEvent
   'vault-changed': VaultChangedEvent
+  'trackpad-swipe': TrackpadSwipeEvent
 }
 
 type Handler<K extends keyof EventMap> = (payload: EventMap[K]) => void
 
-/**
- * One native listener per event name, fanned out in JavaScript.
- * `terminal-output` fires continuously while a shell streams, so registering
- * a native listener per pane would multiply the cost of every chunk.
- */
 const subscribers = new Map<keyof EventMap, Set<Handler<never>>>()
 const natives = new Map<keyof EventMap, Promise<UnlistenFn>>()
 
@@ -45,7 +42,6 @@ export function on<K extends keyof EventMap>(name: K, handler: Handler<K>): () =
   return () => handlers.delete(handler)
 }
 
-/** Test seam: deliver an event as if Rust had emitted it. */
 export function emitLocally<K extends keyof EventMap>(name: K, payload: EventMap[K]): void {
   for (const subscriber of (subscribers.get(name) ?? []) as Set<Handler<K>>) subscriber(payload)
 }

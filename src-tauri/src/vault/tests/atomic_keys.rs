@@ -12,8 +12,6 @@ use std::sync::Arc;
 
 #[test]
 fn failed_key_creation_leaves_no_orphaned_secret() {
-    // A second SQLite connection observes committed blobs without exposing
-    // a test-only inspection method on Storage.
     let uri = format!("file:{}?mode=memory&cache=shared", uuid::Uuid::new_v4());
     let observer = rusqlite::Connection::open(&uri).unwrap();
     let storage = Arc::new(

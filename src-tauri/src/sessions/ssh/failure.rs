@@ -1,8 +1,3 @@
-//! Why a connection failed, in words the user can act on.
-//!
-//! Errors are classified where they happen; only the final message is prose.
-//! A message never contains a secret, only the address and method names.
-
 use std::io;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -11,19 +6,16 @@ pub(super) enum Failure {
     Refused,
     Unreachable,
     Timeout,
-    /// The server closed the connection before the shell was ready.
+
     Closed,
     Network,
     HostKeyRejected,
     Handshake,
-    Rejected {
-        tried: Vec<Method>,
-    },
+    Rejected { tried: Vec<Method> },
     Cancelled,
     Shell,
 }
 
-/// An authentication method, as named to the user.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Method {
     Key,

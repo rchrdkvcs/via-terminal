@@ -9,11 +9,6 @@ import AddressPill from './AddressPill.vue'
 import WindowControls from './WindowControls.vue'
 import UpdateButton from './UpdateButton.vue'
 
-/**
- * The full-window strip above the sidebar and content: the drag region, the address
- * pill in the middle, then the vault, settings and window controls top right,
- * as Windows and Linux expect them. macOS keeps its own traffic lights on the left.
- */
 const settings = useSettings()
 const spaces = useSpaces()
 const ui = useUi()
@@ -21,7 +16,6 @@ const kbd = useShortcutLabel()
 
 const toggle = (route: Route) => (ui.route = ui.route === route ? 'workbench' : route)
 
-/** The current page is a lit key; the others stay flat until hovered. */
 const button =
   'press grid size-7 shrink-0 place-items-center rounded-md text-ink-muted outline-none transition-[background-color,color,box-shadow] duration-100 hover:bg-row-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 aria-[current=true]:bg-control aria-[current=true]:text-foreground aria-[current=true]:shadow-[var(--shadow-control)]'
 const tools = [

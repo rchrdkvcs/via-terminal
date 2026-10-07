@@ -5,7 +5,6 @@ import { useWorkbench } from '@/stores/workbench'
 import ConnectionPanel from './ConnectionPanel.vue'
 import TerminalHost from './TerminalHost.vue'
 
-/** One tab's terminal, with its connection state laid over it when needed. */
 const props = defineProps<{ tab: Tab; inSplit?: boolean }>()
 const workbench = useWorkbench()
 const focused = computed(() => workbench.activeTab?.id === props.tab.id)

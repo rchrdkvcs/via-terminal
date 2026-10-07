@@ -1,5 +1,3 @@
-//! Composition root: builds the modules once and hands them to Tauri.
-
 mod commands;
 pub mod error;
 pub mod layout;
@@ -7,6 +5,7 @@ pub mod secrets;
 pub mod sessions;
 pub mod settings;
 pub mod storage;
+pub mod swipe;
 pub mod vault;
 
 use commands::{emitter::TauriSink, App};
@@ -43,6 +42,7 @@ pub fn run() {
         .setup(|app| {
             let state = build(app.handle())?;
             app.manage(state);
+            swipe::install(app.handle());
             Ok(())
         })
         .invoke_handler(commands::handler())

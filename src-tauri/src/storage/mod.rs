@@ -1,8 +1,3 @@
-//! SQLite persistence: named JSON documents and opaque blobs.
-//!
-//! Callers never see SQL. A document is a whole value replaced atomically, which
-//! is enough for a single-window application whose data fits in memory.
-
 mod transaction;
 pub(crate) use transaction::BlobChange;
 
@@ -29,8 +24,6 @@ impl Storage {
         Self::prepare(Connection::open_in_memory()?)
     }
 
-    /// Storage over `connection` with `faults` (such as failing triggers)
-    /// installed on its schema, to test what callers do when SQLite refuses.
     #[cfg(test)]
     pub(crate) fn with_faults(connection: Connection, faults: &str) -> AppResult<Self> {
         connection.execute_batch(SCHEMA)?;
@@ -45,7 +38,6 @@ impl Storage {
         })
     }
 
-    /// The stored document, or `None` when it was never saved.
     pub fn load<T: DeserializeOwned>(&self, key: &str) -> AppResult<Option<T>> {
         let json: Option<String> = self
             .connection

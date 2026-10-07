@@ -9,11 +9,6 @@ import type { TabRuntime, TabState } from './sessions'
 type EndedListener = (tabId: Id, event: SessionStateEvent) => void
 type HostSavedListener = (tabId: Id, hostId: Id) => void
 
-/**
- * Native session events applied to tab runtimes, in order. `SessionRouting`
- * delivers an event only while its session is bound to the tab; a runtime is
- * updated only while it still shows that session.
- */
 export function createSessionEvents(
   runtimes: Record<Id, TabRuntime>,
   liveStates: readonly TabState[],
@@ -26,7 +21,6 @@ export function createSessionEvents(
     return () => endedListeners.delete(listener)
   }
 
-  /** A quick session saved its host, including notifications before open returns. */
   function onHostSaved(listener: HostSavedListener): () => void {
     hostSavedListeners.add(listener)
     return () => hostSavedListeners.delete(listener)

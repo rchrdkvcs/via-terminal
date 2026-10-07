@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input'
 import { parsePort } from './format'
 import VaultField from './VaultField.vue'
 
-/** A port override: empty inherits, an invalid value is explained and never saved. */
 defineProps<{ id: string; placeholder: string }>()
 const model = defineModel<number | null>({ required: true })
 const emit = defineEmits<{ commit: [] }>()

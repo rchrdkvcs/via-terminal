@@ -10,7 +10,6 @@ export interface Presentation {
   appearance: 'dark' | 'light'
 }
 
-/** Used before settings hydrate the renderer. */
 export const defaultPresentation: Presentation = {
   fontFamily: '',
   fontSize: 14,
@@ -21,7 +20,6 @@ export const defaultPresentation: Presentation = {
   appearance: 'dark',
 }
 
-/** The ANSI ramp belongs to the shell's output, so it stays in full color. */
 const ansiDark = {
   black: '#3a3a3c',
   red: '#ff6b6b',
@@ -60,7 +58,6 @@ const ansiLight = {
   brightWhite: '#000000',
 }
 
-/** Must match `--surface` and `--surface-ink` in `styles/tokens.css`. */
 export function terminalTheme({ appearance }: Presentation): ITheme {
   if (appearance === 'light') {
     return {

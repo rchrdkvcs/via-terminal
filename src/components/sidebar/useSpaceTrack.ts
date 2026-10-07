@@ -1,33 +1,36 @@
-import { computed, nextTick, onBeforeUnmount, ref, watch, type Ref } from 'vue'
-import { usePreferredReducedMotion } from '@vueuse/core'
+import { computed, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
+import { usePreferredReducedMotion, useResizeObserver } from '@vueuse/core'
+import { api, isNative } from '@/ipc/client'
+import { on } from '@/ipc/events'
 import type { Id } from '@/ipc/types'
 import { useSpaces } from '@/stores/spaces'
-import { createSpaceSwipe } from './spaceSwipe'
+import { createSwipeTracker, spring } from './swipeTracker'
+import { createWheelPan } from './wheelPan'
 
-/** How long a released or switched space takes to slide home, in ms. */
-const SETTLE = 250
+const GAIN = 1.5
 
-/**
- * The spaces as panels side by side on a horizontal track. Every panel stays
- * mounted, so the row under the pointer is never torn out mid-gesture; only
- * the active space and the one beside it are shown, moved by transforms.
- *
- * `offset` is how far the track is pulled, in px: positive shows the next
- * space coming in from the right. A switch, from a swipe or anywhere else,
- * restarts the offset from where the new space stands and eases it to 0.
- */
-export function useSpaceTrack(track: Ref<HTMLElement | undefined>) {
+const SWITCH_OMEGA = 37
+
+const RETURN_OMEGA = Math.sqrt(250)
+
+const REST = 0.0005
+const REST_SPEED = 0.01
+
+const phased = isNative() && /Mac/.test(navigator.userAgent)
+
+export function useSpaceTrack(sidebar: Ref<HTMLElement | undefined>) {
   const spaces = useSpaces()
   const motion = usePreferredReducedMotion()
   const reduced = computed(() => motion.value === 'reduce')
-  const offset = ref(0)
-  /** The space shown beside the active one, and on which side. */
-  const peer = ref<{ id: Id; side: 1 | -1 } | null>(null)
-  const phase = ref<'rest' | 'drag' | 'settle'>('rest')
-  let settling = 0
-  let done: ReturnType<typeof setTimeout> | undefined
+  const position = ref(0)
 
-  const width = () => track.value?.clientWidth ?? spaces.sidebar.width
+  const peer = ref<{ id: Id; side: 1 | -1 } | null>(null)
+  const moving = ref(false)
+  let frame = 0
+
+  let base = 0
+
+  let fling = 0
 
   function neighbor(side: 1 | -1): Id | null {
     const list = spaces.spaces
@@ -36,86 +39,116 @@ export function useSpaceTrack(track: Ref<HTMLElement | undefined>) {
     return next && next.id !== spaces.active.id ? next.id : null
   }
 
-  /** Where a space's panel stands on screen as an offset, mid-slide included. */
-  function standing(id: Id): number {
-    if (phase.value !== 'settle') return offset.value
-    const panel = track.value?.querySelector(`[data-space-panel="${CSS.escape(id)}"]`)
-    return panel ? -new DOMMatrix(getComputedStyle(panel).transform).m41 : 0
+  function stop() {
+    cancelAnimationFrame(frame)
+    frame = 0
   }
 
-  /** Hold the panels where they stand, without easing. */
-  function hold(at: number) {
-    settling++
-    clearTimeout(done)
-    phase.value = 'drag'
-    offset.value = at
+  function rest() {
+    stop()
+    position.value = 0
+    peer.value = null
+    moving.value = false
   }
 
-  /** Ease from the held position to the active space. */
-  async function settle() {
-    const run = ++settling
-    await nextTick()
-    // Lay out the starting position before easing, or the slide starts from the end.
-    void track.value?.offsetWidth
-    if (run !== settling) return
-    phase.value = 'settle'
-    offset.value = 0
-    done = setTimeout(() => {
-      if (run !== settling) return
-      phase.value = 'rest'
-      peer.value = null
-    }, SETTLE + 50)
+  function settle(velocity: number, omega: number) {
+    stop()
+    if (reduced.value) return rest()
+    const curve = spring(position.value, velocity, omega)
+    const start = performance.now()
+    const tick = (now: number) => {
+      const at = curve((now - start) / 1000)
+      if (Math.abs(at.position) < REST && Math.abs(at.velocity) < REST_SPEED) return rest()
+      position.value = at.position
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
   }
 
-  const onWheel = createSpaceSwipe({
-    width,
-    canSwitch: () => spaces.spaces.length > 1,
-    resume: () => {
-      if (reduced.value) return 0
-      const at = standing(spaces.active.id)
-      hold(at)
-      return at
+  function pull(at: number) {
+    if (reduced.value) return
+    position.value = Math.max(-1, Math.min(1, at))
+    const side = Math.sign(position.value) as 1 | -1 | 0
+    const id = side ? neighbor(side) : null
+    if (id && side) peer.value = { id, side }
+  }
+
+  const feed = createSwipeTracker({
+    canSwipe: () => spaces.spaces.length > 1,
+    begin: () => {
+      stop()
+      base = position.value
+      moving.value = true
     },
-    drag: (at) => {
-      if (reduced.value) return
-      hold(at)
-      const side = Math.sign(at) as 1 | -1 | 0
-      const id = side ? neighbor(side) : null
-      if (id && side) peer.value = { id, side }
+    move: (amount) => pull(base + GAIN * amount),
+    cross: () => {
+      if (phased) api.swipeHaptic().catch(() => {})
     },
-    release: (direction) => {
-      if (direction) spaces.cycle(direction)
-      else if (!reduced.value) void settle()
+    commit: (direction, velocity) => {
+      fling = GAIN * velocity
+      spaces.cycle(direction)
     },
+    cancel: (velocity) => settle(GAIN * velocity, RETURN_OMEGA),
+  })
+
+  const onWheel = createWheelPan({
+    phased,
+    pan: feed,
     step: (direction) => spaces.cycle(direction),
   })
 
-  // Every switch slides, whatever started it: a swipe, a click, a shortcut.
   watch(
     () => spaces.activeId,
     (_, old) => {
-      if (reduced.value || !old || !spaces.byId(old)) {
-        hold(0)
-        phase.value = 'rest'
-        peer.value = null
-        return
-      }
+      const velocity = fling
+      fling = 0
+      if (reduced.value || !old || !spaces.byId(old)) return rest()
+
       const direction = spaces.switchDirection
-      hold(standing(old) - direction * width())
+      moving.value = true
+      position.value -= direction
       peer.value = { id: old, side: -direction as 1 | -1 }
-      void settle()
+      settle(velocity, SWITCH_OMEGA)
     },
+    { flush: 'sync' },
   )
 
-  onBeforeUnmount(() => clearTimeout(done))
+  let region = ''
+  function report() {
+    const rect = sidebar.value?.getBoundingClientRect()
+    const next =
+      rect && rect.width > 0 && spaces.spaces.length > 1
+        ? { x: rect.left, y: rect.top, width: rect.width, height: rect.height }
+        : null
+    const key = JSON.stringify(next)
+    if (key === region) return
+    region = key
+    api.swipeRegion(next).catch(() => {})
+  }
 
-  /** The transform of a space's panel, or `null` when it is out of sight. */
+  let unlisten = () => {}
+  if (phased) {
+    useResizeObserver(sidebar, report)
+    useResizeObserver(document.documentElement, report)
+    watch(() => spaces.spaces.length, report)
+    onMounted(() => {
+      report()
+      unlisten = on('trackpad-swipe', feed)
+    })
+  }
+
+  onBeforeUnmount(() => {
+    stop()
+    unlisten()
+    if (phased) api.swipeRegion(null).catch(() => {})
+  })
+
   function place(id: Id): string | null {
     const side = id === spaces.active.id ? 0 : peer.value?.id === id ? peer.value.side : null
     if (side === null) return null
-    if (phase.value === 'rest') return 'none'
-    return `translateX(calc(${side * 100}% - ${offset.value}px))`
+    if (!moving.value) return 'none'
+    return `translateX(${(side - position.value) * 100}%)`
   }
 
-  return { onWheel, place, phase }
+  return { onWheel, place, moving }
 }

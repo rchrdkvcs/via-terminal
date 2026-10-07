@@ -1,6 +1,3 @@
-//! What the interface may submit, and the rules a submission must satisfy
-//! against the current vault before it is applied.
-
 use super::model::{Defaults, Id, VaultData};
 use crate::error::{AppError, AppResult};
 use serde::Deserialize;
@@ -118,7 +115,6 @@ pub fn validate_group_ref(data: &VaultData, group_id: Option<Id>) -> AppResult<(
     }
 }
 
-/// A group may not become its own ancestor.
 pub fn validate_parent(data: &VaultData, group_id: Id, parent_id: Option<Id>) -> AppResult<()> {
     validate_group_ref(data, parent_id)?;
     let mut cursor = parent_id;

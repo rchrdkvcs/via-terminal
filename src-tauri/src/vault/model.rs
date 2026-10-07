@@ -1,6 +1,3 @@
-//! Persisted vault records. Secrets are never fields here: they live in
-//! [`crate::secrets`] under the key returned by [`secret_id`].
-
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -18,7 +15,6 @@ pub struct Group {
     pub defaults: Defaults,
 }
 
-/// Values a group passes down and a host may override.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Defaults {
@@ -64,7 +60,7 @@ pub struct Key {
     pub algorithm: String,
     pub fingerprint: String,
     pub public_key: String,
-    /// The stored private key is encrypted with a passphrase.
+
     pub encrypted: bool,
     #[serde(default)]
     pub created_at: i64,
@@ -97,16 +93,14 @@ pub struct VaultData {
     pub known_hosts: Vec<KnownHost>,
 }
 
-/// What the interface receives: records plus which secrets are stored, never
-/// the secrets themselves.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultSnapshot {
     #[serde(flatten)]
     pub data: VaultData,
-    /// Hosts and identities that have a remembered password.
+
     pub passwords: Vec<Id>,
-    /// Keys whose passphrase is remembered.
+
     pub passphrases: Vec<Id>,
     pub secrets_available: bool,
 }

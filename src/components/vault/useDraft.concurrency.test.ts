@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { deferredBackend, editor, record } from '@/test/vaultSaves'
 
-// Promise-backed saves hold writes at the public seam while the user edits.
 describe('useDraft concurrent saves', () => {
   it('acknowledges the submitted fields and preserves a later password', async () => {
     const backend = deferredBackend()

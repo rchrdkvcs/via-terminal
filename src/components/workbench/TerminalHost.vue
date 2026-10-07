@@ -4,10 +4,6 @@ import { useResizeObserver } from '@vueuse/core'
 import type { Id } from '@/ipc/types'
 import { terminals } from '@/terminal/registry'
 
-/**
- * Where a tab's renderer is attached. The renderer belongs to the registry;
- * this element only lends it a place, so unmounting never loses scrollback.
- */
 const props = defineProps<{ tabId: Id }>()
 const host = ref<HTMLElement>()
 

@@ -1,8 +1,4 @@
 <script setup lang="ts">
-/**
- * Where a dragged row will land. It sits in the gap between two rows (or
- * under the last one), so one gap is always one line.
- */
 defineProps<{ at: 'top' | 'bottom' }>()
 </script>
 

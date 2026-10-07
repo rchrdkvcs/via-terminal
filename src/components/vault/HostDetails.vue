@@ -6,7 +6,6 @@ import TagInput from './TagInput.vue'
 import { useVaultOptions } from './useVaultOptions'
 import VaultField from './VaultField.vue'
 
-/** Where the host is filed and what the user wants to remember about it. */
 const draft = defineModel<HostInput>({ required: true })
 const emit = defineEmits<{ commit: [] }>()
 const options = useVaultOptions()

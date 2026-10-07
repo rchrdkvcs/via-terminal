@@ -14,7 +14,6 @@ import {
 } from '@lucide/vue'
 import type { Component } from 'vue'
 
-/** Lucide components for the icon names a space can store. */
 export const spaceIconComponents: Record<string, Component> = {
   terminal: Terminal,
   server: Server,

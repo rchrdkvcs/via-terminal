@@ -7,7 +7,6 @@ import type { TreeNode } from './tree'
 import { useGroupTree } from './useGroupTree'
 import { useVaultState } from './useVaultState'
 
-/** One group of the tree, with its sub-groups. F2 renames, Delete removes. */
 const props = defineProps<{ node: TreeNode }>()
 const state = useVaultState()
 const tree = useGroupTree()

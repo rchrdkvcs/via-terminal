@@ -4,10 +4,6 @@ import type { Id } from '@/ipc/types'
 
 export type Route = 'workbench' | 'vault' | 'settings'
 
-/**
- * What the command bar is for: a new tab, retargeting the current one,
- * actions first, or choosing the second tab of a split.
- */
 export type CommandMode =
   | { kind: 'new' }
   | { kind: 'replace'; tabId: Id }
@@ -22,7 +18,6 @@ export interface Confirmation {
   run: () => void
 }
 
-/** Transient interface state; nothing here is persisted. */
 export const useUi = defineStore('ui', () => {
   const route = ref<Route>('workbench')
   const command = ref<CommandMode | null>(null)

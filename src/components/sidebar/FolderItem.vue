@@ -15,7 +15,6 @@ import { useUi } from '@/stores/ui'
 import InlineRename from './InlineRename.vue'
 import RowArea from './RowArea.vue'
 
-/** A one-level folder; its icon is the only open/closed indicator. */
 const props = defineProps<{ folder: FolderEntry }>()
 const spaces = useSpaces()
 const ui = useUi()
@@ -82,7 +81,7 @@ const rename = (name: string) => {
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
-    <!-- Rows stay mounted so the folder can open and close smoothly, without popping. -->
+
     <div
       class="grid transition-[grid-template-rows,opacity] duration-200 ease-[var(--ease-out)] motion-reduce:transition-none"
       :class="folder.open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'"

@@ -13,7 +13,7 @@ describe('useDraft editor lifecycle', () => {
       stored.value = record('b', 'other')
       draft.value.name = 'changed'
       const current = commit()
-      // Another record has its own queue and does not wait.
+
       expect(backend.inputs().map((input) => input.id)).toEqual(['a', 'b'])
       await backend.settle(finish === 'resolve' ? 'a' : new Error('old failure'))
       expect(await old).toBeNull()

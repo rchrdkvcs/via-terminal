@@ -17,7 +17,6 @@ import { useVaultOptions } from './useVaultOptions'
 import { useVaultState } from './useVaultState'
 import VaultField from './VaultField.vue'
 
-/** A reusable username and credential, edited in place or drafted until saved. */
 const props = defineProps<{ identityId: Id | null }>()
 const vault = useVault()
 const state = useVaultState()

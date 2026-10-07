@@ -1,7 +1,3 @@
-/**
- * Split views inside a space. Mutates the copy `organize.apply` hands over;
- * a `false` return means the intent is invalid and the copy is discarded.
- */
 import type { Direction, Id, Split, Tab } from '@/ipc/types'
 import { slot, take } from './lists'
 import { type Space, newTabRow, rows, tabFromRow } from './space'
@@ -14,7 +10,6 @@ export function directionOf(edge: Edge): Direction {
   return edge === 'left' || edge === 'right' ? 'horizontal' : 'vertical'
 }
 
-/** Whether `edge` of `target` can receive another tab. */
 export function canSplit(space: Space, source: Id, target: Id, edge: Edge): boolean {
   const all = rows(space)
   const sourceRow = all.find((row) => row.id === source)
@@ -24,7 +19,6 @@ export function canSplit(space: Space, source: Id, target: Id, edge: Edge): bool
   return targetRow.direction === directionOf(edge) && targetRow.tabs.length < MAX_SPLIT
 }
 
-/** Put the `source` tab row beside `target` on `edge`. */
 export function splitWith(space: Space, source: Id, target: Id, edge: Edge): boolean {
   if (!canSplit(space, source, target, edge)) return false
   const sourceRow = take(space, source)
@@ -50,7 +44,6 @@ export function splitWith(space: Space, source: Id, target: Id, edge: Edge): boo
   return true
 }
 
-/** Remove a tab from its split; a split left with one tab becomes that tab. */
 function extract(space: Space, tabId: Id): { tab: Tab; splitId: Id } | undefined {
   const split = rows(space).find(
     (row): row is { kind: 'split' } & Split =>
@@ -65,7 +58,6 @@ function extract(space: Space, tabId: Id): { tab: Tab; splitId: Id } | undefined
   return { tab, splitId: split.tabs.length === 1 ? split.tabs[0].id : split.id }
 }
 
-/** The tab becomes its own row, right after what remains of its split. */
 export function detach(space: Space, tabId: Id): boolean {
   const extracted = extract(space, tabId)
   const at = extracted && slot(space, extracted.splitId)

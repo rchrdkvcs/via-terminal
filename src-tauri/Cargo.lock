@@ -5984,9 +5984,12 @@ version = "0.2.1"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
+ "block2",
  "chacha20poly1305",
  "dirs 6.0.0",
  "keyring",
+ "objc2",
+ "objc2-app-kit",
  "portable-pty",
  "rand",
  "rusqlite",

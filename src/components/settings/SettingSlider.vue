@@ -1,16 +1,12 @@
 <script setup lang="ts">
 import { SliderRange, SliderRoot, SliderThumb, SliderTrack } from 'reka-ui'
 
-/**
- * The shadcn slider does not forward attributes to its thumb, which is the
- * element screen readers focus, so settings build theirs from the primitives.
- */
 const props = defineProps<{
   min: number
   max: number
   step: number
   label: string
-  /** Shown next to the track and announced as the value. */
+
   format: (value: number) => string
 }>()
 

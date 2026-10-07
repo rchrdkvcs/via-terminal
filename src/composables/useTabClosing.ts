@@ -8,7 +8,6 @@ import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
 import { useTabLabel } from './useTabLabel'
 
-/** Presentation of close confirmations and the module's undo result. */
 export function useTabClosing() {
   const spaces = useSpaces()
   const sessions = useSessions()

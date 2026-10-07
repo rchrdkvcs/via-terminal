@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { Check } from '@lucide/vue'
 import type { TabState } from '@/stores/sessions'
 
-/** SSH progress as three steps, so a slow server never looks like a frozen app. */
 const props = defineProps<{ state: TabState; address: string }>()
 
 const steps = computed(() => [

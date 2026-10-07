@@ -12,7 +12,6 @@ import { useVaultState } from './useVaultState'
 import VaultEmpty from './VaultEmpty.vue'
 import VaultListPane from './VaultListPane.vue'
 
-/** Hosts of the chosen group and its sub-groups, filtered by the search. */
 const vault = useVault()
 const kbd = useShortcutLabel()
 const state = useVaultState()
@@ -40,7 +39,6 @@ const hosts = computed(() =>
 )
 const ids = computed(() => hosts.value.map((host) => host.id))
 
-// A deep link to a host outside the chosen group shows every host instead.
 watch(
   () => state.selected.value,
   (id) => {

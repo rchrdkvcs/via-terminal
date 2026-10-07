@@ -3,7 +3,6 @@ import type { Id } from '@/ipc/types'
 import { findTab, locate, rowOfTab } from '@/domain/space'
 import type { WorkbenchParts } from './workbench-parts'
 
-/** Internal session reactions of the workbench module, installed once per store. */
 export function installSessionEffects({
   sessions,
   spaces,

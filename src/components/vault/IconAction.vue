@@ -2,7 +2,6 @@
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
-/** A small icon button whose name is both announced and shown on hover. */
 defineOptions({ inheritAttrs: false })
 defineProps<{ label: string }>()
 </script>

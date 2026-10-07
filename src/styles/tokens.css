@@ -1,15 +1,3 @@
-/*
-  One neutral palette. Depth comes from crisp 1px edges, drawn as inner
-  shadows, and from fills a half step apart, not from drop shadows:
-
-  - chrome   the window and the sidebar
-  - surface  the terminal and page content
-  - raised   menus and dialogs, the only things that cast a shadow
-  - field    text fields: a flat fill inside a hairline
-  - control  buttons: a flat fill, a hairline, a faint lit edge
-
-  `terminal/theme.ts` mirrors `--surface` and `--surface-ink`.
-*/
 :root {
   --radius: 0.625rem;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -95,7 +83,6 @@
   --state-error: #ff5f57;
 }
 
-/* Shadcn names, so the primitives in `components/ui` follow the same palette. */
 :root,
 .dark {
   --background: var(--chrome);
@@ -118,7 +105,6 @@
   --ring: var(--focus);
 }
 
-/* Highlight of the item under the pointer in menus and lists of options. */
 :root {
   --menu-hover: rgb(0 0 0 / 6%);
 }
@@ -126,7 +112,6 @@
   --menu-hover: rgb(255 255 255 / 9%);
 }
 
-/* Page rails (vault, settings) sit a half step above the page surface. */
 :root {
   --rail: #f7f7f8;
 }

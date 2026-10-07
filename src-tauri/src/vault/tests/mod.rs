@@ -1,5 +1,3 @@
-//! Vault behaviour through its public methods.
-
 mod atomic_auth;
 mod atomic_keys;
 mod atomic_records;
@@ -33,7 +31,6 @@ pub(super) fn host(address: &str) -> HostInput {
     }
 }
 
-/// Inject SQLite failures, while exercising mutations only through Vault.
 pub(super) fn failing_vault(
     sql: &str,
     key: Option<[u8; 32]>,

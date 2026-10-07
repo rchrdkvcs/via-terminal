@@ -6,8 +6,6 @@ use uuid::Uuid;
 const MAX_NAME: usize = 80;
 const MAX_TITLE: usize = 200;
 
-/// Structural rules of a persisted layout. Anything the interface could get
-/// wrong while reorganizing is caught here before it reaches the disk.
 pub fn check(layout: &Layout) -> AppResult<()> {
     if layout.spaces.is_empty() {
         return Err(AppError::invalid("there must be at least one space"));

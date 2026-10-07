@@ -12,12 +12,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useUi } from '@/stores/ui'
 
-/** The one confirmation dialog, driven by `ui.confirm(...)`. */
 const ui = useUi()
-/**
- * The action closes the dialog before its click handler runs, which clears
- * `ui.confirmation`; keep the request being shown so confirming still runs it.
- */
+
 const shown = shallowRef(ui.confirmation)
 watch(
   () => ui.confirmation,

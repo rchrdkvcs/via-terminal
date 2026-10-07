@@ -11,7 +11,6 @@ import VaultEmpty from './VaultEmpty.vue'
 import VaultListPane from './VaultListPane.vue'
 import VaultRow from './VaultRow.vue'
 
-/** Server keys the user accepted. Removing one makes the next connection ask again. */
 const vault = useVault()
 const state = useVaultState()
 const actions = useVaultActions()

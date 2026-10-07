@@ -1,5 +1,3 @@
-//! Turning a host, or a typed address, into a connection plan.
-
 use super::{
     input,
     model::{secret_id, Id, SecretKind, VaultData},
@@ -11,7 +9,6 @@ use crate::{
 };
 use serde::Deserialize;
 
-/// An address typed in the command bar.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuickTarget {

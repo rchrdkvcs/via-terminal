@@ -6,7 +6,6 @@ import type { Id } from '@/ipc/types'
 import { useKeyActions } from './useKeyActions'
 import { registerDraftPreparation } from '@/updates/drafts'
 
-/** Asks only for a label: Ed25519 is the one algorithm worth generating today. */
 const emit = defineEmits<{ done: [id: Id | null] }>()
 const keys = useKeyActions()
 const label = ref('')

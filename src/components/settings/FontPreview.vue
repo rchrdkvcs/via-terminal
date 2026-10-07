@@ -2,10 +2,6 @@
 import { computed } from 'vue'
 import { useSettings } from '@/stores/settings'
 
-/**
- * Mirrors `MONO_STACK` in `terminal/create.ts`; importing it would pull xterm
- * into the settings chunk just for a string.
- */
 const MONO_STACK = "'IBM Plex Mono', 'Cascadia Mono', Menlo, Consolas, monospace"
 
 const store = useSettings()

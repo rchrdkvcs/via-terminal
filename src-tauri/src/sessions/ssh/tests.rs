@@ -1,5 +1,3 @@
-//! End to end: the hub's SSH sessions against a real in-process server.
-
 use super::{test_harness::Harness, HostKeyStatus};
 use crate::sessions::{
     events::SessionState,
@@ -114,7 +112,6 @@ async fn a_changed_key_shows_the_previous_fingerprint() {
     assert_eq!(previous_fingerprint, Some(previous));
     harness.answer(prompt_id, PromptAnswer::Accept);
 
-    // The stored password is right: no further question.
     harness.state(id, SessionState::Ready).await;
     assert_eq!(harness.store.trusted.lock().unwrap().len(), 1);
     harness.hub.close(id);

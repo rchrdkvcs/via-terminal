@@ -1,9 +1,3 @@
-//! Server key verification, the one russh callback the client needs.
-//!
-//! Every key goes through the vault: a trusted key passes, an unknown or
-//! changed key is shown to the user, and only an explicit acceptance lets the
-//! handshake continue. Refusing makes russh fail with `UnknownKey`.
-
 use super::{ConnectPlan, ConnectionStore, Context, HostKeyStatus, ServerKey};
 use crate::sessions::{
     events::{Event, EventSink, SessionState},
@@ -27,8 +21,7 @@ pub(super) struct Client {
     sink: Arc<dyn EventSink>,
     prompts: Arc<Prompts>,
     store: Arc<dyn ConnectionStore>,
-    /// Set once the server key is being checked, which ends the handshake
-    /// timeout. Also keeps a re-key from reporting `Verifying` again.
+
     verifying: Arc<AtomicBool>,
 }
 
@@ -65,8 +58,7 @@ impl Client {
         if self.prompts.ask(self.id, prompt).await != PromptAnswer::Accept {
             return false;
         }
-        // Accepted for this connection even if saving it failed; the user
-        // will simply be asked again next time.
+
         if self
             .store
             .trust_host_key(&self.address, self.port, &key)

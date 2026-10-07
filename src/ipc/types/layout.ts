@@ -1,5 +1,3 @@
-/** Mirrors `src-tauri/src/layout/mod.rs`: the persisted part of the sidebar. */
-
 export type Id = string
 
 export type Target =
@@ -9,7 +7,7 @@ export type Target =
 
 export interface Tab {
   id: Id
-  /** A manual name; `null` follows the terminal title. */
+
   title: string | null
   target: Target
 }
@@ -19,7 +17,7 @@ export type Direction = 'horizontal' | 'vertical'
 export interface Split {
   id: Id
   direction: Direction
-  /** Relative sizes, one per tab. */
+
   sizes: number[]
   tabs: Tab[]
 }

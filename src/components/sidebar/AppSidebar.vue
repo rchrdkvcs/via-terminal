@@ -5,19 +5,19 @@ import SpacePanel from './SpacePanel.vue'
 import SpaceSwitcher from './SpaceSwitcher.vue'
 import { useSpaceTrack } from './useSpaceTrack'
 
-/**
- * Below the window title bar: the active space (pinned rows, New tab, the
- * temporary rows), and the space switcher.
- */
 const spaces = useSpaces()
-const track = ref<HTMLElement>()
-const { onWheel, place, phase } = useSpaceTrack(track)
+const sidebar = ref<HTMLElement>()
+const { onWheel, place, moving } = useSpaceTrack(sidebar)
 </script>
 
 <template>
-  <aside class="flex h-full min-h-0 flex-col" aria-label="Barre latérale" @wheel="onWheel">
-    <!-- Spaces sit side by side; a swipe pulls the next one in from its side. -->
-    <div ref="track" class="track grid min-h-0 flex-1" data-space-track>
+  <aside
+    ref="sidebar"
+    class="flex h-full min-h-0 flex-col"
+    aria-label="Barre latérale"
+    @wheel="onWheel"
+  >
+    <div class="track grid min-h-0 flex-1" data-space-track>
       <SpacePanel
         v-for="space in spaces.spaces"
         :key="space.id"
@@ -29,8 +29,7 @@ const { onWheel, place, phase } = useSpaceTrack(track)
         class="[grid-area:1/1]"
         :class="[
           place(space.id) === null ? 'invisible' : '',
-          phase === 'settle' ? 'settling' : '',
-          phase !== 'rest' ? 'will-change-transform' : '',
+          moving ? 'will-change-transform' : '',
         ]"
         :style="{ transform: place(space.id) ?? undefined }"
       />
@@ -45,10 +44,6 @@ const { onWheel, place, phase } = useSpaceTrack(track)
 .track {
   grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   overflow: hidden;
-}
-
-.settling {
-  transition: transform 250ms var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {

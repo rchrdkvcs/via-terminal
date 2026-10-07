@@ -11,16 +11,11 @@ import { useUi } from '@/stores/ui'
 import RowArea from './RowArea.vue'
 import SpaceHeader from './SpaceHeader.vue'
 
-/**
- * One space in the sidebar: its name, pinned rows, New tab and temporary
- * rows. Every space keeps its panel mounted; only the active one is live.
- */
 const props = defineProps<{ space: Space }>()
 const ui = useUi()
 const kbd = useShortcutLabel()
 const actions = useSidebarActions()
 
-// Dropping on New tab puts the row first among temporary tabs, where new ones open.
 const newTab = ref<HTMLElement>()
 useDropZone(newTab, {
   target: () => props.space.temporary[0]?.id ?? endTarget('temporary'),

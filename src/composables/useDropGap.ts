@@ -7,7 +7,6 @@ import type { Place } from '@/domain/organize'
 import { useSpaces } from '@/stores/spaces'
 import { dragging, hint } from './useRowDnd'
 
-/** Ends of lists are drop targets too; their ids are built here. */
 export function endTarget(area: 'pinned' | 'temporary', folderId: Id | null = null): Id {
   return folderId ? `end:pinned:${folderId}` : `end:${area}`
 }
@@ -19,12 +18,6 @@ function endPlace(targetId: Id): Place | null {
   return null
 }
 
-/**
- * Where the dragged row would land, as one gap: "before this row" or "at
- * the end of this list". "After A" and "before B" name the same gap, so
- * both are drawn as the same single line, and a drop that would change
- * nothing draws none.
- */
 export function useDropGap() {
   const spaces = useSpaces()
 
@@ -36,7 +29,7 @@ export function useDropGap() {
       : placeFor(spaces.active, current.targetId, current.position)
     const source = dragging.value?.rowId
     if (!target || !source) return target
-    // Landing right where the row already is changes nothing: draw no line.
+
     const at = locate(spaces.active, source)
     const sameList =
       at &&

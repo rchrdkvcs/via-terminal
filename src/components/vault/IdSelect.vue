@@ -10,10 +10,6 @@ import {
 import type { Id } from '@/ipc/types'
 import type { Option } from './useVaultOptions'
 
-/**
- * A select over vault records where null is a real choice ("Aucune", or the
- * inherited value), which reka-ui cannot hold as an item value.
- */
 const props = defineProps<{ id?: string; options: Option[]; none: string; disabled?: boolean }>()
 const model = defineModel<Id | null>({ required: true })
 const NONE = '__none__'

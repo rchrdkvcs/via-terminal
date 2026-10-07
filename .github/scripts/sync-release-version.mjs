@@ -6,7 +6,6 @@ if (!/^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(tag ?? '')) {
 }
 const version = tag.replace(/^v/, '')
 
-// Read and validate every file before writing any changes.
 const updates = ['package.json', 'src-tauri/tauri.conf.json'].map((path) => {
   const contents = readFileSync(path, 'utf8')
   const config = JSON.parse(contents)

@@ -1,4 +1,3 @@
-/** Turning "dropped before/after/into this row" into an organize `Place`. */
 import type { Id } from '@/ipc/types'
 import { listOf } from './lists'
 import type { Place } from './organize'

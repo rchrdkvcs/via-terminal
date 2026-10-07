@@ -1,10 +1,3 @@
-//! Live sessions behind tabs: local shells and SSH channels.
-//!
-//! [`SessionHub`] is the only interface the commands use. Both kinds of
-//! session satisfy [`SessionIo`]; output, state changes and prompts leave
-//! through the [`EventSink`]. A session removes itself from the hub when it
-//! ends, so a closed id simply stops accepting input.
-
 pub mod events;
 pub mod integration;
 mod local;
@@ -26,7 +19,7 @@ pub use local::LocalSpec;
 pub trait SessionIo: Send + Sync {
     fn write(&self, data: &[u8]) -> AppResult<()>;
     fn resize(&self, size: Size) -> AppResult<()>;
-    /// Ask the session to end. Its state event follows asynchronously.
+
     fn close(&self);
 }
 
@@ -48,7 +41,6 @@ impl Size {
 
 type Registry = Arc<Mutex<HashMap<Uuid, Arc<dyn SessionIo>>>>;
 
-/// Lets a session take itself out of the registry when it ends.
 #[derive(Clone)]
 pub struct Ending {
     registry: Registry,
@@ -86,7 +78,6 @@ impl SessionHub {
         Ok(id)
     }
 
-    /// Returns at once; progress arrives as state events and prompts.
     pub fn open_ssh(
         &self,
         plan: ssh::ConnectPlan,

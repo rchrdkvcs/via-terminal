@@ -16,10 +16,6 @@ const empty: VaultView = {
   effective: {},
 }
 
-/**
- * The interface's copy of the vault. Rust returns the whole view after every
- * change, so this store replaces rather than patches, and never holds secrets.
- */
 export const useVault = defineStore('vault', () => {
   const view = ref<VaultView>(empty)
   const pending = new Set<Promise<Id | null>>()
@@ -34,7 +30,6 @@ export const useVault = defineStore('vault', () => {
     return id ? view.value.groups.find((candidate) => candidate.id === id) : undefined
   }
 
-  /** Group names from the root to the host's group, for display and search. */
   function groupPath(groupId: Id | null): string[] {
     const path: string[] = []
     let cursor = group(groupId)
@@ -64,7 +59,6 @@ export const useVault = defineStore('vault', () => {
     return view.value.passwords.includes(id)
   }
 
-  /** Run a vault command and adopt the view it returns. */
   function mutate(run: () => Promise<Mutation>): Promise<Id | null> {
     const operation = run().then((result) => {
       view.value = result.vault
@@ -84,13 +78,11 @@ export const useVault = defineStore('vault', () => {
     }
   }
 
-  /** A host labelled only by its address has no name of its own yet. */
   function isUnnamed(id: Id): boolean {
     const found = host(id)
     return Boolean(found && (!found.label || found.label === found.address))
   }
 
-  /** Give a host its name, keeping everything else (password included) as is. */
   async function rename(id: Id, label: string) {
     const found = host(id)
     if (!found) return

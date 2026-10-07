@@ -1,12 +1,3 @@
-//! Embedded SSH client (russh). See `plan.rs` for the contract with the vault.
-//!
-//! [`spawn`] hands back a handle at once and drives the connection on the
-//! async runtime: socket and handshake (`connect`), server key verification
-//! (`handler`), credentials (`auth`, `keys`, `interactive`, `asker`), then the
-//! shell (`channel`). The handle only talks to that task through channels, so
-//! `write` never blocks. Input typed before the shell is ready is dropped: it
-//! was aimed at a prompt or at nothing, never at the remote shell.
-
 mod asker;
 mod auth;
 mod channel;
@@ -28,7 +19,6 @@ use std::sync::{
 use tokio::sync::{mpsc, watch};
 use uuid::Uuid;
 
-/// Everything a connection needs from the hub.
 pub struct Context {
     pub id: Uuid,
     pub sink: Arc<dyn EventSink>,
@@ -37,24 +27,20 @@ pub struct Context {
     pub ending: Ending,
 }
 
-/// What the handle asks of the running connection.
 enum Command {
     Write(Vec<u8>),
     Resize(Size),
 }
 
-/// How a connection ended, reported once by `connect`.
 enum Outcome {
-    /// The remote shell ended on its own.
     Exited(Option<i32>),
-    /// The user closed the session.
+
     Closed,
-    /// The connection dropped while ready.
+
     Disconnected,
     Failed(failure::Failure),
 }
 
-/// The task's side of the handle.
 struct Link {
     commands: mpsc::UnboundedReceiver<Command>,
     closed: watch::Receiver<bool>,
@@ -67,7 +53,6 @@ struct SshSession {
     ready: Arc<AtomicBool>,
 }
 
-/// Start connecting in the background and return the session handle at once.
 pub fn spawn(plan: ConnectPlan, size: Size, context: Context) -> Arc<dyn SessionIo> {
     let (commands, commands_receiver) = mpsc::unbounded_channel();
     let (closed, closed_receiver) = watch::channel(false);
@@ -85,7 +70,6 @@ pub fn spawn(plan: ConnectPlan, size: Size, context: Context) -> Arc<dyn Session
     })
 }
 
-/// Resolves once the user closed the session, or nobody holds its handle.
 async fn closing(closed: &mut watch::Receiver<bool>) {
     let _ = closed.wait_for(|closed| *closed).await;
 }

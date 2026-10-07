@@ -7,7 +7,6 @@ import { useGroupTree } from './useGroupTree'
 import { useVaultOptions } from './useVaultOptions'
 import { useVaultState } from './useVaultState'
 
-/** Groups as a nested, foldable tree. Choosing one shows its hosts and its defaults. */
 const vault = useVault()
 const state = useVaultState()
 const tree = useGroupTree()

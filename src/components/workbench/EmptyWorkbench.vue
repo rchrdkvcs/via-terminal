@@ -12,10 +12,6 @@ import { useUi } from '@/stores/ui'
 import { useVault } from '@/stores/vault'
 import { useWorkbench } from '@/stores/workbench'
 
-/**
- * Nothing open: a launcher, never a fake terminal frame. The field opens the
- * command bar; below it, the default shell and recent hosts are one click away.
- */
 const settings = useSettings()
 const spaces = useSpaces()
 const ui = useUi()

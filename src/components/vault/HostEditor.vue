@@ -17,7 +17,6 @@ import { useDraft } from './useDraft'
 import { useVaultActions } from './useVaultActions'
 import { useVaultState } from './useVaultState'
 
-/** Edits a saved host in place, or drafts a new one until "Enregistrer". */
 const props = defineProps<{ hostId: Id | null }>()
 const vault = useVault()
 const state = useVaultState()

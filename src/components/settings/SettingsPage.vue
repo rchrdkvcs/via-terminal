@@ -24,7 +24,6 @@ const sections = [
 const current = ref('general')
 const section = computed(() => sections.find((s) => s.id === current.value) ?? sections[0])
 
-/** Resetting is a two-step press so a stray click cannot undo every choice. */
 const confirming = ref(false)
 const { start: armTimeout, stop: disarm } = useTimeoutFn(() => (confirming.value = false), 4000, {
   immediate: false,

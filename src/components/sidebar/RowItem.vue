@@ -7,10 +7,6 @@ import { locate } from '@/domain/space'
 import { useSpaces } from '@/stores/spaces'
 import TabRow from './TabRow.vue'
 
-/**
- * A draggable row: a tab, or a split view shown as its members side by side
- * in a single row. Dragging a split moves the whole view.
- */
 const props = defineProps<{ row: Row }>()
 const actions = useSidebarActions()
 const spaces = useSpaces()
@@ -18,7 +14,7 @@ const element = ref<HTMLElement>()
 
 useRowDnd(element, {
   id: () => props.row.id,
-  // A folder may move around a row only at the pinned root.
+
   canDrop: (source) => {
     const at = locate(spaces.active, props.row.id)
     return !source.isFolder || (at?.area === 'pinned' && at.folderId === null)

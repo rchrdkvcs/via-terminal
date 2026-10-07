@@ -1,4 +1,3 @@
-/** Native session commands and events held by the test, for the sessions store. */
 import { beforeEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import type { SessionStateEvent, Size, Tab } from '@/ipc/types'

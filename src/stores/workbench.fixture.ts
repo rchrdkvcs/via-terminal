@@ -1,4 +1,3 @@
-/** The workbench store over real spaces, with sessions and native calls held by the test. */
 import { afterEach, beforeEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import type { Layout, Row, Target } from '@/ipc/types'

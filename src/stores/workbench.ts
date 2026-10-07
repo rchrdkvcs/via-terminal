@@ -10,10 +10,6 @@ import { createTabLifecycle } from './workbench-lifecycle'
 import { createTabOpening } from './workbench-opening'
 import type { WorkbenchParts } from './workbench-parts'
 
-/**
- * What the user works on: the focused tab of each space, and the tab
- * lifecycle rules (open, wake, close, pin) on top of spaces and sessions.
- */
 export const useWorkbench = defineStore('workbench', () => {
   const spaces = useSpaces()
   const sessions = useSessions()
@@ -32,7 +28,6 @@ export const useWorkbench = defineStore('workbench', () => {
     if (tab && !sessions.isLive(tabId)) void sessions.start(tab, space.defaultShell)
   }
 
-  /** Focus a tab, waking it if asleep. Waking is always an explicit act. */
   function activate(tabId: Id, options: { wake?: boolean } = {}) {
     const space = spaces.spaceOf(tabId)
     if (!space) return
