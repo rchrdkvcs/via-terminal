@@ -21,15 +21,11 @@ const files = useFiles(),
   workbench = useWorkbench(),
   names = useTabLabel()
 const panel = computed(() => files.state(props.tab.id))
-const session = computed(() =>
-  sessions.runtime(props.tab.id).state === 'ready'
-    ? sessions.runtime(props.tab.id).sessionId
-    : null,
-)
+const session = computed(() => files.session(props.tab.id))
 const docked = computed(() => props.tab.view?.kind !== 'files')
 const selected = ref<string[]>([]),
   hidden = ref(true)
-const context = { tabId: () => props.tab.id, sessionId: () => session.value }
+const context = { tabId: () => props.tab.id }
 const operations = useFileOperations(context),
   transfers = useFileTransfers(context)
 const selection = computed(() =>
@@ -43,7 +39,7 @@ watch(
       const current = files.state(id)
       const saved = props.tab.view?.kind === 'files' ? props.tab.view.path : props.tab.remoteCwd
       const directory = current.directory === '.' ? (saved ?? '.') : current.directory
-      await files.navigate(id, sessionId, directory)
+      await files.navigate(id, directory)
     }
   },
   { immediate: true },
@@ -54,7 +50,7 @@ watch(
 )
 function navigate(directory: string) {
   selected.value = []
-  if (session.value) void files.navigate(props.tab.id, session.value, directory)
+  if (session.value) void files.navigate(props.tab.id, directory)
 }
 function select(entry: string, checked: boolean) {
   selected.value = checked

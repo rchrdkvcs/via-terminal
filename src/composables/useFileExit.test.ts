@@ -104,9 +104,9 @@ it('quits when the Windows title-bar X is clicked', async () => {
 it('keeps the window open while a document is still saving', async () => {
   const harness = arm()
   await vi.waitFor(() => expect(bridge.deliver).toEqual(expect.any(Function)))
-  useFiles()
-    .state('tab')
-    .documents.push({ saving: true } as RemoteDocument)
+  const files = useFiles()
+  files.setVisible('tab', true)
+  files.panels.tab.documents.push({ saving: true } as RemoteDocument)
   await bridge.deliver?.()
   await new Promise((resolve) => setTimeout(resolve, 0))
   expect(bridge.exited).toBe(false)

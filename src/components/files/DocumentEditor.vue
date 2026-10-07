@@ -7,18 +7,19 @@ import { useFileDialogs } from '@/stores/file-dialogs'
 import TextEditor from './TextEditor.vue'
 import { Button } from '@/components/ui/button'
 /** The remote document a tab shows in place of its terminal. */
-const props = defineProps<{ tabId: string; path: string; sessionId: string | null }>()
+const props = defineProps<{ tabId: string; path: string }>()
 const files = useFiles(),
   dialogs = useFileDialogs()
 const panel = computed(() => files.state(props.tabId))
 const active = computed(() => panel.value.documents.find((doc) => doc.path === props.path))
+const sessionId = computed(() => files.session(props.tabId))
 function load() {
-  if (props.sessionId && !active.value) {
+  if (sessionId.value && !active.value) {
     files.dismissError(props.tabId)
-    void files.openDocument(props.tabId, props.sessionId, props.path)
+    void files.openDocument(props.tabId, props.path)
   }
 }
-watch(() => props.sessionId, load, { immediate: true })
+watch(sessionId, load, { immediate: true })
 const dirty = computed(() => !!active.value && isDirty(active.value))
 const stale = computed(() => !!active.value && active.value.owner !== panel.value.owner)
 const saved = ref<string | null>(null)
@@ -28,14 +29,14 @@ watch(
 )
 async function save() {
   const document = active.value
-  if (!document || !props.sessionId || stale.value) return
-  if (await files.saveDocument(props.tabId, props.sessionId, document.id)) saved.value = document.id
+  if (!document || stale.value) return
+  if (await files.saveDocument(props.tabId, document.id)) saved.value = document.id
 }
 async function conflict(choice: 'reload' | 'overwrite') {
   const document = active.value,
-    session = props.sessionId,
-    tabId = props.tabId
-  if (!document || !session) return
+    tabId = props.tabId,
+    link = files.connection(tabId)
+  if (!document || !link) return
   const answer = await dialogs.ask({
     title:
       choice === 'reload' ? 'Recharger la version distante ?' : 'Remplacer la version distante ?',
@@ -52,9 +53,9 @@ async function conflict(choice: 'reload' | 'overwrite') {
       },
     ],
   })
-  if (answer.choice !== 'confirm' || props.tabId !== tabId || props.sessionId !== session) return
-  if (choice === 'reload') await files.reloadDocument(tabId, session, document.id)
-  else await files.saveDocument(tabId, session, document.id, true)
+  if (answer.choice !== 'confirm' || !link.current()) return
+  if (choice === 'reload') await files.reloadDocument(tabId, document.id)
+  else await files.saveDocument(tabId, document.id, true)
 }
 </script>
 <template>
