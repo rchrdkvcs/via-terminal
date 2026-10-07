@@ -2,6 +2,7 @@
 import { nextTick, ref } from 'vue'
 import { X } from '@lucide/vue'
 import { isDirty, type RemoteDocument } from '@/stores/file-documents'
+import { Button } from '@/components/ui/button'
 const props = defineProps<{ documents: RemoteDocument[]; active: string | null; panel: string }>()
 const emit = defineEmits<{ select: [id: string]; close: [id: string] }>()
 const list = ref<HTMLElement>()
@@ -29,7 +30,7 @@ async function move(event: KeyboardEvent, index: number) {
 <template>
   <div
     ref="list"
-    class="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-hairline p-1"
+    class="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-hairline px-2 py-1.5"
     role="tablist"
     aria-label="Documents ouverts"
   >
@@ -37,7 +38,7 @@ async function move(event: KeyboardEvent, index: number) {
       v-for="(document, index) in documents"
       :key="document.id"
       role="presentation"
-      class="row flex shrink-0 items-center"
+      class="row flex shrink-0 items-center text-ink-muted hover:text-foreground"
       :data-selected="active === document.id || undefined"
     >
       <button
@@ -48,7 +49,7 @@ async function move(event: KeyboardEvent, index: number) {
         :aria-controls="panel"
         :tabindex="active === document.id ? 0 : -1"
         aria-keyshortcuts="Delete"
-        class="flex max-w-44 items-center gap-1.5 rounded-md py-1.5 ps-2 pe-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        class="flex h-7 max-w-44 items-center gap-1.5 rounded-md ps-2 pe-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
         :title="`${document.path}\nSuppr pour fermer`"
         @click="emit('select', document.id)"
         @keydown="move($event, index)"
@@ -60,18 +61,20 @@ async function move(event: KeyboardEvent, index: number) {
           aria-hidden="true"
         /><span v-if="isDirty(document)" class="sr-only">, non enregistré</span>
       </button>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         tabindex="-1"
         aria-hidden="true"
-        class="me-0.5 grid size-6 place-items-center rounded text-ink-muted hover:bg-row-hover hover:text-foreground disabled:opacity-40"
+        class="me-0.5"
         :title="`Fermer ${name(document)}`"
         :disabled="document.saving"
         @mousedown.prevent
         @click="emit('close', document.id)"
       >
-        <X :size="12" />
-      </button>
+        <X :stroke-width="1.5" />
+      </Button>
     </div>
   </div>
 </template>

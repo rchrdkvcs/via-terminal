@@ -15,7 +15,7 @@ import {
   LanguageDescription,
 } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
-import { oneDark } from '@codemirror/theme-one-dark'
+import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark'
 import { applySourceChanges, newlineOf } from './sourceText'
 import { documentSaveKey } from '@/lib/shortcuts'
 import { useSettings } from '@/stores/settings'
@@ -29,6 +29,8 @@ let editor: EditorView | undefined
 let source = props.content
 let replacing = false
 let newline = newlineOf(source)
+const highlight = (appearance: 'dark' | 'light') =>
+  syntaxHighlighting(appearance === 'dark' ? oneDarkHighlightStyle : defaultHighlightStyle)
 async function loadLanguage() {
   const support = LanguageDescription.matchFilename(languages, props.path)
   const extension = support ? await support.load() : []
@@ -44,9 +46,8 @@ onMounted(() => {
         history(),
         drawSelection(),
         highlightActiveLine(),
-        syntaxHighlighting(defaultHighlightStyle),
         language.of([]),
-        theme.of(settings.appearance === 'dark' ? oneDark : []),
+        theme.of(highlight(settings.appearance)),
         keymap.of([
           {
             key: documentSaveKey,
@@ -69,9 +70,25 @@ onMounted(() => {
           spellcheck: 'false',
         }),
         EditorView.theme({
-          '&': { height: '100%', backgroundColor: 'transparent', fontSize: '12px' },
+          '&': {
+            height: '100%',
+            backgroundColor: 'transparent',
+            color: 'var(--surface-ink)',
+            fontSize: '12px',
+          },
           '.cm-scroller': { overflow: 'auto', fontFamily: 'var(--font-mono)' },
-          '.cm-gutters': { backgroundColor: 'transparent', border: 'none' },
+          '.cm-content': { caretColor: 'var(--ink)' },
+          '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--ink)' },
+          '.cm-gutters': {
+            backgroundColor: 'transparent',
+            color: 'var(--ink-faint)',
+            border: 'none',
+          },
+          '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'var(--row-hover)' },
+          '.cm-activeLineGutter': { color: 'var(--ink-muted)' },
+          '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': {
+            backgroundColor: 'rgb(127 127 127 / 30%)',
+          },
           '&.cm-focused': { outline: 'none', boxShadow: 'inset 0 0 0 1px var(--ring)' },
         }),
       ],
@@ -93,8 +110,7 @@ watch(
 )
 watch(
   () => settings.appearance,
-  (appearance) =>
-    editor?.dispatch({ effects: theme.reconfigure(appearance === 'dark' ? oneDark : []) }),
+  (appearance) => editor?.dispatch({ effects: theme.reconfigure(highlight(appearance)) }),
 )
 onBeforeUnmount(() => editor?.destroy())
 </script>

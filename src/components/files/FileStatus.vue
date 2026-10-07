@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { X } from '@lucide/vue'
 import type { TabState } from '@/stores/sessions'
+import { Button } from '@/components/ui/button'
 defineProps<{ state: TabState; error: string | null; connected: boolean }>()
 const emit = defineEmits<{ connect: []; retry: []; dismiss: [] }>()
-const action =
-  'material-control press rounded-md px-2 py-1 text-xs focus-visible:outline-2 focus-visible:outline-ring'
 const pending = ['connecting', 'verifying', 'authenticating']
 </script>
 <template>
@@ -12,24 +11,29 @@ const pending = ['connecting', 'verifying', 'authenticating']
     <p v-if="pending.includes(state)">Connexion du terminal en cours…</p>
     <template v-else>
       <p>Les fichiers distants sont disponibles quand le terminal est connecté.</p>
-      <button type="button" :class="[action, 'mt-2 text-foreground']" @click="emit('connect')">
+      <Button type="button" size="sm" class="mt-2" @click="emit('connect')">
         Connecter le terminal
-      </button>
+      </Button>
     </template>
   </div>
-  <div v-if="error" role="alert" class="flex shrink-0 items-start gap-2 px-3 py-2 text-xs">
+  <div
+    v-if="error"
+    role="alert"
+    class="flex shrink-0 items-start gap-1.5 border-b border-hairline py-1.5 ps-3 pe-2 text-xs"
+  >
     <p class="min-w-0 flex-1 py-1 break-words">{{ error }}</p>
-    <button v-if="connected" type="button" :class="action" @click="emit('retry')">
+    <Button v-if="connected" type="button" variant="secondary" size="xs" @click="emit('retry')">
       Actualiser
-    </button>
-    <button
+    </Button>
+    <Button
       type="button"
-      class="press grid size-6 shrink-0 place-items-center rounded text-ink-muted hover:bg-row-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+      variant="ghost"
+      size="icon-xs"
       aria-label="Masquer l’erreur"
       title="Masquer"
       @click="emit('dismiss')"
     >
-      <X :size="12" />
-    </button>
+      <X :stroke-width="1.5" />
+    </Button>
   </div>
 </template>

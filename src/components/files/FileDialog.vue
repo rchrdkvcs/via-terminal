@@ -9,6 +9,8 @@ import {
   AlertDialogFooter,
 } from '@/components/ui/alert-dialog'
 import { useFileDialogs } from '@/stores/file-dialogs'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 const dialogs = useFileDialogs()
 const errorId = useId()
 const value = ref('')
@@ -34,46 +36,35 @@ function answer(choice: string) {
           >{{ dialogs.current.description }}</AlertDialogDescription
         >
       </AlertDialogHeader>
-      <label v-if="dialogs.current.input !== undefined" class="grid gap-2 text-sm">
+      <label v-if="dialogs.current.input !== undefined" class="grid gap-2 text-[13px]">
         {{ dialogs.current.inputLabel ?? 'Nom ou chemin' }}
-        <input
+        <Input
           v-model="value"
           :aria-invalid="!!dialogs.error"
           :aria-describedby="dialogs.error ? errorId : undefined"
           autofocus
-          class="material-field h-9 rounded-md px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          class="font-mono text-xs"
           @keydown.enter.prevent="answer(dialogs.current.actions[0].value)"
         />
         <p v-if="dialogs.error" :id="errorId" role="alert" class="text-xs text-foreground">
           {{ dialogs.error }}
         </p>
       </label>
-      <label v-if="dialogs.current.applyAll" class="flex items-center gap-2 text-sm"
-        ><input v-model="all" type="checkbox" class="size-4" />Appliquer aux autres conflits de ce
+      <label v-if="dialogs.current.applyAll" class="flex items-center gap-2 text-[13px]"
+        ><input v-model="all" type="checkbox" class="size-3.5" />Appliquer aux autres conflits de ce
         transfert</label
       >
       <AlertDialogFooter class="flex-wrap">
-        <button
-          type="button"
-          class="material-control press rounded-md px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring"
-          @click="answer('cancel')"
-        >
-          Annuler
-        </button>
-        <button
-          v-for="action in dialogs.current.actions"
+        <Button type="button" variant="secondary" @click="answer('cancel')">Annuler</Button>
+        <Button
+          v-for="(action, index) in dialogs.current.actions"
           :key="action.value"
           type="button"
-          class="press rounded-md px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          :class="
-            action.destructive
-              ? 'bg-destructive text-destructive-foreground shadow-control'
-              : 'material-control'
-          "
+          :variant="action.destructive ? 'destructive' : index ? 'secondary' : 'default'"
           @click="answer(action.value)"
         >
           {{ action.label }}
-        </button>
+        </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

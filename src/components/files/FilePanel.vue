@@ -76,7 +76,7 @@ function open(entry: RemoteEntry) {
 <template>
   <FileDropZone
     :directory="panel.directory"
-    class="relative flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-surface"
+    class="relative flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-rail"
     aria-label="Explorateur distant"
     @drop="transfers.drop"
   >
@@ -113,7 +113,7 @@ function open(entry: RemoteEntry) {
       class="flex-1"
       :class="panel.documents.length ? 'min-h-72' : 'min-h-40'"
     >
-      <ResizablePanel :default-size="panel.documents.length ? 40 : 100" :min-size="15">
+      <ResizablePanel :min-size="15">
         <div class="flex h-full min-h-0 flex-col">
           <FileList
             :entries="panel.entries"
@@ -129,7 +129,9 @@ function open(entry: RemoteEntry) {
         </div>
       </ResizablePanel>
       <template v-if="panel.documents.length"
-        ><ResizableHandle aria-label="Redimensionner l’éditeur" /><ResizablePanel
+        ><ResizableHandle
+          class="bg-hairline"
+          aria-label="Redimensionner l’éditeur" /><ResizablePanel
           ref="editorPane"
           :default-size="60"
           :min-size="20"

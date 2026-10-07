@@ -9,6 +9,7 @@ import {
   Trash2,
   Upload,
 } from '@lucide/vue'
+import { Button } from '@/components/ui/button'
 defineProps<{ count: number; enabled: boolean }>()
 const emit = defineEmits<{
   create: [directory: boolean]
@@ -18,88 +19,94 @@ const emit = defineEmits<{
   chmod: []
   remove: []
 }>()
-const button =
-  'press grid size-8 place-items-center rounded-md text-ink-muted hover:bg-row-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-30'
 </script>
 <template>
   <div
-    class="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-hairline px-2 py-1.5"
+    class="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-hairline px-2 pt-1 pb-2"
     role="group"
     aria-label="Opérations sur les fichiers"
   >
-    <button
-      :class="button"
+    <Button
+      variant="ghost"
+      size="icon-sm"
       :disabled="!enabled"
       aria-label="Nouveau fichier"
       title="Nouveau fichier"
       @click="emit('create', false)"
     >
-      <FilePlus :size="15" />
-    </button>
-    <button
-      :class="button"
+      <FilePlus :stroke-width="1.5" />
+    </Button>
+    <Button
+      variant="ghost"
+      size="icon-sm"
       :disabled="!enabled"
       aria-label="Nouveau dossier"
       title="Nouveau dossier"
       @click="emit('create', true)"
     >
-      <FolderPlus :size="15" />
-    </button>
-    <span class="mx-1 h-4 w-px bg-hairline" />
-    <button
-      :class="button"
+      <FolderPlus :stroke-width="1.5" />
+    </Button>
+    <span class="mx-1 h-4 w-px bg-hairline" aria-hidden="true" />
+    <Button
+      variant="ghost"
+      size="icon-sm"
       :disabled="!enabled"
       aria-label="Envoyer des fichiers"
       title="Envoyer des fichiers"
       @click="emit('upload', false)"
     >
-      <Upload :size="15" />
-    </button>
-    <button
-      :class="button"
+      <Upload :stroke-width="1.5" />
+    </Button>
+    <Button
+      variant="ghost"
+      size="icon-sm"
       :disabled="!enabled"
       aria-label="Envoyer un dossier"
       title="Envoyer un dossier"
       @click="emit('upload', true)"
     >
-      <FolderUp :size="15" />
-    </button>
-    <button
-      :class="button"
+      <FolderUp :stroke-width="1.5" />
+    </Button>
+    <Button
+      variant="ghost"
+      size="icon-sm"
       :disabled="!enabled || !count"
       aria-label="Télécharger la sélection"
       title="Télécharger la sélection"
       @click="emit('download')"
     >
-      <Download :size="15" />
-    </button>
-    <span class="mx-1 h-4 w-px bg-hairline" />
-    <button
-      :class="button"
+      <Download :stroke-width="1.5" />
+    </Button>
+    <span class="mx-1 h-4 w-px bg-hairline" aria-hidden="true" />
+    <Button
+      variant="ghost"
+      size="icon-sm"
       :disabled="!enabled || count !== 1"
       aria-label="Renommer ou déplacer"
       title="Renommer ou déplacer"
       @click="emit('rename')"
     >
-      <Pencil :size="15" />
-    </button>
-    <button
-      :class="button"
+      <Pencil :stroke-width="1.5" />
+    </Button>
+    <Button
+      variant="ghost"
+      size="icon-sm"
       :disabled="!enabled || count !== 1"
       aria-label="Modifier les permissions"
       title="Modifier les permissions"
       @click="emit('chmod')"
     >
-      <Shield :size="15" />
-    </button>
-    <button
-      :class="button"
+      <Shield :stroke-width="1.5" />
+    </Button>
+    <Button
+      variant="ghost"
+      size="icon-sm"
       :disabled="!enabled || !count"
       aria-label="Supprimer la sélection"
       title="Supprimer la sélection"
       @click="emit('remove')"
     >
-      <Trash2 :size="15" />
-    </button>
+      <Trash2 :stroke-width="1.5" />
+    </Button>
   </div>
 </template>

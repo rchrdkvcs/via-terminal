@@ -32,18 +32,18 @@ function render(props: Partial<InstanceType<typeof FileList>['$props']> = {}) {
 describe('FileList', () => {
   it('selects every visible entry from the header and clears it with Escape', async () => {
     const view = render({ selected: ['/srv/app.log'] })
-    const all = view.get<HTMLInputElement>('thead input[type="checkbox"]')
+    const all = view.get<HTMLInputElement>('[role="columnheader"] input[type="checkbox"]')
     expect(all.element.indeterminate).toBe(true)
     await all.setValue(true)
     expect(view.emitted('selectAll')?.[0]).toEqual([['/srv/app.log', '/srv/releases']])
-    await view.get('tbody button').trigger('keydown', { key: 'Escape' })
+    await view.get('[role="cell"] button').trigger('keydown', { key: 'Escape' })
     expect(view.emitted('selectAll')?.[1]).toEqual([[]])
     view.unmount()
   })
 
   it('opens with Enter, toggles selection on click and names entry kinds', async () => {
     const view = render()
-    const [log, releases] = view.findAll('tbody button')
+    const [log, releases] = view.findAll('[role="cell"] button')
     expect(releases.text()).toContain('dossier')
     await log.trigger('click')
     await releases.trigger('keydown', { key: 'Enter' })

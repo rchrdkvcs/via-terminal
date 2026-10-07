@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, useId, watch } from 'vue'
 import { File, Folder, Link } from '@lucide/vue'
 import type { RemoteEntry } from '@/ipc/files'
+import { entrySize } from './fileSize'
 const props = defineProps<{
   entries: RemoteEntry[]
   selected: string[]
@@ -23,15 +24,8 @@ const visible = computed(() =>
 const chosen = computed(
   () => visible.value.filter((entry) => props.selected.includes(entry.path)).length,
 )
-const number = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 })
-const size = (entry: RemoteEntry) =>
-  entry.kind !== 'file'
-    ? '—'
-    : entry.size < 1024
-      ? `${entry.size} o`
-      : entry.size < 1024 * 1024
-        ? `${number.format(entry.size / 1024)} Ko`
-        : `${number.format(entry.size / 1024 / 1024)} Mo`
+const columns =
+  'grid grid-cols-[2rem_minmax(0,1fr)] items-center @[16rem]:grid-cols-[2rem_minmax(0,1fr)_5rem] @[20rem]:grid-cols-[2rem_minmax(0,1fr)_5rem_3rem]'
 const kinds = { directory: 'dossier', link: 'lien symbolique', file: 'fichier', other: 'autre' }
 let refocus = false
 watch(
@@ -40,7 +34,7 @@ watch(
     if (!refocus) return
     refocus = false
     await nextTick()
-    const target = root.value?.querySelector<HTMLElement>('tbody button') ?? root.value
+    const target = root.value?.querySelector<HTMLElement>('[role="cell"] button') ?? root.value
     target?.focus()
   },
 )
@@ -48,6 +42,10 @@ function deselect(event: KeyboardEvent) {
   if (!chosen.value) return
   event.stopPropagation()
   emit('selectAll', [])
+}
+function toggleAll(event: Event) {
+  const checked = (event.target as HTMLInputElement).checked
+  emit('selectAll', checked ? visible.value.map((entry) => entry.path) : [])
 }
 function open(entry: RemoteEntry) {
   refocus = true
@@ -65,55 +63,58 @@ function open(entry: RemoteEntry) {
     <p :id="keys" class="sr-only">
       Entrée pour ouvrir, Espace pour sélectionner, Échap pour tout désélectionner.
     </p>
-    <table class="w-full table-fixed text-left text-[12px]" aria-label="Fichiers distants">
-      <thead class="sticky top-0 z-10 bg-surface text-ink-muted">
-        <tr>
-          <th class="w-8 p-2">
+    <div role="table" class="text-[12px]" aria-label="Fichiers distants">
+      <div role="rowgroup" class="sticky top-0 z-10 bg-rail text-ink-muted">
+        <div role="row" :class="[columns, 'h-8']">
+          <div role="columnheader" class="grid place-items-center">
             <input
               type="checkbox"
+              class="size-3.5"
               aria-label="Tout sélectionner"
               :checked="!!visible.length && chosen === visible.length"
               :indeterminate="!!chosen && chosen < visible.length"
               :disabled="!visible.length"
-              @change="
-                emit(
-                  'selectAll',
-                  ($event.target as HTMLInputElement).checked
-                    ? visible.map((entry) => entry.path)
-                    : [],
-                )
-              "
+              @change="toggleAll"
             />
-          </th>
-          <th class="py-2 font-medium">
+          </div>
+          <div role="columnheader" class="truncate px-1 font-medium">
             Nom<span role="status" class="ms-2 font-normal">{{
               chosen ? `${chosen} sélectionné${chosen > 1 ? 's' : ''}` : ''
             }}</span>
-          </th>
-          <th class="hidden w-20 px-2 py-2 text-right font-medium @[16rem]:table-cell">Taille</th>
-          <th class="hidden w-12 py-2 text-right font-medium @[20rem]:table-cell">Droits</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
+          </div>
+          <div role="columnheader" class="hidden px-2 text-right font-medium @[16rem]:block">
+            Taille
+          </div>
+          <div role="columnheader" class="hidden pe-2 text-right font-medium @[20rem]:block">
+            Droits
+          </div>
+        </div>
+      </div>
+      <div role="rowgroup" class="grid gap-px">
+        <div
           v-for="entry in visible"
           :key="entry.path"
-          class="row"
+          role="row"
+          :class="[
+            columns,
+            'row h-8 has-[button:focus-visible]:ring-2 has-[button:focus-visible]:ring-ring/40',
+          ]"
           :data-selected="selected.includes(entry.path) || undefined"
           @dblclick="open(entry)"
         >
-          <td class="p-2">
+          <div role="cell" class="grid place-items-center">
             <input
               type="checkbox"
+              class="size-3.5"
               :aria-label="`Sélectionner ${entry.name}`"
               :checked="selected.includes(entry.path)"
               @change="emit('select', entry.path, ($event.target as HTMLInputElement).checked)"
             />
-          </td>
-          <td class="max-w-0">
+          </div>
+          <div role="cell" class="min-w-0">
             <button
               type="button"
-              class="flex w-full items-center gap-2 rounded px-1 py-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              class="flex h-8 w-full items-center gap-2 px-1 text-left outline-none"
               :title="entry.path"
               :aria-describedby="keys"
               @click="emit('select', entry.path, !selected.includes(entry.path))"
@@ -122,23 +123,28 @@ function open(entry: RemoteEntry) {
               <component
                 :is="entry.kind === 'directory' ? Folder : entry.kind === 'link' ? Link : File"
                 :size="14"
+                :stroke-width="1.5"
                 class="shrink-0 text-ink-muted"
                 aria-hidden="true"
               /><span class="truncate">{{ entry.name }}</span
               ><span v-if="entry.kind !== 'file'" class="sr-only">, {{ kinds[entry.kind] }}</span>
             </button>
-          </td>
-          <td
-            class="hidden whitespace-nowrap px-2 text-right tabular-nums text-ink-muted @[16rem]:table-cell"
+          </div>
+          <div
+            role="cell"
+            class="hidden px-2 text-right whitespace-nowrap text-ink-muted tabular-nums @[16rem]:block"
           >
-            {{ size(entry) }}
-          </td>
-          <td class="hidden text-right font-mono text-[11px] text-ink-muted @[20rem]:table-cell">
+            {{ entrySize(entry) }}
+          </div>
+          <div
+            role="cell"
+            class="hidden pe-2 text-right font-mono text-[11px] text-ink-muted @[20rem]:block"
+          >
             {{ entry.permissions === null ? '—' : (entry.permissions & 0o7777).toString(8) }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
+          </div>
+        </div>
+      </div>
+    </div>
     <p v-if="busy && !entries.length" class="py-8 text-center text-xs text-ink-muted">
       Chargement…
     </p>

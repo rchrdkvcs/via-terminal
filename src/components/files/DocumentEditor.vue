@@ -7,6 +7,7 @@ import { useFileProtection } from '@/composables/useFileProtection'
 import { useFileDialogs } from '@/stores/file-dialogs'
 import DocumentTabs from './DocumentTabs.vue'
 import TextEditor from './TextEditor.vue'
+import { Button } from '@/components/ui/button'
 const props = defineProps<{ tabId: string; sessionId: string | null }>()
 const files = useFiles(),
   protection = useFileProtection(),
@@ -53,13 +54,11 @@ async function conflict(choice: 'reload' | 'overwrite') {
   if (choice === 'reload') await files.reloadDocument(tabId, session, document.id)
   else await files.saveDocument(tabId, session, document.id, true)
 }
-const action =
-  'material-control press rounded-md px-2 py-1 text-xs focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40'
 </script>
 <template>
   <section
     v-if="panel.documents.length"
-    class="flex h-full min-h-0 flex-col border-t border-hairline"
+    class="flex h-full min-h-0 flex-col"
     aria-label="Documents distants"
   >
     <DocumentTabs
@@ -74,9 +73,11 @@ const action =
       :id="id"
       role="tabpanel"
       :aria-labelledby="`${id}-tab-${active.id}`"
-      class="flex min-h-0 flex-1 flex-col"
+      class="flex min-h-0 flex-1 flex-col bg-surface text-surface-ink"
     >
-      <div class="flex shrink-0 flex-wrap items-start gap-x-2 px-3 py-1.5">
+      <div
+        class="flex shrink-0 flex-wrap items-start gap-x-2 border-b border-hairline py-1.5 ps-3 pe-2"
+      >
         <p class="min-w-0 flex-1 basis-40 py-1 text-[11px] break-all text-ink-muted">
           <template v-if="active.resolvedPath !== active.path"
             >{{ active.path }} <span aria-hidden="true">→</span
@@ -92,33 +93,45 @@ const action =
                 ? 'Reconnectez pour enregistrer'
                 : ''
         }}</span>
-        <button
+        <Button
           type="button"
-          :class="[action, 'flex shrink-0 items-center gap-1.5']"
+          variant="secondary"
+          size="xs"
           :disabled="!sessionId || stale || active.saving || !dirty"
           @click="save"
         >
-          <Save :size="12" aria-hidden="true" />Enregistrer
-        </button>
+          <Save :stroke-width="1.5" aria-hidden="true" />Enregistrer
+        </Button>
       </div>
-      <p v-if="stale" class="shrink-0 px-3 pb-2 text-xs">
+      <p v-if="stale" class="shrink-0 border-b border-hairline px-3 py-2 text-xs">
         Ce document vient d’une connexion précédente (autre serveur ou compte). Il ne peut pas être
         enregistré ici : copiez vos modifications ou fermez-le.
       </p>
-      <div v-if="active.error" class="shrink-0 px-3 pb-2 text-xs" role="alert">
+      <div
+        v-if="active.error"
+        class="shrink-0 border-b border-hairline px-3 py-2 text-xs"
+        role="alert"
+      >
         <p class="break-words">{{ active.error }}</p>
-        <div v-if="active.conflict" class="mt-1.5 flex flex-wrap gap-2">
-          <button type="button" :class="action" :disabled="!sessionId" @click="conflict('reload')">
-            Recharger la version distante
-          </button>
-          <button
+        <div v-if="active.conflict" class="mt-2 flex flex-wrap gap-1.5">
+          <Button
             type="button"
-            :class="action"
+            variant="secondary"
+            size="xs"
+            :disabled="!sessionId"
+            @click="conflict('reload')"
+          >
+            Recharger la version distante
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="xs"
             :disabled="!sessionId || stale"
             @click="conflict('overwrite')"
           >
             Remplacer la version distante
-          </button>
+          </Button>
         </div>
       </div>
       <TextEditor
