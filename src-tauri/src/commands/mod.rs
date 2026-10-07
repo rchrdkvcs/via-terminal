@@ -24,6 +24,7 @@ pub struct App {
 pub fn handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
     tauri::generate_handler![
         app::app_bootstrap,
+        app::app_prepare_update,
         app::layout_save,
         app::settings_save,
         vault::vault_get,

@@ -10,6 +10,7 @@ import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
 import { useVault } from '@/stores/vault'
 import { useWorkbench } from '@/stores/workbench'
+import { useUpdates } from '@/stores/updates'
 
 const ENTER = String.fromCharCode(13)
 
@@ -68,6 +69,8 @@ export function useBootstrap() {
       spaces.hydrate(bootstrap.layout)
       ready.value = true
       if (isNative()) void adoptTabNames()
+      if (isNative() && !import.meta.env.DEV && settings.settings.checkForUpdates)
+        void useUpdates().check()
     } catch (cause) {
       failure.value = describeError(cause)
     }

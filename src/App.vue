@@ -6,6 +6,7 @@ import ConfirmDialog from '@/components/shell/ConfirmDialog.vue'
 import SidebarFrame from '@/components/shell/SidebarFrame.vue'
 import SpaceDialog from '@/components/shell/SpaceDialog.vue'
 import TitleBar from '@/components/shell/TitleBar.vue'
+import UpdateDialog from '@/components/shell/UpdateDialog.vue'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Workbench from '@/components/workbench/Workbench.vue'
@@ -52,6 +53,7 @@ const ui = useUi()
         <CommandBar />
         <SpaceDialog />
         <ConfirmDialog />
+        <UpdateDialog />
       </template>
       <div v-else-if="failure" class="grid flex-1 place-items-center p-8 text-center" role="alert">
         <div class="max-w-sm space-y-2">

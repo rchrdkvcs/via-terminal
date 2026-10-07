@@ -1,6 +1,8 @@
 # Privacy and local data
 
-Via is local-first: no account, no telemetry, no cloud. The application only opens network connections to the SSH servers the user connects to, and to links the user opens with Ctrl+click.
+Via is local-first: no account, no telemetry, no cloud. The application opens network connections to the SSH servers the user connects to, links the user opens with Ctrl+click, and the public GitHub release endpoint for updates. Installed release builds check once after startup by default; disable this in Settings → General → Updates. Development and browser previews do not check automatically. Manual checks remain available. Downloads follow GitHub redirects to its asset hosting infrastructure.
+
+Update requests disclose the client IP address and standard HTTP metadata to GitHub and its download infrastructure. The application does not send vault records, credentials, terminal contents, commands, or telemetry. Update packages are verified with an embedded public signing key before installation.
 
 ## Stored locally
 

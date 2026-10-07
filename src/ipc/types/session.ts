@@ -65,6 +65,7 @@ export interface Settings {
   defaultShell: string | null
   saveQuickConnect: boolean
   confirmCloseRunning: boolean
+  checkForUpdates: boolean
 }
 
 export interface TerminalOutputEvent {

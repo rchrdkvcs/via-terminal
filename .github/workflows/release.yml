@@ -26,6 +26,8 @@ env:
 
 jobs:
   quality:
+    outputs:
+      complete: ${{ steps.publication.outputs.complete }}
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -39,6 +41,14 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: Check whether this release is already complete
+        id: publication
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          complete="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" --jq 'any(.assets[]; .name == "latest.json")')"
+          echo "complete=${complete}" >> "$GITHUB_OUTPUT"
       - name: Synchronize version from release tag
         run: node .github/scripts/sync-release-version.mjs
       - uses: dtolnay/rust-toolchain@stable
@@ -50,6 +60,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm test
+      - run: pnpm test:release
       - run: pnpm lint
       - run: pnpm format:check
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
@@ -58,13 +69,17 @@ jobs:
 
   publish:
     needs: quality
+    if: needs.quality.outputs.complete != 'true'
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: macos-latest
-            args: --target aarch64-apple-darwin --bundles dmg
+            args: --target aarch64-apple-darwin --bundles app,dmg
             rust_targets: aarch64-apple-darwin
           - platform: ubuntu-22.04
             args: --bundles appimage,deb
@@ -104,6 +119,13 @@ jobs:
         with:
           workspaces: src-tauri
       - run: pnpm install --frozen-lockfile
+      - name: Require updater signing key
+        shell: bash
+        run: |
+          if [[ -z "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
+            echo "Configure the TAURI_SIGNING_PRIVATE_KEY repository secret before releasing." >&2
+            exit 1
+          fi
       - name: Resolve GitHub Release
         id: gh_release
         shell: bash
@@ -132,7 +154,12 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$RELEASE_TAG" src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg --repo "$GITHUB_REPOSITORY" --clobber
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg \
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz \
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz.sig \
+            --repo "$GITHUB_REPOSITORY" --clobber
       - name: Build and upload Windows and Linux installers
         if: runner.os != 'macOS'
         uses: tauri-apps/tauri-action@v1
@@ -140,5 +167,32 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           releaseId: ${{ steps.gh_release.outputs.id }}
+          tagName: ${{ env.RELEASE_TAG }}
           uploadUpdaterJson: false
           args: ${{ matrix.args }}
+
+  updater:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate and publish the complete stable updater manifest
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > release.json
+          if [[ "$(jq -r .prerelease release.json)" == "true" ]]; then
+            echo "Prerelease installers uploaded; stable updater channel is unchanged."
+            exit 0
+          fi
+          mkdir signatures
+          gh release download "$RELEASE_TAG" --pattern '*.sig' --dir signatures --repo "$GITHUB_REPOSITORY"
+          node .github/scripts/updater-manifest.mjs release.json signatures latest.json
+          gh release upload "$RELEASE_TAG" latest.json --repo "$GITHUB_REPOSITORY"

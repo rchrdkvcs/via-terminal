@@ -11,6 +11,10 @@
     "core:window:allow-start-dragging",
     "opener:default",
     "opener:allow-open-url",
-    "window-state:default"
+    "window-state:default",
+    "updater:allow-check",
+    "updater:allow-download",
+    "updater:allow-install",
+    "process:allow-restart"
   ]
 }
