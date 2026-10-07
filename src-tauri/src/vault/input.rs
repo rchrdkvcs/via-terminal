@@ -4,8 +4,9 @@ use super::{
 };
 use crate::error::{AppError, AppResult};
 use serde::Deserialize;
+use ts_rs::TS;
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, TS)]
 #[serde(tag = "action", content = "value", rename_all = "camelCase")]
 pub enum SecretUpdate {
     #[default]
@@ -14,7 +15,7 @@ pub enum SecretUpdate {
     Set(String),
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct HostInput {
     pub id: Option<Id>,
@@ -33,7 +34,7 @@ pub struct HostInput {
     pub password: SecretUpdate,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct GroupInput {
     pub id: Option<Id>,
@@ -43,7 +44,7 @@ pub struct GroupInput {
     pub defaults: Defaults,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct IdentityInput {
     pub id: Option<Id>,
@@ -55,7 +56,7 @@ pub struct IdentityInput {
     pub password: SecretUpdate,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyImport {
     pub label: String,

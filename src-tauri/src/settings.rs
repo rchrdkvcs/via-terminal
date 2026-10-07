@@ -4,10 +4,11 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
+use ts_rs::TS;
 
 const DOCUMENT: &str = "settings";
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
 pub enum Theme {
     Light,
@@ -17,7 +18,7 @@ pub enum Theme {
     System,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
 pub enum CursorStyle {
     Block,
@@ -27,7 +28,7 @@ pub enum CursorStyle {
     Bar,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
     pub theme: Theme,

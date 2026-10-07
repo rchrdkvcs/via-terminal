@@ -5,37 +5,42 @@ use crate::sessions::{
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
+use ts_rs::TS;
 use uuid::Uuid;
 
 pub struct TauriSink(pub AppHandle);
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
-struct Output {
+#[ts(rename = "TerminalOutputEvent")]
+pub(crate) struct Output {
     session_id: Uuid,
     data_base64: String,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
-struct StateChanged {
+#[ts(rename = "SessionStateEvent")]
+pub(crate) struct StateChanged {
     session_id: Uuid,
     state: SessionState,
     message: Option<String>,
     exit_code: Option<i32>,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
-struct PromptPayload {
+#[ts(rename = "SessionPromptEvent")]
+pub(crate) struct PromptPayload {
     session_id: Uuid,
     prompt_id: Uuid,
     prompt: Option<Prompt>,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
-struct VaultChanged {
+#[ts(rename = "VaultChangedEvent")]
+pub(crate) struct VaultChanged {
     session_id: Uuid,
     host_id: Option<Uuid>,
 }

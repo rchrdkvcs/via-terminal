@@ -8,6 +8,7 @@ import type {
   IdentityInput,
   KeyImport,
   Layout,
+  LocalTarget,
   Mutation,
   PromptAnswer,
   QuickTarget,
@@ -73,7 +74,7 @@ export const api = {
 
   session: {
     openLocal: (shell: string | null, cwd: string | null, size: Size) =>
-      call<Id>('session_open_local', { target: { shell, cwd }, size }),
+      call<Id>('session_open_local', { target: { shell, cwd } satisfies LocalTarget, size }),
     /** Without a size, the session serves files only and opens no shell. */
     openHost: (hostId: Id, size: Size | null) => call<Id>('session_open_host', { hostId, size }),
     openQuick: (target: QuickTarget, size: Size | null) =>

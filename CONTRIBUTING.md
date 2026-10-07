@@ -14,6 +14,7 @@ Thanks for helping build via terminal. The project is focused on the V1 describe
 - Keep processes, persistence, secrets and the vault in Rust; organization rules live in `src/domain`.
 - Never log terminal contents, commands, usernames, hosts, personal paths, credentials, or key material.
 - Never persist terminal scrollback or command history.
+- Never hand-write an IPC wire type in `src/ipc`: change the Rust type, then run `UPDATE_BINDINGS=1 cargo test --manifest-path src-tauri/Cargo.toml bindings`.
 - Keep modules small and deep: no source file over about 150 lines.
 - Test behavior at public seams: Tauri commands/domain services, Vue interactions, and end-to-end workflows.
 - Keep keyboard access and visible focus working with every UI change.

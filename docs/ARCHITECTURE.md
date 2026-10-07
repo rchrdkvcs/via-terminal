@@ -16,7 +16,7 @@ vault/              hosts, groups, identities, keys, known hosts
   connection_store.rs  the vault as the SSH client's store; persists a credential after authentication
 layout/             persisted spaces and pinned rows, structurally validated
 files/              remote explorer service of an SSH tab
-  model.rs          wire types mirrored by `src/ipc/files.ts`
+  model.rs          wire types of the explorer
   owner.rs          endpoint/account identity checked on saves and transfers
   paths.rs          POSIX remote names versus platform-safe local names
   documents.rs      safe document replacement; reading.rs bounded UTF-8 reads
@@ -24,6 +24,7 @@ files/              remote explorer service of an SSH tab
   staging.rs        local copies of interface drops, received as raw byte chunks, cleared at
                     launch and exit
 settings.rs         preferences
+bindings.rs         test that generates `src/ipc/bindings.ts` from the wire types (ts-rs)
 sessions/           live sessions behind tabs
   local.rs          shells in a native PTY (portable-pty)
   shells.rs         detected shells; only these may be launched
@@ -44,11 +45,12 @@ sessions/           live sessions behind tabs
 - Every vault mutation goes through `Vault::commit` or `commit_with_secrets`. Both validate a copy and persist it before publishing it. Changes to encrypted secret blobs and the vault document share one SQLite transaction, so a failed mutation keeps both unchanged. `Secrets` only seals and opens blobs; it has no write path of its own.
 - Secrets never enter a document, a snapshot sent to the interface, a log or a process argument.
 - The interface can only launch a detected shell, by its path, never an arbitrary executable.
+- Rust owns every wire type: derive `ts_rs::TS`, list it in `bindings.rs`, regenerate with `UPDATE_BINDINGS=1 cargo test --manifest-path src-tauri/Cargo.toml bindings`. `cargo test` fails while `src/ipc/bindings.ts` is stale.
 
 ## Interface (`src`)
 
 ```text
-ipc/                typed commands and events, mirrors of the Rust wire types
+ipc/                typed commands and events over `bindings.ts`, generated from the Rust wire types
 domain/             pure logic, no Vue: organize (intents), split, drop, search, quick-connect, palette, credentials
 stores/             spaces, sessions, workbench, vault, settings, ui, files (Pinia), and the
                     store-private parts of files (file-document, file-transfers); file-dialogs

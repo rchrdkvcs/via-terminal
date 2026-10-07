@@ -1,8 +1,9 @@
 use super::prompts::Prompt;
 use serde::Serialize;
+use ts_rs::TS;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum SessionState {
     Connecting,

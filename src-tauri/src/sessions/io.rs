@@ -1,4 +1,5 @@
 use crate::error::{AppError, AppResult};
+use ts_rs::TS;
 
 /// What the hub drives, whether the session is a local shell or an SSH channel.
 pub trait SessionIo: Send + Sync {
@@ -15,7 +16,7 @@ pub trait SessionIo: Send + Sync {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, TS)]
 pub struct Size {
     pub cols: u16,
     pub rows: u16,
