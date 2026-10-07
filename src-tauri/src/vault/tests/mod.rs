@@ -2,6 +2,7 @@ mod atomic_auth;
 mod atomic_keys;
 mod atomic_records;
 mod connections;
+mod credentials;
 mod records;
 
 use super::{input::*, model::*, Vault};
@@ -19,6 +20,7 @@ pub(super) fn vault() -> Vault {
 
 pub(super) fn host(address: &str) -> HostInput {
     HostInput {
+        own_credentials: false,
         id: None,
         group_id: None,
         label: String::new(),

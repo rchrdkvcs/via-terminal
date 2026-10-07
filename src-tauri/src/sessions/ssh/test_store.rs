@@ -11,6 +11,10 @@ pub struct FakeStore {
 }
 
 impl ConnectionStore for FakeStore {
+    fn select_credential(&self, _: &mut ConnectPlan, _: super::CredentialChoice) -> AppResult<()> {
+        Err(crate::error::AppError::not_found("identité"))
+    }
+
     fn host_key_status(&self, _: &str, _: u16, _: &ServerKey) -> HostKeyStatus {
         self.status.clone()
     }

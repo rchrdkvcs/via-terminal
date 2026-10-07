@@ -19,6 +19,10 @@ export interface PromptField {
   echo: boolean
 }
 
+export type CredentialChoice =
+  | { kind: 'identity'; id: Id }
+  | { kind: 'key'; id: Id; username: string }
+
 export type Prompt =
   | {
       kind: 'hostKey'
@@ -28,12 +32,15 @@ export type Prompt =
       fingerprint: string
       previousFingerprint: string | null
     }
+  | { kind: 'authentication'; address: string; username: string | null; canRemember: boolean }
   | { kind: 'username'; address: string }
   | { kind: 'password'; username: string; address: string; canRemember: boolean; retry: boolean }
   | { kind: 'passphrase'; keyLabel: string; canRemember: boolean; retry: boolean }
   | { kind: 'keyboardInteractive'; name: string; instructions: string; fields: PromptField[] }
 
 export type PromptAnswer =
+  | { kind: 'credential'; credential: CredentialChoice }
+  | { kind: 'authentication'; username: string; password: string; remember: boolean }
   | { kind: 'accept' }
   | { kind: 'cancel' }
   | { kind: 'text'; value: string; remember: boolean }

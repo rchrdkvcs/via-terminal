@@ -2,6 +2,8 @@ use std::io;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum Failure {
+    Credential(super::CredentialChoice),
+    CredentialUnavailable,
     Resolve,
     Refused,
     Unreachable,
@@ -66,6 +68,9 @@ impl Failure {
 
     pub fn message(&self, address: &str, port: u16) -> String {
         match self {
+            Failure::Credential(_) | Failure::CredentialUnavailable => {
+                "Cette identité ne peut pas être utilisée. Vérifiez le coffre.".into()
+            }
             Failure::Resolve => format!("Adresse introuvable : {address}"),
             Failure::Refused => format!("Connexion refusée par {address}:{port}"),
             Failure::Unreachable => format!("{address} est injoignable"),

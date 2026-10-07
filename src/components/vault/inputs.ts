@@ -18,6 +18,7 @@ export function hostInput(host: Host | undefined, groupId: Id | null = null): Ho
   }
   return {
     id: host.id,
+    ownCredentials: host.ownCredentials,
     groupId: host.groupId,
     label: host.label === host.address ? '' : host.label,
     address: host.address,

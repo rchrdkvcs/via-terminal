@@ -25,10 +25,10 @@ export function inherited(data: Data, groupId: Id | null, own: Id | null = null)
   let identityId: Sourced<Id> | null = null
   for (const { defaults, from } of levels) {
     const identity = data.identities.find((candidate) => candidate.id === defaults.identityId)
-    if (!username && defaults.username) username = { value: defaults.username, from }
     if (!username && identity) {
       username = { value: identity.username, from: { kind: 'identity', id: identity.id } }
     }
+    if (!username && defaults.username) username = { value: defaults.username, from }
     if (!port && defaults.port) port = { value: defaults.port, from }
     if (!identityId && identity) identityId = { value: identity.id, from }
   }

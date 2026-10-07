@@ -3,7 +3,7 @@ use crate::{
     sessions::ssh::{ConnectionStore, Remembered},
     vault::{
         input::{HostInput, IdentityInput, SecretUpdate},
-        model::VaultData,
+        model::{secret_id, SecretKind, VaultData},
         QuickTarget, Vault,
     },
 };
@@ -102,8 +102,18 @@ fn failed_secret_deletion_preserves_host_and_identity_references() {
             vec![saved.clone()]
         );
         assert_eq!(
-            current.plan(saved.id).unwrap().password.unwrap().as_str(),
+            current
+                .secrets
+                .get_string(&secret_id(SecretKind::Password, saved.id))
+                .unwrap()
+                .unwrap()
+                .as_str(),
             "host-pw"
+        );
+        // The selected identity is authoritative; the old host secret remains intact.
+        assert_eq!(
+            current.plan(saved.id).unwrap().password.unwrap().as_str(),
+            "pw"
         );
     }
 }
@@ -128,6 +138,7 @@ fn failed_remembering_does_not_save_quick_connect() {
             &plan,
             "user",
             Remembered {
+                password_verified: false,
                 password: Some(Zeroizing::new("pw".into())),
                 passphrase: None,
             }

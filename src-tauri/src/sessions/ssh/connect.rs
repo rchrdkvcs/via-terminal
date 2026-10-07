@@ -21,9 +21,9 @@ use tokio::{
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 
-pub(super) async fn run(plan: ConnectPlan, size: Size, context: Context, mut link: Link) {
+pub(super) async fn run(mut plan: ConnectPlan, size: Size, context: Context, mut link: Link) {
     let prepared = tokio::select! {
-        prepared = prepare(&plan, size, &context) => Some(prepared),
+        prepared = prepare(&mut plan, size, &context) => Some(prepared),
         _ = closing(&mut link.closed) => None,
     };
     let outcome = match prepared {
@@ -38,7 +38,7 @@ pub(super) async fn run(plan: ConnectPlan, size: Size, context: Context, mut lin
 }
 
 async fn prepare(
-    plan: &ConnectPlan,
+    plan: &mut ConnectPlan,
     size: Size,
     context: &Context,
 ) -> Result<(client::Handle<Client>, Channel<client::Msg>, Owner), Failure> {
@@ -46,13 +46,36 @@ async fn prepare(
     context
         .sink
         .state(context.id, SessionState::Connecting, Some(message));
-    let stream = tcp(&plan.address, plan.port).await?;
-    let mut handle = handshake(stream, plan, context).await?;
-    context
-        .sink
-        .state(context.id, SessionState::Authenticating, None);
-    let asker = Asker::new(context, plan);
-    let (username, remembered) = auth::authenticate(&mut handle, plan, &asker).await?;
+    let mut remembered_password = None;
+    let (handle, username, mut remembered) = loop {
+        let stream = tcp(&plan.address, plan.port).await?;
+        let mut handle = handshake(stream, plan, context).await?;
+        context
+            .sink
+            .state(context.id, SessionState::Authenticating, None);
+        if plan.key.is_none() && plan.password.is_none() && plan.credential.is_none() {
+            remembered_password = super::credentials::choose(plan, context).await?;
+        }
+        let asker = Asker::new(context, plan);
+        match auth::authenticate(&mut handle, plan, &asker).await {
+            Ok((username, remembered)) => break (handle, username, remembered),
+            Err(Failure::Credential(choice)) => {
+                context
+                    .store
+                    .select_credential(plan, choice)
+                    .map_err(|_| Failure::CredentialUnavailable)?;
+                remembered_password = None;
+                let _ = handle
+                    .disconnect(russh::Disconnect::ByApplication, "", "")
+                    .await;
+            }
+            Err(error) => return Err(error),
+        }
+    };
+    // A refused initial password must never be saved over the successful retry.
+    if remembered.password.is_none() && remembered.password_verified {
+        remembered.password = remembered_password;
+    }
 
     if let Ok(Some(host_id)) = context.store.authenticated(plan, &username, remembered) {
         context.sink.emit(Event::VaultChanged {

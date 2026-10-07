@@ -32,7 +32,7 @@ async fn unknown_key_then_typed_password_reaches_a_shell_until_exit() {
 
     let (prompt_id, prompt) = harness.prompt(id).await;
     assert!(
-        matches!(prompt, Prompt::Password { retry: false, .. }),
+        matches!(prompt, Prompt::Authentication { .. }),
         "{prompt:?}"
     );
     let trusted = harness.store.trusted.lock().unwrap().clone();

@@ -29,6 +29,7 @@ impl Vault {
                 .transpose()?;
             let previous = existing.map(|index| data.hosts[index].clone());
             let host = Host {
+                own_credentials: input.own_credentials,
                 id: previous.as_ref().map_or_else(Uuid::new_v4, |host| host.id),
                 group_id: input.group_id,
                 label: input::trimmed(Some(input.label.clone())).unwrap_or_else(|| address.clone()),

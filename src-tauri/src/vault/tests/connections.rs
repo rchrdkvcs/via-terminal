@@ -19,6 +19,7 @@ fn quick_connect_saves_the_host_and_remembered_password_once_authenticated() {
         )
         .unwrap();
     let remembered = Remembered {
+        password_verified: false,
         password: Some(Zeroizing::new("pw".into())),
         passphrase: None,
     };

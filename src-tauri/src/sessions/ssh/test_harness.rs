@@ -49,6 +49,7 @@ impl Harness {
 
     pub fn open(&self, password: Option<&str>) -> Uuid {
         let plan = ConnectPlan {
+            credential: None,
             host_id: None,
             label: "test".into(),
             address: "127.0.0.1".into(),

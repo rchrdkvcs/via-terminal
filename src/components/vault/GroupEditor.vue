@@ -42,6 +42,7 @@ const identityNone = computed(() =>
 
 function setIdentity(id: Id | null) {
   draft.value.defaults.identityId = id
+  draft.value.defaults.username = null
   void autosave()
 }
 </script>
@@ -74,6 +75,7 @@ function setIdentity(id: Id | null) {
     </p>
     <div class="grid grid-cols-2 gap-2">
       <UsernameField
+        v-if="!draft.defaults.identityId"
         id="group-username"
         v-model="draft.defaults.username"
         :placeholder="hint(vault.view, resolved.username, 'Aucun')"

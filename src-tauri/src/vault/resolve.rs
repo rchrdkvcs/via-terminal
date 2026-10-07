@@ -58,19 +58,22 @@ pub fn effective(data: &VaultData, host: &Host) -> Effective {
             Level::Host(host) => (&host.overrides, Source::Host),
             Level::Group(group) => (&group.defaults, Source::Group(group.id)),
         };
-        let level_identity = identity(data, defaults.identity_id);
-        if username.is_none() {
-            username = defaults
-                .username
-                .clone()
-                .map(|value| Sourced {
-                    value,
-                    from: source,
+        let use_credentials = !host.own_credentials || matches!(source, Source::Host);
+        let level_identity = if host.own_credentials {
+            None
+        } else {
+            identity(data, defaults.identity_id)
+        };
+        if username.is_none() && use_credentials {
+            username = level_identity
+                .map(|identity| Sourced {
+                    value: identity.username.clone(),
+                    from: Source::Identity(identity.id),
                 })
                 .or_else(|| {
-                    level_identity.map(|identity| Sourced {
-                        value: identity.username.clone(),
-                        from: Source::Identity(identity.id),
+                    defaults.username.clone().map(|value| Sourced {
+                        value,
+                        from: source,
                     })
                 });
         }
@@ -89,6 +92,7 @@ pub fn effective(data: &VaultData, host: &Host) -> Effective {
     }
     let key_id = host
         .key_id
+        .filter(|_| host.overrides.identity_id.is_none() || host.own_credentials)
         .map(|value| Sourced {
             value,
             from: Source::Host,

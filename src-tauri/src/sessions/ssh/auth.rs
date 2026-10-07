@@ -89,7 +89,15 @@ impl Chain<'_> {
             .handle
             .authenticate_password(self.username.clone(), password)
             .await;
+        let partial = matches!(
+            result,
+            Ok(AuthResult::Failure {
+                partial_success: true,
+                ..
+            })
+        );
         let accepted = self.settle(result)?;
+        self.remembered.password_verified = accepted || partial;
         self.password_failed = !accepted;
         Ok(accepted)
     }

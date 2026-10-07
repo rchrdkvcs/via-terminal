@@ -2,6 +2,7 @@ mod asker;
 mod auth;
 mod channel;
 mod connect;
+mod credentials;
 mod failure;
 mod handler;
 mod interactive;
@@ -122,3 +123,8 @@ mod test_server;
 mod test_store;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod credential_tests;
+#[cfg(test)]
+mod password_tests;
