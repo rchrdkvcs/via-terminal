@@ -54,7 +54,7 @@ describe('workbench views', () => {
       [],
       [{ ...remote('tab'), view: { kind: 'files', path: '/' } }],
     )
-    workbench.open({ kind: 'host', hostId: 'other' }, { replace: 'tab' })
+    workbench.replace('tab', { kind: 'host', hostId: 'other' })
     expect(findTab(spaces.active, 'tab')?.view).toBeUndefined()
   })
 })

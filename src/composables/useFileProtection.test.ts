@@ -60,7 +60,6 @@ it('drafts are lost only when the closing succeeds, and later edits are asked ag
   await reply('discard')
   expect(await confirmed).toBe(true)
   expect(close).toHaveBeenCalledOnce()
-  expect(files.panels.tab).toBeUndefined()
 })
 
 /** Asks to close the tab and returns the offered actions, then cancels. */

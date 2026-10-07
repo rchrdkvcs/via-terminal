@@ -3,36 +3,29 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { api, describeError, isNative } from '@/ipc/client'
 import { on } from '@/ipc/events'
 import { notify } from '@/lib/notify'
-import { useFiles } from '@/stores/files'
 import { useSpaces } from '@/stores/spaces'
 import { useSettings } from '@/stores/settings'
-import { useFileProtection } from './useFileProtection'
+import { useClosing } from './useClosing'
 export function useFileExit() {
   if (!isNative()) return
-  const files = useFiles(),
-    spaces = useSpaces(),
+  const spaces = useSpaces(),
     settings = useSettings(),
-    protection = useFileProtection()
+    closing = useClosing()
   let stopped: (() => void) | undefined,
-    closing = false,
+    exiting = false,
     pending = false
   async function request() {
     if (pending) return
     pending = true
     try {
-      for (;;) {
-        const decision = await protection.protect(Object.keys(files.panels))
-        if (!decision) return
-        await Promise.all([spaces.flush(), settings.flush()])
-        if (protection.current(decision)) break
-      }
-      closing = true
+      if (!(await closing.leave(() => Promise.all([spaces.flush(), settings.flush()])))) return
+      exiting = true
       // This listener already vetoes the native close. Calling close() again only
       // reaches destroy(), and destroying the last window is vetoed once more as
       // an exit with no code. app_exit(0) is the exit that veto lets through.
       await api.exit()
     } catch (cause) {
-      closing = false
+      exiting = false
       notify.error(describeError(cause))
     } finally {
       pending = false
@@ -43,7 +36,7 @@ export function useFileExit() {
   })
   void getCurrentWindow()
     .onCloseRequested((event) => {
-      if (closing) return
+      if (exiting) return
       event.preventDefault()
       void request()
     })

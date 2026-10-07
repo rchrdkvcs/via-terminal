@@ -3,7 +3,7 @@ import { appliesWhileEditing, match, type ActionId } from '@/lib/shortcuts'
 import { rowOfTab } from '@/domain/space'
 import { terminals } from '@/terminal/registry'
 import { useSettings } from '@/stores/settings'
-import { useTabClosing } from './useTabClosing'
+import { useClosing } from './useClosing'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
@@ -13,7 +13,7 @@ export function useShortcuts() {
   const spaces = useSpaces()
   const ui = useUi()
   const workbench = useWorkbench()
-  const closing = useTabClosing()
+  const closing = useClosing()
 
   function run(id: ActionId, digit?: number) {
     const tab = workbench.activeTab
@@ -22,7 +22,7 @@ export function useShortcuts() {
       newTab: () => ui.openCommand({ kind: 'new' }),
       retarget: () => ui.openCommand(tab ? { kind: 'replace', tabId: tab.id } : { kind: 'new' }),
       actions: () => ui.openCommand({ kind: 'actions' }),
-      closeTab: () => tab && closing.close(tab.id),
+      closeTab: () => tab && closing.closeTab(tab.id),
       pin: () => row && workbench.togglePin(row.id),
       split: () => tab && ui.openCommand({ kind: 'split', tabId: tab.id }),
       nextTab: () => workbench.cycle(1),

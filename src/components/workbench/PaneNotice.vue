@@ -4,7 +4,7 @@ import { AlertTriangle, Server, Terminal, Zap } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/kbd'
 import type { Tab } from '@/ipc/types'
-import { useTabClosing } from '@/composables/useTabClosing'
+import { useClosing } from '@/composables/useClosing'
 import { useTabLabel } from '@/composables/useTabLabel'
 import { useSessions } from '@/stores/sessions'
 import { useUi } from '@/stores/ui'
@@ -14,7 +14,7 @@ const props = defineProps<{ tab: Tab; mode: 'asleep' | 'failed' }>()
 const sessions = useSessions()
 const ui = useUi()
 const workbench = useWorkbench()
-const closing = useTabClosing()
+const closing = useClosing()
 const names = useTabLabel()
 
 const remote = computed(() => props.tab.target.kind !== 'local')
@@ -66,7 +66,7 @@ const editHost = () =>
       >
         Modifier l’hôte
       </Button>
-      <Button v-if="mode === 'failed'" variant="ghost" @click="closing.close(tab.id)"
+      <Button v-if="mode === 'failed'" variant="ghost" @click="closing.closeTab(tab.id)"
         >Fermer l’onglet</Button
       >
     </div>

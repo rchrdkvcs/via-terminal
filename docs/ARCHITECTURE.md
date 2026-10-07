@@ -50,13 +50,12 @@ sessions/           live sessions behind tabs
 ipc/                typed commands and events, mirrors of the Rust wire types
 domain/             pure logic, no Vue: organize (intents), split, drop, search, quick-connect, palette, credentials
 stores/             spaces, sessions, workbench, vault, settings, ui, files (Pinia), and the
-                    store-private parts of workbench (workbench-opening, -lifecycle, -effects) and files (file-document,
-                    -transfers, -preparation, -transfer-model); file-dialogs queues
-                    explorer questions
+                    store-private parts of files (file-document, -transfers, -preparation,
+                    -transfer-model); file-dialogs queues explorer questions
 terminal/           xterm instances keyed by tab, outside the Vue tree
 composables/        bootstrap, shortcuts, drag and drop, labels, sidebar actions, and file
-                    protection (useFileProtection), transfer events (useFileRuntime) and
-                    quit protection (useFileExit)
+                    protection (useFileProtection), every destructive intent (useClosing),
+                    transfer events (useFileRuntime) and the quit request (useFileExit)
 components/
   shell/            title bar, address pill, dialogs, sidebar frame and resizer
   sidebar/          rows, folders, space header and switcher
@@ -71,7 +70,7 @@ components/
 
 **Organization.** `domain/organize.ts` applies one closed set of intents (open, move, remove, split, detach, resize, folders, rename) to a copy of a space. It returns `null` when an intent is invalid, so nothing changes; a list of intents applies all together or not at all, and `transfer` moves a row between two spaces the same way. `stores/spaces` saves the pinned part as one layout document (ADR-0008).
 
-**Tab lifecycle.** `stores/workbench` owns complete operations for closing tabs, removing spaces, transferring rows and opening beside an existing tab. It commits organization before starting or releasing sessions, owns successor focus, and exposes focus as read-only state. Compound organization intents and transfers publish only when every step succeeds. Confirmations and undo notifications remain in the interface's presentation code; their callers do not orchestrate runtime cleanup.
+**Tab lifecycle.** `stores/workbench` owns complete operations for closing and replacing tabs, removing spaces, transferring rows and opening beside an existing tab. It commits organization before starting, stopping or releasing sessions, releases the explorers of the tabs it closes or retargets, owns successor focus, and exposes focus as read-only state. Compound organization intents and transfers publish only when every step succeeds. `useClosing` is the only caller of its destructive operations: each intent (close tab, replace tab, remove space, quit or update) protects explorers, confirms, closes, then offers undo, so no interface caller assembles these steps itself.
 
 **Sessions.** `stores/sessions` subscribes to session events, maps session ids to tabs and buffers events that arrive before `open` returns. It also owns terminal input: keystrokes go to a ready session, and Enter in an exited, disconnected or failed tab reconnects it. `lib/session-routing` delivers an event only while its session is still bound to the tab, so an early exit drops the events queued after it. Renderers are keyed by tab in `terminal/registry`. Reconnecting therefore replaces the session without clearing the scrollback.
 
@@ -91,4 +90,4 @@ The terminal registry exposes tab-level search, selection and paste operations. 
 
 **Remote files.** Each SSH actor opens one lazy SFTP service on its authenticated handle (`ssh/sftp.rs`). Opening is polled beside the shell reader, so a shell filling its channel cannot stall it; calls arriving meanwhile wait for that single attempt. The `files::Files` service answers typed requests with typed replies; transfer progress travels through `EventSink`. Atomic document replacement requires the OpenSSH extension and verified metadata. Remote names follow POSIX; only local names are checked against the platform.
 
-The in-memory `stores/files` keeps every transfer plan and, through `file-document`, the single document each document tab shows. That document keeps the owner of the read that produced it; after a reconnection the tab reads it again to learn the new connection's owner, and it can be saved only while both match. It reads each tab's ready session from `stores/sessions` itself and keeps one connection generation per explorer, renewed when the session changes or the explorer is released; every reply, success or failure, applies only while its generation is current. Reading an explorer never creates it. Retry, drop preparation and staging cleanup are store operations, so a released explorer is never recreated by a late reply. `useFileProtection` turns closing questions into a decision that loses nothing; `release` applies it only after the tab, space, target or application actually closed, and asks again if a draft or transfer changed meanwhile. Pinned tab layout retains only `remoteCwd`, never documents. See ADR-0009 and ADR-0010.
+The in-memory `stores/files` keeps every transfer plan and, through `file-document`, the single document each document tab shows. That document keeps the owner of the read that produced it; after a reconnection the tab reads it again to learn the new connection's owner, and it can be saved only while both match. It reads each tab's ready session from `stores/sessions` itself and keeps one connection generation per explorer, renewed when the session changes or the explorer is released; every reply, success or failure, applies only while its generation is current. Reading an explorer never creates it. Retry, drop preparation and staging cleanup are store operations, so a released explorer is never recreated by a late reply. `useFileProtection` turns closing questions into a decision that loses nothing; `release` runs the closing, whose workbench operation releases the explorers, only while the decision is current, and asks again if a draft or transfer changed meanwhile. Quitting and updating check it again after flushing. Pinned tab layout retains only `remoteCwd`, never documents. See ADR-0009 and ADR-0010.

@@ -36,7 +36,7 @@ export const remoteText = (content = 'old', owner = 'server-a'): RemoteText => (
 })
 /**
  * Stands in for the sessions store under the same id, so `useSessions()` returns it: each
- * tab's ready session, driven by `ready` and `end`.
+ * tab's ready session, driven by `ready` and `end`, and no session events.
  */
 const useSessionsFake = defineStore('sessions', () => {
   const ready = reactive<Record<string, string>>({})
@@ -44,7 +44,8 @@ const useSessionsFake = defineStore('sessions', () => {
     state: ready[tabId] ? 'ready' : 'asleep',
     sessionId: ready[tabId] ?? null,
   })
-  return { ready, runtime }
+  const subscribe = () => () => undefined
+  return { ready, runtime, onEnded: subscribe, onHostSaved: subscribe }
 })
 /** The tab's session becomes ready, replacing any previous one. */
 export function ready(tabId = 'tab', sessionId = 'session') {
