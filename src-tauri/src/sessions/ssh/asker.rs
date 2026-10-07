@@ -1,9 +1,21 @@
-use super::{failure::Failure, ConnectPlan, Context};
+use super::{failure::Failure, ConnectPlan, Context, CredentialChoice};
 use crate::sessions::prompts::{Prompt, PromptAnswer, PromptField, Prompts};
 use russh::client::Prompt as Field;
 use std::sync::Arc;
 use uuid::Uuid;
 use zeroize::Zeroizing;
+
+/// Ends an authentication early: on failure, or because the user picked another credential.
+pub(super) enum Stop {
+    Failed(Failure),
+    Switch(CredentialChoice),
+}
+
+impl From<Failure> for Stop {
+    fn from(failure: Failure) -> Self {
+        Stop::Failed(failure)
+    }
+}
 
 pub(super) struct Asker {
     id: Uuid,
@@ -26,7 +38,7 @@ impl Asker {
         self.prompts.ask(self.id, prompt).await
     }
 
-    pub async fn username(&self) -> Result<String, Failure> {
+    pub async fn username(&self) -> Result<String, Stop> {
         let prompt = Prompt::Username {
             address: self.address.clone(),
         };
@@ -34,8 +46,8 @@ impl Asker {
             PromptAnswer::Text { value, .. } if !value.trim().is_empty() => {
                 Ok(value.trim().to_string())
             }
-            PromptAnswer::Credential { credential } => Err(Failure::Credential(credential)),
-            _ => Err(Failure::Cancelled),
+            PromptAnswer::Credential { credential } => Err(Stop::Switch(credential)),
+            _ => Err(Failure::Cancelled.into()),
         }
     }
 
@@ -43,7 +55,7 @@ impl Asker {
         &self,
         username: &str,
         retry: bool,
-    ) -> Result<(Zeroizing<String>, bool), Failure> {
+    ) -> Result<(Zeroizing<String>, bool), Stop> {
         let prompt = Prompt::Password {
             username: username.to_string(),
             address: self.address.clone(),
@@ -52,8 +64,8 @@ impl Asker {
         };
         match self.ask(prompt).await {
             PromptAnswer::Text { value, remember } => Ok((Zeroizing::new(value), remember)),
-            PromptAnswer::Credential { credential } => Err(Failure::Credential(credential)),
-            _ => Err(Failure::Cancelled),
+            PromptAnswer::Credential { credential } => Err(Stop::Switch(credential)),
+            _ => Err(Failure::Cancelled.into()),
         }
     }
 
@@ -62,7 +74,7 @@ impl Asker {
         name: String,
         instructions: String,
         prompts: &[Field],
-    ) -> Result<Vec<String>, Failure> {
+    ) -> Result<Vec<String>, Stop> {
         let fields = prompts
             .iter()
             .map(|field| PromptField {
@@ -77,8 +89,8 @@ impl Asker {
         };
         match self.ask(prompt).await {
             PromptAnswer::Fields { values } if values.len() == prompts.len() => Ok(values),
-            PromptAnswer::Credential { credential } => Err(Failure::Credential(credential)),
-            _ => Err(Failure::Cancelled),
+            PromptAnswer::Credential { credential } => Err(Stop::Switch(credential)),
+            _ => Err(Failure::Cancelled.into()),
         }
     }
 }

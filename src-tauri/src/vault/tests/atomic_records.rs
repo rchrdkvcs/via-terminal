@@ -138,7 +138,6 @@ fn failed_remembering_does_not_save_quick_connect() {
             &plan,
             "user",
             Remembered {
-                password_verified: false,
                 password: Some(Zeroizing::new("pw".into())),
                 passphrase: None,
             }

@@ -47,9 +47,9 @@ pub struct ServerKey {
     pub fingerprint: String,
 }
 
+/// What a successful authentication may save; the vault picks the owner of the password.
 #[derive(Default)]
 pub struct Remembered {
-    pub password_verified: bool,
     pub password: Option<Zeroizing<String>>,
     pub passphrase: Option<(Uuid, Zeroizing<String>)>,
 }
