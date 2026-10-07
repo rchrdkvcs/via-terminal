@@ -1,5 +1,6 @@
 import type { Folder, Id, Row, Tab } from '@/ipc/types'
 import { clone } from '@/lib/clone'
+import { withinLimits } from './limits'
 import { insertAt, listOf, take } from './lists'
 import { type Space, isFolder, locate, rows, tabs } from './space'
 import { detach, dropTab, resize, splitWith, type Edge } from './split'
@@ -24,7 +25,7 @@ export type Intent =
 export function apply(space: Space, intent: Intent | readonly Intent[]): Space | null {
   const next = clone(space) as Space
   const intents = 'type' in intent ? [intent] : intent
-  return intents.every((change) => run(next, change)) ? next : null
+  return intents.every((change) => run(next, change)) && withinLimits(next) ? next : null
 }
 
 export function transfer(from: Space, to: Space, rowId: Id): [Space, Space] | null {

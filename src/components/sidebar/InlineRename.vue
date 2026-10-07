@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
 
-const props = defineProps<{ value: string; label: string }>()
+const props = defineProps<{ value: string; label: string; maxlength?: number }>()
 const emit = defineEmits<{ commit: [value: string]; cancel: [] }>()
 const draft = ref(props.value)
 const input = ref<HTMLInputElement>()
@@ -26,6 +26,7 @@ onMounted(async () => {
     ref="input"
     v-model="draft"
     :aria-label="label"
+    :maxlength="maxlength"
     class="material-field h-6 min-w-0 flex-1 rounded-[5px] px-1.5 text-[13px] text-foreground outline-none"
     @keydown.enter.prevent="finish(true)"
     @keydown.escape.prevent="finish(false)"

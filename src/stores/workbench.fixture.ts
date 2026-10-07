@@ -32,7 +32,11 @@ vi.mock('./sessions', () => ({
   }),
 }))
 vi.mock('@/terminal/registry', () => ({ terminals: { focus: mocks.focus } }))
-vi.mock('@/ipc/client', () => ({ api: { saveLayout: mocks.saveLayout }, describeError: String }))
+vi.mock('@/ipc/client', () => ({
+  api: { saveLayout: mocks.saveLayout },
+  describeError: String,
+  errorCode: (cause: { code?: string }) => cause.code ?? null,
+}))
 vi.mock('@/lib/notify', () => ({ notify: { error: vi.fn() } }))
 vi.mock('@/ipc/events', () => ({
   on: (name: string, handler: (payload: never) => void) => mocks.eventHandlers.set(name, handler),

@@ -10,6 +10,7 @@ import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
 import { useTabClosing } from '@/composables/useTabClosing'
 import InlineRename from './InlineRename.vue'
+import { LAYOUT_LIMITS } from '@/domain/limits'
 import RowMenu from './RowMenu.vue'
 import TabIcon from './TabIcon.vue'
 
@@ -51,6 +52,7 @@ const asleep = computed(() => state.value === 'asleep' || state.value === 'exite
           v-if="ui.renaming === tab.id"
           :value="label"
           label="Nom de l’onglet"
+          :maxlength="LAYOUT_LIMITS.titleLength"
           @commit="(value) => (actions.rename(tab.id, value), (ui.renaming = null))"
           @cancel="ui.renaming = null"
         />

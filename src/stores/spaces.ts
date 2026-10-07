@@ -1,9 +1,21 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { api, describeError } from '@/ipc/client'
+import { api, describeError, errorCode } from '@/ipc/client'
 import type { Id, Layout } from '@/ipc/types'
 import { apply, transfer as transferRow, type Intent } from '@/domain/organize'
-import { type Space, fromPersisted, locate, rowOfTab, toPersisted } from '@/domain/space'
+import { LAYOUT_LIMITS, clampSidebarWidth, fitsLength } from '@/domain/limits'
+import {
+  type Space,
+  fromPersisted,
+  locate,
+  newTabRow,
+  rowOfTab,
+  rows,
+  tabs,
+  tabsOf,
+  toPersisted,
+} from '@/domain/space'
+import { clone } from '@/lib/clone'
 import { notify } from '@/lib/notify'
 import { deferredSave } from '@/lib/deferred-save'
 
@@ -32,10 +44,39 @@ export const useSpaces = defineStore('spaces', () => {
     return spaces.value.find((space) => locate(space, id) ?? rowOfTab(space, id))
   }
 
+  let lastSaved: Layout | undefined
+
   function hydrate(layout: Layout) {
+    lastSaved = clone(layout)
     spaces.value = layout.spaces.map(fromPersisted)
     activeId.value = layout.activeSpaceId ?? layout.spaces[0]?.id ?? ''
     sidebar.value = { ...layout.sidebar }
+  }
+
+  function restore(layout: Layout) {
+    const current = spaces.value
+    const previous = activeId.value
+    hydrate(layout)
+    const kept = new Set(spaces.value.flatMap((space) => tabs(space).map((tab) => tab.id)))
+    for (const space of current) {
+      const home = byId(space.id) ?? spaces.value[0]
+      for (const row of rows(space)) {
+        const missing = tabsOf(row).filter((tab) => !kept.has(tab.id))
+        if (missing.length === tabsOf(row).length) home.temporary.push(row)
+        else home.temporary.push(...missing.map(newTabRow))
+      }
+    }
+    if (byId(previous)) activeId.value = previous
+  }
+
+  async function write(layout: Layout) {
+    try {
+      await api.saveLayout(layout)
+      lastSaved = layout
+    } catch (cause) {
+      if (errorCode(cause) === 'invalid' && lastSaved) restore(clone(lastSaved))
+      throw cause
+    }
   }
 
   const persistence = deferredSave(
@@ -44,7 +85,7 @@ export const useSpaces = defineStore('spaces', () => {
       sidebar: sidebar.value,
       spaces: spaces.value.map(toPersisted),
     }),
-    api.saveLayout,
+    write,
     (cause) => notify.error(`Organisation non enregistrée : ${describeError(cause)}`),
     250,
   )
@@ -76,7 +117,10 @@ export const useSpaces = defineStore('spaces', () => {
     if (next) activate(next.id, direction)
   }
 
-  function create(draft: SpaceDraft): Space {
+  const validName = (draft: SpaceDraft) => fitsLength(draft.name, LAYOUT_LIMITS.nameLength)
+
+  function create(draft: SpaceDraft): Space | null {
+    if (!validName(draft)) return null
     const space: Space = { id: crypto.randomUUID(), ...draft, pinned: [], temporary: [] }
     spaces.value.push(space)
     activate(space.id)
@@ -86,7 +130,7 @@ export const useSpaces = defineStore('spaces', () => {
 
   function update(id: Id, draft: SpaceDraft) {
     const space = byId(id)
-    if (!space) return
+    if (!space || !validName(draft)) return
     Object.assign(space, draft)
     persist()
   }
@@ -124,7 +168,8 @@ export const useSpaces = defineStore('spaces', () => {
   }
 
   function setSidebar(patch: Partial<{ width: number; visible: boolean }>) {
-    sidebar.value = { ...sidebar.value, ...patch }
+    const next = { ...sidebar.value, ...patch }
+    sidebar.value = { ...next, width: clampSidebarWidth(next.width) }
     persist()
   }
 
