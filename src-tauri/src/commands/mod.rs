@@ -46,5 +46,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static 
         sessions::session_resize,
         sessions::session_close,
         sessions::session_answer,
+        crate::swipe::swipe_region,
+        crate::swipe::swipe_haptic,
     ]
 }

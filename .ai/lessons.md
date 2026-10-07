@@ -93,3 +93,14 @@ before it passed.
 - CDP `Input.dispatchMouseEvent` wheels carry no phases and never latch;
   `Input.synthesizeScrollGesture` with `gestureSourceType: 'mouse'` does. Use
   the second when a check depends on latching.
+
+## Read touchpad swipes from the OS, not from wheel rhythm
+
+**2026-10-07 — space swipe, again.** Guessing fingers from inertia in wheel
+deltas kept failing in new ways. macOS scroll events carry the phases
+(`phase`, `momentumPhase`) that web wheel events drop, so `swipe.rs` watches
+them with an `NSEvent` local monitor, claims horizontal gestures that start
+over the sidebar region the interface reports, swallows them and their
+momentum, and forwards `trackpad-swipe` phases. `swipeTracker.ts` is a port of
+Firefox's `SwipeTracker`, the code behind Zen's space swipes. The wheel
+heuristics only remain as a fallback where the OS gives no phases.
