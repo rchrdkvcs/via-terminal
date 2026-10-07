@@ -75,6 +75,17 @@ describe('layout persistence', () => {
     expect(saved()[1].spaces[0].pinned.map((entry) => entry.id)).toEqual(['f'])
   })
 
+  it('does not save when only temporary tabs changed', async () => {
+    const { spaces } = setup([row('kept')], [row('loose')])
+    spaces.dispatch({ type: 'navigate', tabId: 'loose', side: 'local', path: '/lab' })
+    spaces.dispatch({ type: 'updateTab', tabId: 'loose', patch: { title: 'logs' } })
+    await spaces.flush()
+    expect(saved()).toHaveLength(0)
+    spaces.dispatch({ type: 'updateTab', tabId: 'kept', patch: { title: 'prod' } })
+    await spaces.flush()
+    expect(saved()).toHaveLength(1)
+  })
+
   it('refuses space names the layout would reject', () => {
     const { spaces } = setup()
     const draft = { icon: 'terminal', defaultShell: null }

@@ -25,6 +25,8 @@ export interface SpaceDraft {
   defaultShell: string | null
 }
 
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+
 export const useSpaces = defineStore('spaces', () => {
   const spaces = ref<Space[]>([])
   const activeId = ref<Id>('')
@@ -96,10 +98,12 @@ export const useSpaces = defineStore('spaces', () => {
     spaceId: Id | undefined = active.value?.id,
   ): boolean {
     const index = spaces.value.findIndex((space) => space.id === spaceId)
-    const next = index >= 0 ? apply(spaces.value[index], intent) : null
+    const current = spaces.value[index]
+    const next = current ? apply(current, intent) : null
     if (!next) return false
+    if (same(next, current)) return true
     spaces.value[index] = next
-    persist()
+    if (!same(toPersisted(next), toPersisted(current))) persist()
     return true
   }
 

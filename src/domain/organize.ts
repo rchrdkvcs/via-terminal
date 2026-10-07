@@ -2,7 +2,7 @@ import type { Folder, Id, Row, Tab } from '@/ipc/types'
 import { clone } from '@/lib/clone'
 import { withinLimits } from './limits'
 import { insertAt, listOf, take } from './lists'
-import { type Space, isFolder, locate, rows, tabs } from './space'
+import { type Space, findTab, isFolder, isPinned, locate, rows, tabs } from './space'
 import { detach, dropTab, resize, splitWith, type Edge } from './split'
 
 export type Place =
@@ -17,6 +17,7 @@ export type Intent =
   | { type: 'detach'; tabId: Id }
   | { type: 'resize'; splitId: Id; sizes: number[] }
   | { type: 'updateTab'; tabId: Id; patch: Partial<Omit<Tab, 'id'>> }
+  | { type: 'navigate'; tabId: Id; side: 'local' | 'remote'; path: string }
   | { type: 'createFolder'; folder: Folder; before: Id | null }
   | { type: 'renameFolder'; id: Id; name: string }
   | { type: 'toggleFolder'; id: Id; open?: boolean }
@@ -58,6 +59,8 @@ function run(space: Space, intent: Intent): boolean {
       return resize(space, intent.splitId, intent.sizes)
     case 'updateTab':
       return updateTab(space, intent.tabId, intent.patch)
+    case 'navigate':
+      return navigate(space, intent.tabId, intent.side, intent.path)
     case 'createFolder':
       return insertAt(space.pinned, intent.folder, intent.before)
     case 'renameFolder':
@@ -103,6 +106,18 @@ function updateTab(space: Space, tabId: Id, patch: Partial<Omit<Tab, 'id'>>): bo
   const tab = tabs(space).find((candidate) => candidate.id === tabId)
   if (!tab) return false
   Object.assign(tab, patch)
+  return true
+}
+
+function navigate(space: Space, tabId: Id, side: 'local' | 'remote', path: string): boolean {
+  const tab = findTab(space, tabId)
+  if (!tab) return false
+  if (isPinned(space, tabId)) return true
+  if (side === 'local') {
+    if (tab.target.kind === 'local') tab.target.cwd = path
+  } else if (!path.startsWith('/')) return true
+  else if (!tab.view) tab.remoteCwd = path
+  else if (tab.view.kind === 'files') tab.view.path = path
   return true
 }
 

@@ -5,7 +5,7 @@ import { useFiles } from '@/stores/files'
 import { useFileDialogs } from '@/stores/file-dialogs'
 import { useSessions } from '@/stores/sessions'
 import { useSpaces } from '@/stores/spaces'
-import { findTab, isPinned } from '@/domain/space'
+import { isPinned } from '@/domain/space'
 /** Routes native transfer events, asks collision questions and keeps tab directories. */
 export function useFileRuntime() {
   const files = useFiles(),
@@ -36,8 +36,6 @@ export function useFileRuntime() {
     if (panel && (event.state === 'completed' || event.state === 'cancelled'))
       void files.navigate(tabId, panel.directory)
   })
-  // Terminals and explorer tabs follow their directory until pinned, then keep the one they
-  // were pinned at.
   watch(
     () =>
       Object.entries(files.panels).map(([id, panel]) => {
@@ -45,17 +43,9 @@ export function useFileRuntime() {
         return [id, panel.directory, Boolean(space && isPinned(space, id))] as const
       }),
     (directories) => {
-      for (const [id, path, pinned] of directories) {
-        const space = spaces.spaceOf(id),
-          tab = space && findTab(space, id)
-        if (!space || !tab || pinned || !path.startsWith('/')) continue
-        if (!tab.view && tab.remoteCwd !== path)
-          spaces.dispatch({ type: 'updateTab', tabId: id, patch: { remoteCwd: path } }, space.id)
-        else if (tab.view?.kind === 'files' && tab.view.path !== path)
-          spaces.dispatch(
-            { type: 'updateTab', tabId: id, patch: { view: { kind: 'files', path } } },
-            space.id,
-          )
+      for (const [tabId, path] of directories) {
+        const space = spaces.spaceOf(tabId)
+        if (space) spaces.dispatch({ type: 'navigate', tabId, side: 'remote', path }, space.id)
       }
     },
   )
