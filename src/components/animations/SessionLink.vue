@@ -79,6 +79,7 @@ const SPARKS = [0, 50, 110, 180, 230, 300].map((degrees) => {
   max-width: 300px;
   overflow: visible;
   --tone: var(--ink);
+  --status-cycle: 3.6s;
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .session-link.local {
@@ -170,7 +171,7 @@ const SPARKS = [0, 50, 110, 180, 230, 300].map((degrees) => {
 }
 [data-scene='unreachable'] .packet {
   fill: var(--tone);
-  animation: fade-midway 1.3s var(--ease-out) forwards;
+  animation: fade-midway var(--status-cycle) var(--ease-out) infinite;
 }
 .key {
   fill: none;
@@ -184,7 +185,7 @@ const SPARKS = [0, 50, 110, 180, 230, 300].map((degrees) => {
   animation: carry-key 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 [data-scene='refused'] .key {
-  animation: bounce-key 1.3s var(--ease-out) forwards;
+  animation: bounce-key var(--status-cycle) var(--ease-out) infinite;
 }
 .spark path {
   stroke: var(--tone);
@@ -194,7 +195,7 @@ const SPARKS = [0, 50, 110, 180, 230, 300].map((degrees) => {
   transform-origin: 120px 48px;
 }
 [data-scene='disconnected'] .spark path {
-  animation: spark 0.6s var(--ease-out) 0.08s forwards;
+  animation: spark var(--status-cycle) var(--ease-out) infinite;
 }
 
 /* ---------- nodes ---------- */
@@ -259,10 +260,10 @@ const SPARKS = [0, 50, 110, 180, 230, 300].map((degrees) => {
   fill: var(--ink);
 }
 [data-scene='ready'] .node-local .ripple {
-  animation: ripple 0.9s var(--ease-out) 0.1s;
+  animation: ripple var(--status-cycle) var(--ease-out) 0.1s infinite;
 }
 [data-scene='ready'] .node-server .ripple {
-  animation: ripple 0.9s var(--ease-out) 0.5s;
+  animation: ripple var(--status-cycle) var(--ease-out) 0.5s infinite;
 }
 [data-scene='unreachable'] .node-server {
   opacity: 0.35;
@@ -276,7 +277,7 @@ const SPARKS = [0, 50, 110, 180, 230, 300].map((degrees) => {
   stroke: var(--tone);
 }
 [data-scene='refused'] .node-server rect {
-  animation: flash 0.5s var(--ease-out) 0.55s;
+  animation: flash var(--status-cycle) var(--ease-out) infinite;
 }
 [data-scene='refused'] .led,
 [data-scene='hostKey'] .led,
@@ -290,10 +291,10 @@ const SPARKS = [0, 50, 110, 180, 230, 300].map((degrees) => {
 }
 [data-scene='hostKey'] .node-server,
 [data-scene='failed'] .node-server {
-  animation: jitter 0.36s steps(3) 3;
+  animation: jitter var(--status-cycle) linear infinite;
 }
 .local[data-scene='failed'] .node-local {
-  animation: jitter 0.36s steps(3) 3;
+  animation: jitter var(--status-cycle) linear infinite;
 }
 .local[data-scene='failed'] .node-local rect {
   stroke: var(--tone);
@@ -329,19 +330,22 @@ const SPARKS = [0, 50, 110, 180, 230, 300].map((degrees) => {
     opacity: 0;
   }
 }
+/* One short gesture, then a quiet hold. Hidden resets keep the loop seamless. */
 @keyframes fade-midway {
   0% {
+    transform: translateX(0) scale(1);
     opacity: 0;
   }
-  20% {
+  7% {
     opacity: 1;
   }
-  70% {
-    transform: translateX(74px);
+  25% {
+    transform: translateX(74px) scale(1);
     opacity: 1;
   }
+  36%,
   100% {
-    transform: translateX(80px) scale(0);
+    transform: translateX(80px) scale(0.6);
     opacity: 0;
   }
 }
@@ -364,28 +368,31 @@ const SPARKS = [0, 50, 110, 180, 230, 300].map((degrees) => {
 }
 @keyframes bounce-key {
   0% {
+    transform: translateX(0);
+    stroke: var(--ink);
     opacity: 0;
   }
-  10% {
+  4% {
     opacity: 1;
   }
-  42% {
+  15% {
     transform: translateX(108px);
     stroke: var(--ink);
   }
-  48% {
+  17% {
     transform: translateX(96px);
     stroke: var(--tone);
   }
-  54% {
+  19% {
     transform: translateX(104px);
   }
-  60% {
+  21% {
     transform: translateX(99px);
   }
-  80% {
+  28% {
     opacity: 1;
   }
+  36%,
   100% {
     transform: translateX(60px) translateY(10px) rotate(30deg);
     stroke: var(--tone);
@@ -395,8 +402,12 @@ const SPARKS = [0, 50, 110, 180, 230, 300].map((degrees) => {
 @keyframes spark {
   0% {
     transform: scale(0.2);
+    opacity: 0;
+  }
+  3% {
     opacity: 1;
   }
+  20%,
   100% {
     transform: scale(1.5);
     opacity: 0;
@@ -415,23 +426,44 @@ const SPARKS = [0, 50, 110, 180, 230, 300].map((degrees) => {
 @keyframes ripple {
   0% {
     transform: scale(0.9);
+    opacity: 0;
+  }
+  3% {
     opacity: 0.8;
   }
+  28%,
   100% {
     transform: scale(2.2);
     opacity: 0;
   }
 }
 @keyframes flash {
-  30% {
+  0%,
+  15%,
+  29%,
+  100% {
+    fill: var(--surface);
+  }
+  19% {
     fill: color-mix(in srgb, var(--tone) 30%, var(--surface));
   }
 }
 @keyframes jitter {
-  33% {
+  0%,
+  6%,
+  12%,
+  18%,
+  100% {
+    transform: translate(0, 0);
+  }
+  2%,
+  8%,
+  14% {
     transform: translate(-3px, 1px);
   }
-  66% {
+  4%,
+  10%,
+  16% {
     transform: translate(2px, -1px);
   }
 }
@@ -443,8 +475,7 @@ const SPARKS = [0, 50, 110, 180, 230, 300].map((degrees) => {
 
 @media (prefers-reduced-motion: reduce) {
   .session-link * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+    animation: none !important;
     transition-duration: 0.01ms !important;
   }
 }
