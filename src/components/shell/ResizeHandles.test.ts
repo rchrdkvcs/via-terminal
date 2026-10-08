@@ -26,7 +26,7 @@ async function pointer(element: Element, type: string, clientX: number) {
   await nextTick()
 }
 
-it('preserves sidebar keyboard resizing, bounds and double-click reset through the shared handle', async () => {
+it('preserves sidebar keyboard resizing and bounds without resetting on double click', async () => {
   const view = mount(SidebarResizer)
   const handle = view.get('[role="separator"]')
   await handle.trigger('keydown', { key: 'ArrowRight' })
@@ -36,7 +36,7 @@ it('preserves sidebar keyboard resizing, bounds and double-click reset through t
   await handle.trigger('keydown', { key: 'ArrowLeft' })
   expect(sidebar.width).toBe(200)
   await handle.trigger('dblclick')
-  expect(sidebar.width).toBe(264)
+  expect(sidebar.width).toBe(200)
   view.unmount()
 })
 
@@ -65,7 +65,7 @@ it('preserves inspector resizing from its left edge and exposes the current widt
   await handle.trigger('pointerup')
   expect(handle.attributes('data-dragging')).toBe('false')
   await handle.trigger('dblclick')
-  expect(handle.attributes('aria-valuenow')).toBe('380')
+  expect(handle.attributes('aria-valuenow')).toBe('454')
   view.unmount()
 })
 

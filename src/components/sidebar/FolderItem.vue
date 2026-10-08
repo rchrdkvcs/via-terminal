@@ -60,7 +60,6 @@ const rename = (name: string) => {
           @click="toggle"
           @keydown.enter.prevent="toggle"
           @keydown.f2.prevent="ui.renaming = folder.id"
-          @dblclick.stop="ui.renaming = folder.id"
         >
           <component :is="folder.open ? FolderOpen : Folder" :size="16" :stroke-width="1.5" />
           <InlineRename

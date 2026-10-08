@@ -43,7 +43,6 @@ const asleep = computed(() => state.value === 'asleep' || state.value === 'exite
           asleep && !selected ? 'text-muted-foreground' : '',
         ]"
         @click="workbench.activate(tab.id)"
-        @dblclick.stop="ui.renaming = tab.id"
         @keydown.enter.prevent="workbench.activate(tab.id)"
         @keydown.f2.prevent="ui.renaming = tab.id"
       >

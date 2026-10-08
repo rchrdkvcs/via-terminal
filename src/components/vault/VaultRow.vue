@@ -2,7 +2,7 @@
 import type { Id } from '@/ipc/types'
 
 defineProps<{ id: Id; selected: boolean; tabbable: boolean }>()
-defineEmits<{ select: []; activate: [] }>()
+defineEmits<{ select: [] }>()
 </script>
 
 <template>
@@ -13,7 +13,6 @@ defineEmits<{ select: []; activate: [] }>()
     :tabindex="tabbable ? 0 : -1"
     class="row group/row relative flex min-h-12 cursor-default items-center gap-3 px-2.5 py-1.5 text-[13px] outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/40"
     @click="$emit('select')"
-    @dblclick="$emit('activate')"
   >
     <slot />
     <div

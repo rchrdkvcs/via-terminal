@@ -7,7 +7,7 @@ import { useVault } from '@/stores/vault'
 import VaultRow from './VaultRow.vue'
 
 const props = defineProps<{ host: Host; selected: boolean; tabbable: boolean }>()
-defineEmits<{ select: []; connect: [] }>()
+defineEmits<{ select: [] }>()
 const vault = useVault()
 const hostName = useHostName()
 
@@ -29,13 +29,7 @@ const shownTags = computed(() => props.host.tags.slice(0, 3))
 </script>
 
 <template>
-  <VaultRow
-    :id="host.id"
-    :selected="selected"
-    :tabbable="tabbable"
-    @select="$emit('select')"
-    @activate="$emit('connect')"
-  >
+  <VaultRow :id="host.id" :selected="selected" :tabbable="tabbable" @select="$emit('select')">
     <span
       class="material-control grid size-8 shrink-0 place-items-center rounded-lg text-ink-muted"
     >
