@@ -33,7 +33,10 @@ watch(shown, async (visible) => {
   <ResizablePanelGroup @layout="layout" direction="horizontal" class="relative h-full min-h-0">
     <ResizablePanel :min-size="20" :class="!shown ? '!flex-[1_1_100%]' : ''">
       <div class="relative h-full min-h-0">
-        <EmptyWorkbench v-if="!workbench.activeRow" class="rounded-xl bg-surface shadow-surface" />
+        <EmptyWorkbench
+          v-if="!workbench.activeRow"
+          class="rounded-xl bg-surface shadow-[inset_0_0_0_1px_var(--hairline)]"
+        />
         <SplitView v-else-if="workbench.activeRow.kind === 'split'" :split="workbench.activeRow" />
         <TabPane v-else :key="workbench.activeRow.id" :tab="workbench.activeRow" />
         <SplitDropZones />
