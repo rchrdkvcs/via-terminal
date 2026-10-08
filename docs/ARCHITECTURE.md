@@ -87,6 +87,8 @@ components/
   ui/               shadcn-vue primitives
 ```
 
+**Resize handles.** `components/ui/resize-handle/ResizeHandle.vue` owns the shared grip, hit area and hover/focus/drag states for the sidebar, page inspector and split separators. `ui/resizable/ResizableHandle.vue` renders it through Reka's splitter handle; the sidebar and inspector supply their own width limits, pointer events and keyboard actions. Keep visual changes in the shared primitive.
+
 **Organization.** `domain/organize.ts` applies one closed set of intents (open, move, remove, split, detach, resize, update a tab, navigate, folders) to a copy of a space. It returns `null` when an intent is invalid, so nothing changes; a list of intents applies all together or not at all, and `transfer` moves a row between two spaces the same way. `stores/spaces` saves the pinned part as one layout document (ADR-0008).
 
 **Tab lifecycle.** `stores/workbench` owns complete operations for closing and replacing tabs, removing spaces, transferring rows and opening beside an existing tab. It commits organization before starting, stopping or releasing sessions, releases the explorers of the tabs it closes or retargets, owns successor focus, and exposes focus as read-only state. Compound organization intents and transfers publish only when every step succeeds. `useClosing` is the only caller of its destructive operations: each intent (close tab, replace tab, remove space, quit or update) protects explorers, confirms, closes, then offers undo, so no interface caller assembles these steps itself.

@@ -41,7 +41,7 @@ watch(shown, async (visible) => {
       </div>
     </ResizablePanel>
     <template v-if="shown && workbench.activeTab">
-      <ResizableHandle class="w-2 shrink-0" aria-label="Redimensionner l’explorateur distant" />
+      <ResizableHandle aria-label="Redimensionner l’explorateur distant" />
       <ResizablePanel
         ref="filePane"
         :default-size="40"

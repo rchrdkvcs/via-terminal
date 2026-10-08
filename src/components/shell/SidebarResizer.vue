@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import ResizeHandle from '@/components/ui/resize-handle/ResizeHandle.vue'
 import { useSpaces } from '@/stores/spaces'
 
 const spaces = useSpaces()
 const DEFAULT = 264
 const clamp = (value: number) => Math.round(Math.min(480, Math.max(200, value)))
+
+const dragging = ref(false)
 
 function start(event: PointerEvent) {
   if (event.button !== 0) return
@@ -12,17 +16,21 @@ function start(event: PointerEvent) {
   const initial = spaces.sidebar.width
   const target = event.currentTarget as HTMLElement
   target.setPointerCapture(event.pointerId)
+  dragging.value = true
   const move = (moveEvent: PointerEvent) => {
     const next = initial + moveEvent.clientX - origin
     if (next < 140) spaces.setSidebar({ visible: false, width: initial })
     else spaces.setSidebar({ width: clamp(next) })
   }
   const stop = () => {
+    dragging.value = false
     target.removeEventListener('pointermove', move)
     target.removeEventListener('pointerup', stop)
+    target.removeEventListener('lostpointercapture', stop)
   }
   target.addEventListener('pointermove', move)
   target.addEventListener('pointerup', stop)
+  target.addEventListener('lostpointercapture', stop)
 }
 
 function nudge(delta: number) {
@@ -31,7 +39,8 @@ function nudge(delta: number) {
 </script>
 
 <template>
-  <div
+  <ResizeHandle
+    :data-dragging="dragging"
     role="separator"
     aria-orientation="vertical"
     aria-label="Largeur de la barre latérale"
@@ -39,14 +48,10 @@ function nudge(delta: number) {
     aria-valuemin="200"
     aria-valuemax="480"
     tabindex="0"
-    class="group absolute inset-y-0 -end-1.5 z-20 w-2 cursor-ew-resize outline-none"
+    class="absolute inset-y-0 -end-1.5 z-20"
     @pointerdown="start"
     @dblclick="spaces.setSidebar({ width: DEFAULT })"
     @keydown.left.prevent="nudge(-16)"
     @keydown.right.prevent="nudge(16)"
-  >
-    <span
-      class="absolute inset-y-[20%] start-1/2 w-px bg-border opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus-visible:opacity-100"
-    />
-  </div>
+  />
 </template>
