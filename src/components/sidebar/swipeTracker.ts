@@ -34,10 +34,11 @@ export function createSwipeTracker(sink: SwipeSink) {
   let lastT = 0
   let success = false
 
-  function succeeds(): boolean {
+  function succeeds(released: boolean): boolean {
     if (!direction) return false
     if (velocity * direction < -TWITCH_TOLERANCE) return false
-    return (amount + velocity * VELOCITY_CONTRIBUTION) * direction >= THRESHOLD
+    const reach = released ? amount + velocity * VELOCITY_CONTRIBUTION : amount
+    return reach * direction >= THRESHOLD
   }
 
   function step(pan: Pan, first: boolean) {
@@ -49,7 +50,7 @@ export function createSwipeTracker(sink: SwipeSink) {
       lastT = pan.t
     }
 
-    const now = succeeds()
+    const now = succeeds(pan.phase === 'end')
     if (now !== success) {
       success = now
       sink.cross()
