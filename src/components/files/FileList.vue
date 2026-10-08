@@ -57,14 +57,14 @@ function open(entry: RemoteEntry) {
     @keydown="keydown"
   >
     <p :id="keys" class="sr-only">
-      Entrée pour ouvrir, Espace pour sélectionner, Cmd ou Ctrl + clic pour ajouter ou retirer un
-      élément, Maj + clic ou flèches pour sélectionner une plage, Cmd ou Ctrl + A pour tout
-      sélectionner, Échap pour tout désélectionner.
+      Double-clic ou Entrée pour ouvrir, Espace pour sélectionner, Cmd ou Ctrl + clic pour ajouter
+      ou retirer un élément, Maj + clic ou flèches pour sélectionner une plage, Cmd ou Ctrl + A pour
+      tout sélectionner, Échap pour tout désélectionner.
     </p>
     <div role="table" class="text-[12px]" aria-label="Fichiers distants">
       <div role="rowgroup" class="sticky top-0 z-10 bg-rail text-ink-muted">
         <div role="row" :class="[columns, 'h-8']">
-          <div role="columnheader" class="truncate px-1 font-medium">
+          <div role="columnheader" class="truncate px-2 font-medium">
             Nom<span role="status" class="ms-2 font-normal">{{
               chosen ? `${chosen} sélectionné${chosen > 1 ? 's' : ''}` : ''
             }}</span>
@@ -88,11 +88,12 @@ function open(entry: RemoteEntry) {
           ]"
           :data-selected="selected.includes(entry.path) || undefined"
           @click="select(entry, $event)"
+          @dblclick="open(entry)"
         >
           <div role="cell" class="min-w-0">
             <button
               type="button"
-              class="flex h-8 w-full items-center gap-2 px-1 text-left outline-none"
+              class="flex h-8 w-full items-center gap-2 px-2 text-left outline-none"
               :title="entry.path"
               :aria-describedby="keys"
               :aria-pressed="selected.includes(entry.path)"
