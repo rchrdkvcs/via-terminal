@@ -73,7 +73,10 @@ const rename = (name: string) => {
           <span v-else class="min-w-0 flex-1 truncate">{{ folder.name }}</span>
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent class="w-52">
+      <ContextMenuContent
+        class="w-52"
+        @close-auto-focus="ui.renaming === folder.id && $event.preventDefault()"
+      >
         <ContextMenuItem @select="ui.renaming = folder.id">
           <Pencil :stroke-width="1.5" /> Renommer
         </ContextMenuItem>

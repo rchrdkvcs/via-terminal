@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 
 const props = defineProps<{ value: string; label: string; maxlength?: number }>()
 const emit = defineEmits<{ commit: [value: string]; cancel: [] }>()
@@ -14,10 +14,16 @@ function finish(commit: boolean) {
   else emit('cancel')
 }
 
-onMounted(async () => {
-  await nextTick()
-  input.value?.focus()
-  input.value?.select()
+let focusFrame: number | undefined
+onMounted(() => {
+  // Let the menu/dialog finish closing before moving focus outside its focus scope.
+  focusFrame = requestAnimationFrame(() => {
+    input.value?.focus()
+    input.value?.select()
+  })
+})
+onUnmounted(() => {
+  if (focusFrame !== undefined) cancelAnimationFrame(focusFrame)
 })
 </script>
 
