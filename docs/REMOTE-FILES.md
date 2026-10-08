@@ -10,6 +10,7 @@ Explorer and document tabs ([ADR-0011](adr/0011-remote-explorers-and-documents-i
 - Dock a resizable remote explorer beside the SSH terminal tab; hiding it leaves the terminal running.
 - Detach the docked explorer into its own explorer tab at its current directory. Explorer and document tabs open their own connection to the same target (ADR-0011).
 - Navigate independently from the terminal's working directory.
+- A single click selects an entry; a double-click anywhere on its row or Enter opens a file or navigates into a directory, including a symbolic link to a directory. Cmd/Ctrl + click toggles selection and Shift + click extends a range.
 - Open the docked explorer for the active SSH tab through a file-tree icon at the top right or an action in the command bar.
 - First navigation starts at the remote account's home directory; each tab retains its last visited directory.
 - In split views, the docked explorer follows the selected terminal, with separate directory state per tab. An explorer tab identifies its remote target.
