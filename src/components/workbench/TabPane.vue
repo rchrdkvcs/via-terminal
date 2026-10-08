@@ -15,14 +15,14 @@ const focused = computed(() => workbench.activeTab?.id === props.tab.id)
 
 <template>
   <div
-    class="relative h-full min-h-0 w-full min-w-0 overflow-hidden rounded-xl bg-surface shadow-surface"
+    class="relative h-full min-h-0 w-full min-w-0 overflow-hidden rounded-xl bg-surface"
     :data-focused="focused || undefined"
     :aria-label="inSplit ? 'Volet' : undefined"
     @pointerdown="!focused && workbench.activate(tab.id)"
   >
     <div
-      v-if="inSplit"
-      class="pointer-events-none absolute inset-0 z-20 rounded-xl ring-1 ring-border ring-inset"
+      class="pointer-events-none absolute inset-0 z-20 rounded-xl ring-1 ring-inset"
+      :class="inSplit ? 'ring-border' : 'ring-(--hairline)'"
       aria-hidden="true"
     />
     <FilePanel v-if="tab.view?.kind === 'files'" :tab="tab" />
