@@ -51,7 +51,7 @@ function open(entry: RemoteEntry) {
 <template>
   <div
     ref="root"
-    class="@container min-h-0 flex-1 overflow-auto px-2 pb-2 outline-none"
+    class="@container relative min-h-0 flex-1 overflow-auto overscroll-contain px-2 pb-2 outline-none"
     tabindex="-1"
     :aria-busy="busy"
     @keydown="keydown"
