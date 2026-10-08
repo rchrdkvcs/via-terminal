@@ -49,6 +49,11 @@ export type Shell = { path: string, name: string, args: Array<string>, };
 
 export type SessionState = "connecting" | "verifying" | "authenticating" | "ready" | "exited" | "failed" | "disconnected";
 
+/**
+ * Why a session failed, so the interface can tell what the user can do about it.
+ */
+export type FailureReason = "unreachable" | "authentication" | "hostKey" | "cancelled" | "other";
+
 export type Prompt = { "kind": "hostKey", address: string, port: number, algorithm: string, fingerprint: string, previousFingerprint: string | null, } | { "kind": "authentication", address: string, username: string | null, canRemember: boolean, } | { "kind": "username", address: string, } | { "kind": "password", username: string, address: string, canRemember: boolean, retry: boolean, } | { "kind": "passphrase", keyLabel: string, canRemember: boolean, retry: boolean, } | { "kind": "keyboardInteractive", name: string, instructions: string, fields: Array<PromptField>, };
 
 export type PromptField = { label: string, echo: boolean, };
@@ -61,7 +66,7 @@ export type LocalTarget = { shell: string | null, cwd: string | null, };
 
 export type TerminalOutputEvent = { sessionId: string, dataBase64: string, };
 
-export type SessionStateEvent = { sessionId: string, state: SessionState, message: string | null, exitCode: number | null, };
+export type SessionStateEvent = { sessionId: string, state: SessionState, message: string | null, exitCode: number | null, reason: FailureReason | null, };
 
 export type SessionPromptEvent = { sessionId: string, promptId: string, prompt: Prompt | null, };
 

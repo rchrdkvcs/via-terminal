@@ -1,3 +1,4 @@
+use crate::sessions::events::FailureReason;
 use std::io;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,6 +89,23 @@ impl Failure {
         }
     }
 
+    pub fn reason(&self) -> FailureReason {
+        match self {
+            Failure::Resolve
+            | Failure::Refused
+            | Failure::Unreachable
+            | Failure::Timeout
+            | Failure::Closed
+            | Failure::Network => FailureReason::Unreachable,
+            Failure::CredentialUnavailable | Failure::Rejected { .. } => {
+                FailureReason::Authentication
+            }
+            Failure::HostKeyRejected => FailureReason::HostKey,
+            Failure::Cancelled => FailureReason::Cancelled,
+            Failure::Handshake | Failure::Shell => FailureReason::Other,
+        }
+    }
+
     pub fn disconnected(address: &str) -> String {
         format!("Connexion perdue avec {address}")
     }
@@ -105,6 +123,23 @@ mod tests {
         assert_eq!(kind(io::ErrorKind::HostUnreachable), Failure::Unreachable);
         assert_eq!(kind(io::ErrorKind::ConnectionReset), Failure::Closed);
         assert_eq!(kind(io::ErrorKind::Other), Failure::Network);
+    }
+
+    #[test]
+    fn failures_carry_the_reason_the_interface_shows() {
+        assert_eq!(Failure::Timeout.reason(), FailureReason::Unreachable);
+        assert_eq!(Failure::Resolve.reason(), FailureReason::Unreachable);
+        assert_eq!(
+            Failure::Rejected { tried: vec![] }.reason(),
+            FailureReason::Authentication
+        );
+        assert_eq!(
+            Failure::CredentialUnavailable.reason(),
+            FailureReason::Authentication
+        );
+        assert_eq!(Failure::HostKeyRejected.reason(), FailureReason::HostKey);
+        assert_eq!(Failure::Cancelled.reason(), FailureReason::Cancelled);
+        assert_eq!(Failure::Shell.reason(), FailureReason::Other);
     }
 
     #[test]

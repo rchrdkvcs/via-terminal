@@ -49,6 +49,7 @@ export function state(sessionId: string, value: SessionStateEvent['state']) {
     state: value,
     message: null,
     exitCode: null,
+    reason: null,
   } as never)
 }
 export function output(sessionId: string) {

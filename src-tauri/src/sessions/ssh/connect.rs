@@ -139,18 +139,20 @@ async fn handshake(
 }
 
 fn report(context: &Context, plan: &ConnectPlan, outcome: Outcome) {
-    let (state, message, exit_code) = match outcome {
-        Outcome::Exited(code) => (SessionState::Exited, None, code),
-        Outcome::Closed => (SessionState::Exited, None, None),
+    let (state, message, exit_code, reason) = match outcome {
+        Outcome::Exited(code) => (SessionState::Exited, None, code, None),
+        Outcome::Closed => (SessionState::Exited, None, None, None),
         Outcome::Disconnected => (
             SessionState::Disconnected,
             Some(Failure::disconnected(&plan.address)),
+            None,
             None,
         ),
         Outcome::Failed(failure) => (
             SessionState::Failed,
             Some(failure.message(&plan.address, plan.port)),
             None,
+            Some(failure.reason()),
         ),
     };
     context.sink.emit(Event::State {
@@ -158,5 +160,6 @@ fn report(context: &Context, plan: &ConnectPlan, outcome: Outcome) {
         state,
         message,
         exit_code,
+        reason,
     });
 }

@@ -2,7 +2,15 @@ import { defineStore } from 'pinia'
 import { onScopeDispose, reactive } from 'vue'
 import { api, describeError } from '@/ipc/client'
 import { on } from '@/ipc/events'
-import type { Id, Prompt, PromptAnswer, SessionState, SessionStateEvent, Tab } from '@/ipc/types'
+import type {
+  FailureReason,
+  Id,
+  Prompt,
+  PromptAnswer,
+  SessionState,
+  SessionStateEvent,
+  Tab,
+} from '@/ipc/types'
 import { findTab } from '@/domain/space'
 import { decodeBase64 } from '@/lib/base64'
 import { SessionRouting } from '@/lib/session-routing'
@@ -16,6 +24,7 @@ export interface TabRuntime {
   state: TabState
   message: string | null
   exitCode: number | null
+  reason: FailureReason | null
   prompt: { id: Id; prompt: Prompt } | null
 
   autoTitle: string | null
@@ -29,6 +38,7 @@ const asleep = (): TabRuntime => ({
   state: 'asleep',
   message: null,
   exitCode: null,
+  reason: null,
   prompt: null,
   autoTitle: null,
 })
@@ -160,7 +170,12 @@ export const useSessions = defineStore('sessions', () => {
   function applyState(tabId: Id, event: SessionStateEvent) {
     const current = runtimeOf(tabId, event.sessionId)
     if (!current) return
-    Object.assign(current, { state: event.state, message: event.message, exitCode: event.exitCode })
+    Object.assign(current, {
+      state: event.state,
+      message: event.message,
+      exitCode: event.exitCode,
+      reason: event.reason,
+    })
     if (!LIVE.includes(event.state)) {
       current.prompt = null
       routing.finish(event.sessionId)

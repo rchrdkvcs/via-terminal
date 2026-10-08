@@ -14,6 +14,7 @@ describe('workbench reactions to sessions', () => {
       state: 'exited',
       exitCode: 0,
       message: null,
+      reason: null,
     }
     ended('temporary', event)
     expect(findTab(spaces.active, 'temporary')).toBeUndefined()
