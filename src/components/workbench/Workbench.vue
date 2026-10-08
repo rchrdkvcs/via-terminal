@@ -49,8 +49,12 @@ watch(shown, async (visible) => {
         ref="filePane"
         :default-size="40"
         :min-size="30"
-        class="overflow-hidden rounded-xl bg-rail shadow-surface"
+        class="relative overflow-hidden rounded-xl bg-rail"
       >
+        <div
+          class="pointer-events-none absolute inset-0 z-20 rounded-xl ring-1 ring-(--hairline) ring-inset"
+          aria-hidden="true"
+        />
         <FilePanel :tab="workbench.activeTab" />
       </ResizablePanel>
     </template>
