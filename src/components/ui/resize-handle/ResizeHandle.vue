@@ -46,7 +46,7 @@ const props = withDefaults(defineProps<PrimitiveProps & { class?: HTMLAttributes
   flex-shrink: 0;
   border-radius: 999px;
   background: var(--color-ink-faint);
-  opacity: 0.4;
+  opacity: 0;
   transition:
     opacity 100ms ease-out,
     background-color 100ms ease-out;
