@@ -52,11 +52,6 @@ function navigate(directory: string) {
   selected.value = []
   if (session.value) void files.navigate(props.tab.id, directory)
 }
-function select(entry: string, checked: boolean) {
-  selected.value = checked
-    ? [...new Set([...selected.value, entry])]
-    : selected.value.filter((path) => path !== entry)
-}
 function open(entry: RemoteEntry) {
   if (entry.kind === 'directory' || entry.targetKind === 'directory') navigate(entry.path)
   else workbench.openView(props.tab, { kind: 'document', path: entry.path })
@@ -113,7 +108,6 @@ function detach() {
         :hidden="hidden"
         :connected="!!session"
         :failed="!!panel.error"
-        @select="select"
         @select-all="selected = $event"
         @open="open"
       />
