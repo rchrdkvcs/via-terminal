@@ -83,6 +83,20 @@ describe('swipe tracker', () => {
     expect(replay(pans).crossings).toBe(2)
   })
 
+  it('bumps once on a slow, uneven drag past the threshold', () => {
+    const steps = [0, 2, 1, 0, 1, 2, 1, 1]
+    const gaps = [10, 22, 14, 9, 18, 12]
+    const pans: Pan[] = [{ phase: 'start', dx: 1, dy: 0, t: 0 }]
+    for (let i = 0, t = 0; i < 300; i++) {
+      t += gaps[i % gaps.length]
+      pans.push({ phase: 'update', dx: steps[i % steps.length], dy: 0, t })
+    }
+    pans.push({ phase: 'end', dx: 0, dy: 0, t: pans[pans.length - 1].t + 16 })
+    const { crossings, commits } = replay(pans)
+    expect(crossings).toBe(1)
+    expect(commits).toEqual([1])
+  })
+
   it('hands the speed of the fingers to the spring', () => {
     const { ends } = replay(swipe(-11, 10))
 
