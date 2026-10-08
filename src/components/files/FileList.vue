@@ -62,7 +62,7 @@ function open(entry: RemoteEntry) {
       sélectionner, Échap pour tout désélectionner.
     </p>
     <div role="table" class="text-[12px]" aria-label="Fichiers distants">
-      <div role="rowgroup" class="sticky top-0 z-10 bg-rail text-ink-muted">
+      <div role="rowgroup" class="sticky top-0 z-10 -mx-2 bg-rail px-2 text-ink-muted">
         <div role="row" :class="[columns, 'h-8']">
           <div role="columnheader" class="truncate px-1 font-medium">
             Nom<span role="status" class="ms-2 font-normal">{{
