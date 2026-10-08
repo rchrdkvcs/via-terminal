@@ -107,6 +107,7 @@ impl Harness {
                         state: reached,
                         message,
                         exit_code,
+                        ..
                     } if *session_id == session && *reached == state => {
                         Some((message.clone(), *exit_code))
                     }

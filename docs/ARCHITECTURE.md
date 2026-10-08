@@ -78,7 +78,9 @@ components/
   shell/            title bar, address pill, dialogs, sidebar frame and resizer
   sidebar/          rows, folders, space header and switcher
   command/          command bar
-  workbench/        panes, split view, connection panel and prompts
+  workbench/        panes, split view, connection panel, session notice and prompts
+  animations/       SVG status animations reused as components (SessionLink); their scene
+                    and tone come from domain/session-scene
   files/            explorer, CodeMirror documents and transfer controls; useFileOperations
                     and useFileTransfers start operations on the explorer's current connection
   page/             page frame and inspector shared by the vault and settings pages

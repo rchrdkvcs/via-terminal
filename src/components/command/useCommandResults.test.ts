@@ -12,7 +12,7 @@ import { useVault } from '@/stores/vault'
 import { useWorkbench } from '@/stores/workbench'
 import { useCommandResults } from './useCommandResults'
 import CommandBar from './CommandBar.vue'
-import PaneNotice from '@/components/workbench/PaneNotice.vue'
+import SessionNotice from '@/components/workbench/SessionNotice.vue'
 import { parseQuickConnect } from '@/domain/quick-connect'
 
 const closing = vi.hoisted(() => ({ closeTab: vi.fn(), replaceTab: vi.fn() }))
@@ -129,7 +129,7 @@ describe('command bar, replace and split', () => {
     mocks.failed.add('tab')
     bar.ui.closeCommand()
     const view = mount(CommandBar, { attachTo: document.body })
-    const notice = mount(PaneNotice, { props: { tab: bar.workbench.activeTab!, mode: 'failed' } })
+    const notice = mount(SessionNotice, { props: { tab: bar.workbench.activeTab! } })
     try {
       // Reopening normally restores the failed address.
       bar.ui.openCommand()

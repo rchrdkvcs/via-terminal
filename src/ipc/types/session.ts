@@ -1,6 +1,7 @@
 export type {
   CredentialChoice,
   CursorStyle,
+  FailureReason,
   LocalTarget,
   Prompt,
   PromptAnswer,

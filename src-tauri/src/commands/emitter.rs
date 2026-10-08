@@ -1,5 +1,5 @@
 use crate::sessions::{
-    events::{Event, EventSink, SessionState},
+    events::{Event, EventSink, FailureReason, SessionState},
     prompts::Prompt,
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
@@ -26,6 +26,7 @@ pub(crate) struct StateChanged {
     state: SessionState,
     message: Option<String>,
     exit_code: Option<i32>,
+    reason: Option<FailureReason>,
 }
 
 #[derive(Clone, Serialize, TS)]
@@ -61,6 +62,7 @@ impl EventSink for TauriSink {
                 state,
                 message,
                 exit_code,
+                reason,
             } => self.0.emit(
                 "session-state",
                 StateChanged {
@@ -68,6 +70,7 @@ impl EventSink for TauriSink {
                     state,
                     message,
                     exit_code,
+                    reason,
                 },
             ),
             Event::Prompt {

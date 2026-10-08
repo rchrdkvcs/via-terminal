@@ -21,6 +21,26 @@ pub enum SessionState {
     Disconnected,
 }
 
+/// Why a session failed, so the interface can tell what the user can do about it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum FailureReason {
+    /// The address could not be reached: resolution, refusal, timeout or network.
+    Unreachable,
+
+    /// The server refused every credential, or the chosen one cannot be used.
+    Authentication,
+
+    /// The server key was refused.
+    HostKey,
+
+    /// The user cancelled a prompt.
+    Cancelled,
+
+    /// The server answered but the SSH negotiation or the shell failed.
+    Other,
+}
+
 #[derive(Debug, Clone)]
 pub enum Event {
     Files(crate::files::model::TransferEvent),
@@ -33,6 +53,7 @@ pub enum Event {
         state: SessionState,
         message: Option<String>,
         exit_code: Option<i32>,
+        reason: Option<FailureReason>,
     },
     Prompt {
         session_id: Uuid,
@@ -62,6 +83,7 @@ impl dyn EventSink {
             state,
             message,
             exit_code: None,
+            reason: None,
         });
     }
 }

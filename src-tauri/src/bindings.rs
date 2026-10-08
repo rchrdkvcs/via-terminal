@@ -62,6 +62,7 @@ fn generate() -> String {
         .add::<sessions::Size>()
         .add::<sessions::shells::Shell>()
         .add::<sessions::events::SessionState>()
+        .add::<sessions::events::FailureReason>()
         .add::<sessions::prompts::Prompt>()
         .add::<sessions::prompts::PromptField>()
         .add::<sessions::prompts::PromptAnswer>()

@@ -91,6 +91,7 @@ pub fn spawn(
             state: SessionState::Exited,
             message: None,
             exit_code,
+            reason: None,
         });
     });
 
