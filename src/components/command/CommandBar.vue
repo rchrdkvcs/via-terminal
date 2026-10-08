@@ -19,7 +19,7 @@ const query = ref('')
 const active = ref(0)
 const input = ref<HTMLInputElement>()
 const list = ref<HTMLElement>()
-const { placeholder, items, choose } = useCommandResults(query)
+const { placeholder, items, choose, initialQuery } = useCommandResults(query)
 
 const open = computed({
   get: () => ui.command !== null,
@@ -28,7 +28,7 @@ const open = computed({
 
 watch(open, async (isOpen) => {
   if (!isOpen) return
-  query.value = ''
+  query.value = initialQuery()
   active.value = 0
   await nextTick()
   input.value?.focus()
@@ -59,6 +59,7 @@ const showSection = (index: number) =>
       <DialogContent
         class="material-raised fixed start-1/2 top-[13vh] z-50 flex max-h-[min(580px,72vh)] w-[min(660px,calc(100vw-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-2xl text-popover-foreground outline-none"
         @open-auto-focus.prevent
+        @close-auto-focus="ui.renaming !== null && $event.preventDefault()"
       >
         <DialogTitle class="sr-only">Barre de commande</DialogTitle>
         <DialogDescription class="sr-only"

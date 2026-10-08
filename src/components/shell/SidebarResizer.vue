@@ -4,7 +4,6 @@ import ResizeHandle from '@/components/ui/resize-handle/ResizeHandle.vue'
 import { useSpaces } from '@/stores/spaces'
 
 const spaces = useSpaces()
-const DEFAULT = 264
 const clamp = (value: number) => Math.round(Math.min(480, Math.max(200, value)))
 
 const dragging = ref(false)
@@ -50,7 +49,6 @@ function nudge(delta: number) {
     tabindex="0"
     class="absolute inset-y-0 -end-1.5 z-20"
     @pointerdown="start"
-    @dblclick="spaces.setSidebar({ width: DEFAULT })"
     @keydown.left.prevent="nudge(-16)"
     @keydown.right.prevent="nudge(16)"
   />

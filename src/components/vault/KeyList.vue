@@ -67,7 +67,6 @@ async function renamed(id: Id, label: string | null) {
         :selected="key.id === state.selected.value"
         :tabbable="tabbable(key.id)"
         @select="state.selected.value = key.id"
-        @activate="state.renaming.value = key.id"
       >
         <div class="min-w-0 flex-1">
           <InlineRename

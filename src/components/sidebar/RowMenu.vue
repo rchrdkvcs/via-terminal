@@ -48,7 +48,10 @@ const otherSpaces = computed(() => spaces.spaces.filter((space) => space.id !== 
 </script>
 
 <template>
-  <ContextMenuContent class="w-60">
+  <ContextMenuContent
+    class="w-60"
+    @close-auto-focus="ui.renaming === tabId && $event.preventDefault()"
+  >
     <ContextMenuItem @select="ui.renaming = tabId">
       <Pencil :stroke-width="1.5" /> Renommer <ContextMenuShortcut>F2</ContextMenuShortcut>
     </ContextMenuItem>

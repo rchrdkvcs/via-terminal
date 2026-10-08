@@ -36,7 +36,6 @@ function onKeydown(event: KeyboardEvent) {
     :aria-label="label"
     class="material-field h-6 min-w-0 flex-1 rounded-[5px] px-1.5 text-[13px] outline-none"
     @click.stop
-    @dblclick.stop
     @keydown="onKeydown"
     @blur="finish(true)"
   />

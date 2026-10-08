@@ -80,7 +80,7 @@ describe('FileList', () => {
     },
   )
 
-  it('opens with Enter and double click, and selects with Space and Shift + arrows', async () => {
+  it('opens only with Enter, and selects with Space and Shift + arrows', async () => {
     const view = render()
     const [log, releases] = view.findAll('[role="cell"] button')
     expect(releases.text()).toContain('dossier')
@@ -92,9 +92,10 @@ describe('FileList', () => {
     expect(document.activeElement).toBe(releases.element)
     await releases.trigger('keydown', { key: 'ArrowUp' })
     expect(view.emitted('selectAll')?.[2]).toEqual([['/srv/app.log']])
-    await releases.trigger('keydown', { key: 'Enter' })
     await releases.trigger('dblclick')
-    expect(view.emitted('open')).toEqual([[entries[2]], [entries[2]]])
+    expect(view.emitted('open')).toBeUndefined()
+    await releases.trigger('keydown', { key: 'Enter' })
+    expect(view.emitted('open')).toEqual([[entries[2]]])
     view.unmount()
   })
 
