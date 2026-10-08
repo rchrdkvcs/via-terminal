@@ -1,16 +1,26 @@
 <script setup lang="ts">
 import {
-  Download,
+  AppWindow,
+  Check,
+  Ellipsis,
+  Eye,
   FilePlus,
   FolderPlus,
   FolderUp,
-  Pencil,
-  Shield,
-  Trash2,
+  Plus,
   Upload,
+  X,
 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
-defineProps<{ count: number; enabled: boolean }>()
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import FileSelectionActions from './FileSelectionActions.vue'
+defineProps<{ count: number; enabled: boolean; hidden: boolean; docked: boolean }>()
 const emit = defineEmits<{
   create: [directory: boolean]
   upload: [directory: boolean]
@@ -18,95 +28,82 @@ const emit = defineEmits<{
   rename: []
   chmod: []
   remove: []
+  hidden: []
+  detach: []
+  hide: []
 }>()
 </script>
 <template>
   <div
-    class="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-hairline px-2 pt-1 pb-2"
+    class="ms-auto flex shrink-0 items-center gap-1"
     role="group"
     aria-label="Opérations sur les fichiers"
   >
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      :disabled="!enabled"
-      aria-label="Nouveau fichier"
-      title="Nouveau fichier"
-      @click="emit('create', false)"
-    >
-      <FilePlus :stroke-width="1.5" />
-    </Button>
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      :disabled="!enabled"
-      aria-label="Nouveau dossier"
-      title="Nouveau dossier"
-      @click="emit('create', true)"
-    >
-      <FolderPlus :stroke-width="1.5" />
-    </Button>
-    <span class="mx-1 h-4 w-px bg-hairline" aria-hidden="true" />
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      :disabled="!enabled"
-      aria-label="Envoyer des fichiers"
-      title="Envoyer des fichiers"
-      @click="emit('upload', false)"
-    >
-      <Upload :stroke-width="1.5" />
-    </Button>
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      :disabled="!enabled"
-      aria-label="Envoyer un dossier"
-      title="Envoyer un dossier"
-      @click="emit('upload', true)"
-    >
-      <FolderUp :stroke-width="1.5" />
-    </Button>
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      :disabled="!enabled || !count"
-      aria-label="Télécharger la sélection"
-      title="Télécharger la sélection"
-      @click="emit('download')"
-    >
-      <Download :stroke-width="1.5" />
-    </Button>
-    <span class="mx-1 h-4 w-px bg-hairline" aria-hidden="true" />
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      :disabled="!enabled || count !== 1"
-      aria-label="Renommer ou déplacer"
-      title="Renommer ou déplacer"
-      @click="emit('rename')"
-    >
-      <Pencil :stroke-width="1.5" />
-    </Button>
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      :disabled="!enabled || count !== 1"
-      aria-label="Modifier les permissions"
-      title="Modifier les permissions"
-      @click="emit('chmod')"
-    >
-      <Shield :stroke-width="1.5" />
-    </Button>
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      :disabled="!enabled || !count"
-      aria-label="Supprimer la sélection"
-      title="Supprimer la sélection"
-      @click="emit('remove')"
-    >
-      <Trash2 :stroke-width="1.5" />
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger as-child>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Créer ou envoyer"
+          title="Créer ou envoyer"
+          :disabled="!enabled"
+        >
+          <Plus :stroke-width="1.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem :disabled="!enabled" @select="emit('create', false)">
+          <FilePlus :stroke-width="1.5" />Nouveau fichier
+        </DropdownMenuItem>
+        <DropdownMenuItem :disabled="!enabled" @select="emit('create', true)">
+          <FolderPlus :stroke-width="1.5" />Nouveau dossier
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem :disabled="!enabled" @select="emit('upload', false)">
+          <Upload :stroke-width="1.5" />Envoyer des fichiers
+        </DropdownMenuItem>
+        <DropdownMenuItem :disabled="!enabled" @select="emit('upload', true)">
+          <FolderUp :stroke-width="1.5" />Envoyer un dossier
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+    <DropdownMenu>
+      <DropdownMenuTrigger as-child>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Autres actions"
+          title="Autres actions"
+        >
+          <Ellipsis :stroke-width="1.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem role="menuitemcheckbox" :aria-checked="hidden" @select="emit('hidden')">
+          <Eye :stroke-width="1.5" />Afficher les fichiers cachés
+          <Check v-if="hidden" class="ms-auto" :stroke-width="1.5" />
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <FileSelectionActions
+          :count="count"
+          :enabled="enabled"
+          @download="emit('download')"
+          @rename="emit('rename')"
+          @chmod="emit('chmod')"
+          @remove="emit('remove')"
+        />
+        <template v-if="docked">
+          <DropdownMenuSeparator />
+          <DropdownMenuItem @select="emit('detach')">
+            <AppWindow :stroke-width="1.5" />Ouvrir dans un onglet
+          </DropdownMenuItem>
+          <DropdownMenuItem @select="emit('hide')">
+            <X :stroke-width="1.5" />Masquer l’explorateur distant
+          </DropdownMenuItem>
+        </template>
+      </DropdownMenuContent>
+    </DropdownMenu>
   </div>
 </template>

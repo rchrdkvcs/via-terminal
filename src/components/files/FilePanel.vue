@@ -4,7 +4,6 @@ import FileNavigation from './FileNavigation.vue'
 import { useFiles } from '@/stores/files'
 import { useSessions } from '@/stores/sessions'
 import { useWorkbench } from '@/stores/workbench'
-import { useTabLabel } from '@/composables/useTabLabel'
 import type { Tab } from '@/ipc/types'
 import type { RemoteEntry } from '@/ipc/files'
 import { useFileOperations } from './useFileOperations'
@@ -18,8 +17,7 @@ import FileDropZone from './FileDropZone.vue'
 const props = defineProps<{ tab: Tab }>()
 const files = useFiles(),
   sessions = useSessions(),
-  workbench = useWorkbench(),
-  names = useTabLabel()
+  workbench = useWorkbench()
 const panel = computed(() => files.state(props.tab.id))
 const session = computed(() => files.session(props.tab.id))
 const docked = computed(() => props.tab.view?.kind !== 'files')
@@ -70,27 +68,23 @@ function detach() {
     aria-label="Explorateur distant"
     @drop="transfers.drop"
   >
-    <FileNavigation
-      :name="docked ? names.label(tab) : names.targetName(tab)"
-      :panel="panel"
-      :connected="!!session"
-      :hidden="hidden"
-      :docked="docked"
-      @navigate="navigate"
-      @hidden="hidden = !hidden"
-      @detach="detach"
-      @hide="files.hide(tab.id)"
-    />
-    <FileToolbar
-      :count="selection.length"
-      :enabled="!!session && !panel.busy"
-      @create="operations.create"
-      @upload="transfers.upload"
-      @download="transfers.download(selection)"
-      @rename="operations.change(selection[0], 'move')"
-      @chmod="operations.change(selection[0], 'chmod')"
-      @remove="operations.remove(selection)"
-    />
+    <FileNavigation :panel="panel" :connected="!!session" @navigate="navigate">
+      <FileToolbar
+        :count="selection.length"
+        :enabled="!!session && !panel.busy"
+        :hidden="hidden"
+        :docked="docked"
+        @create="operations.create"
+        @upload="transfers.upload"
+        @download="transfers.download(selection)"
+        @rename="operations.change(selection[0], 'move')"
+        @chmod="operations.change(selection[0], 'chmod')"
+        @remove="operations.remove(selection)"
+        @hidden="hidden = !hidden"
+        @detach="detach"
+        @hide="files.hide(tab.id)"
+      />
+    </FileNavigation>
     <FileStatus
       :state="sessions.runtime(tab.id).state"
       :error="panel.error"
