@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="UTF-8"><title>Animations de statut — vérification</title>
+<style>
+body { margin: 0; padding: 32px; background: #18181b; color: #eee; font: 14px system-ui; --ink: #eee; --ink-faint: #777; --surface: #222225; --edge-hover: #666; --state-pending: #e9ac51; --state-error: #fa7770; --ease-out: cubic-bezier(.23,1,.32,1); }
+main { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1000px; margin: auto; }
+section { padding: 20px; border: 1px solid #444; border-radius: 16px; display: grid; justify-items: center; gap: 8px; }
+h1 { max-width: 1000px; margin: 0 auto 24px; font-size: 20px; } h2 { font-size: 14px; font-weight: 500; } .session-link { height: 110px; }
+</style></head><body><h1>Animations de statut · cycle de 3,6 secondes</h1><main id="app"></main>
+<script type="module">
+import { createApp, h } from 'vue';
+import SessionLink from '/src/components/animations/SessionLink.vue';
+import { sceneTone } from '/src/domain/session-scene.ts';
+const scenes = ['unreachable', 'refused', 'hostKey', 'failed', 'disconnected', 'ready', 'connecting', 'authenticating', 'localFailed'];
+createApp({ render() { return scenes.map(name => { const local = name === 'localFailed'; const scene = local ? 'failed' : name; return h('section', [h(SessionLink, { scene, tone: sceneTone(scene), local }), h('h2', name)]); }); } }).mount('#app');
+</script></body></html>
