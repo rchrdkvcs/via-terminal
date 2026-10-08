@@ -59,6 +59,7 @@ const showSection = (index: number) =>
       <DialogContent
         class="material-raised fixed start-1/2 top-[13vh] z-50 flex max-h-[min(580px,72vh)] w-[min(660px,calc(100vw-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-2xl text-popover-foreground outline-none"
         @open-auto-focus.prevent
+        @close-auto-focus="ui.renaming !== null && $event.preventDefault()"
       >
         <DialogTitle class="sr-only">Barre de commande</DialogTitle>
         <DialogDescription class="sr-only"
