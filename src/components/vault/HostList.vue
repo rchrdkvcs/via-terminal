@@ -95,7 +95,6 @@ const empty = computed(() => {
         :selected="host.id === state.selected.value"
         :tabbable="tabbable(host.id)"
         @select="state.selected.value = host.id"
-        @connect="actions.connect(host.id)"
       />
     </template>
     <template #empty>

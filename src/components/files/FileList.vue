@@ -88,7 +88,6 @@ function open(entry: RemoteEntry) {
           ]"
           :data-selected="selected.includes(entry.path) || undefined"
           @click="select(entry, $event)"
-          @dblclick="open(entry)"
         >
           <div role="cell" class="min-w-0">
             <button

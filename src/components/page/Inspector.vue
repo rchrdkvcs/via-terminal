@@ -49,7 +49,6 @@ function resize(event: PointerEvent) {
       tabindex="0"
       class="absolute inset-y-0 start-0 z-10"
       @pointerdown="resize"
-      @dblclick="width = 380"
       @keydown.left.prevent="width = clamp(width + 24)"
       @keydown.right.prevent="width = clamp(width - 24)"
     />

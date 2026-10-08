@@ -37,7 +37,7 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 - Typing `user@host`, `host:2222` or `ssh user@host -p 2222` offers **Connect to …**. When authentication succeeds, the host is saved in the vault automatically.
 - **Ctrl+Shift+L** (or clicking the address pill) opens the command bar for the current tab: Enter replaces what the tab connects to.
 - **Ctrl+Shift+P** opens the same bar with actions first: new space, open vault, settings, split, pin, rename, close.
-- From the vault, double-click or **Connect** opens a host in a new tab of the current space.
+- From the vault, Enter or **Connect** opens a host in a new tab of the current space.
 
 ## Tabs
 
@@ -48,7 +48,7 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 - A host saved by quick connect is named after its address until named: naming its tab names the host, so the sidebar, the command bar and the vault show one name.
 - A temporary local shell that exits normally closes its tab. A failed launch or a dropped SSH connection keeps the tab with its output and offers Reconnect.
 - Ctrl+Shift+W closes the current tab; closing a pinned tab puts it to sleep, closing again removes it. Removing offers Undo.
-- Renaming: double-click a row or F2. A manual name stops following the terminal title until reset.
+- Renaming: use the row menu or F2. A manual name stops following the terminal title until reset.
 - Ctrl+Tab / Ctrl+Shift+Tab cycle tabs in sidebar order; Ctrl+1…9 switch spaces.
 
 ## Split view
@@ -109,6 +109,7 @@ A full page with General (default shell, behavior on close, quick-connect auto-s
 - A drop target is always one line in one gap; a drop that would change nothing shows nothing.
 - The window chrome quiets down while the window is in the background.
 - Every pointer action has a keyboard or menu equivalent.
+- Double-clicks do not trigger application actions; use explicit controls, menus or keyboard shortcuts.
 
 ## Outside this release
 
