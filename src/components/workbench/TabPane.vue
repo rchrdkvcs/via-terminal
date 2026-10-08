@@ -22,8 +22,7 @@ const focused = computed(() => workbench.activeTab?.id === props.tab.id)
   >
     <div
       v-if="inSplit"
-      class="pointer-events-none absolute inset-0 z-20 rounded-xl ring-1 ring-inset transition-[box-shadow] duration-150"
-      :class="focused ? 'ring-primary/45' : 'ring-border'"
+      class="pointer-events-none absolute inset-0 z-20 rounded-xl ring-1 ring-border ring-inset"
       aria-hidden="true"
     />
     <FilePanel v-if="tab.view?.kind === 'files'" :tab="tab" />
