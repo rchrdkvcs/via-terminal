@@ -30,11 +30,7 @@ function onLayout(sizes: number[]) {
     @layout="onLayout"
   >
     <template v-for="(tab, index) in split.tabs" :key="tab.id">
-      <ResizableHandle
-        v-if="index > 0"
-        class="w-2 shrink-0 data-[orientation=vertical]:h-2"
-        aria-label="Redimensionner les terminaux"
-      />
+      <ResizableHandle v-if="index > 0" aria-label="Redimensionner les terminaux" />
       <ResizablePanel :default-size="percent(index)" :min-size="12">
         <TabPane :tab="tab" in-split />
       </ResizablePanel>
