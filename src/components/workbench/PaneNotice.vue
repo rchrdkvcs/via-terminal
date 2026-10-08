@@ -66,6 +66,13 @@ const editHost = () =>
       >
         Modifier l’hôte
       </Button>
+      <Button
+        v-if="mode === 'failed' && tab.target.kind === 'quick'"
+        variant="secondary"
+        @click="ui.openCommand({ kind: 'replace', tabId: tab.id })"
+      >
+        Modifier la connexion
+      </Button>
       <Button v-if="mode === 'failed'" variant="ghost" @click="closing.closeTab(tab.id)"
         >Fermer l’onglet</Button
       >

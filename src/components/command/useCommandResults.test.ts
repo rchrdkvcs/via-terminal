@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
+import { DOMWrapper, mount } from '@vue/test-utils'
 import { mocks, row, setup, split } from '@/stores/workbench.fixture'
 import type { Host, VaultView } from '@/ipc/types'
 import { findTab, isPinned, rowOfTab, tabs } from '@/domain/space'
@@ -10,6 +11,9 @@ import { useUi, type CommandMode } from '@/stores/ui'
 import { useVault } from '@/stores/vault'
 import { useWorkbench } from '@/stores/workbench'
 import { useCommandResults } from './useCommandResults'
+import CommandBar from './CommandBar.vue'
+import PaneNotice from '@/components/workbench/PaneNotice.vue'
+import { parseQuickConnect } from '@/domain/quick-connect'
 
 const closing = vi.hoisted(() => ({ closeTab: vi.fn(), replaceTab: vi.fn() }))
 vi.mock('@/composables/useClosing', () => ({ useClosing: () => closing }))
@@ -114,6 +118,80 @@ describe('command bar, new tab', () => {
 })
 
 describe('command bar, replace and split', () => {
+  it('reopens a failed quick connection for editing and retries in the same tab', async () => {
+    const bar = open({ kind: 'new' })
+    bar.workbench.replace('tab', {
+      kind: 'quick',
+      address: '10.0.0.5',
+      username: 'admin',
+      port: 2222,
+    })
+    mocks.failed.add('tab')
+    bar.ui.closeCommand()
+    const view = mount(CommandBar, { attachTo: document.body })
+    const notice = mount(PaneNotice, { props: { tab: bar.workbench.activeTab!, mode: 'failed' } })
+    try {
+      // Reopening normally restores the failed address.
+      bar.ui.openCommand()
+      await view.vm.$nextTick()
+      const body = new DOMWrapper(document.body)
+      expect(body.get<HTMLInputElement>('input[role="combobox"]').element.value).toBe(
+        'admin@10.0.0.5:2222',
+      )
+      bar.ui.closeCommand()
+      await view.vm.$nextTick()
+
+      await notice
+        .findAll('button')
+        .find((button) => button.text() === 'Modifier la connexion')!
+        .trigger('click')
+      expect(bar.ui.command).toEqual({ kind: 'replace', tabId: 'tab' })
+      const input = body.get<HTMLInputElement>('input[role="combobox"]')
+      expect(input.element.value).toBe('admin@10.0.0.5:2222')
+      await input.setValue('deploy@10.0.0.6:2200')
+      await input.trigger('keydown', { key: 'Enter' })
+      expect(closing.replaceTab).toHaveBeenCalledWith('tab', {
+        kind: 'quick',
+        address: '10.0.0.6',
+        username: 'deploy',
+        port: 2200,
+      })
+      expect(bar.ui.command).toBeNull()
+    } finally {
+      view.unmount()
+      notice.unmount()
+    }
+  })
+
+  it.each([
+    { address: 'server', username: null, port: 22 },
+    { address: '2001:db8::1', username: 'admin', port: 2222 },
+  ])('restores a parseable quick connection with all fields: %j', (target) => {
+    const bar = open({ kind: 'replace', tabId: 'tab' })
+    bar.workbench.replace('tab', { kind: 'quick', ...target })
+    mocks.failed.add('tab')
+    expect(parseQuickConnect(bar.initialQuery())).toEqual(target)
+  })
+
+  it('keeps other command contexts and successful connections empty', () => {
+    const bar = open({ kind: 'new' })
+    bar.workbench.replace('tab', {
+      kind: 'quick',
+      address: 'example.test',
+      username: 'admin',
+      port: null,
+    })
+    expect(bar.initialQuery()).toBe('')
+    mocks.failed.add('tab')
+    for (const mode of [{ kind: 'actions' }, { kind: 'split', tabId: 'tab' }] as CommandMode[]) {
+      bar.ui.openCommand(mode)
+      expect(bar.initialQuery()).toBe('')
+    }
+    bar.workbench.replace('tab', { kind: 'host', hostId: 'alpha' })
+    bar.ui.openCommand()
+    expect(bar.initialQuery()).toBe('')
+  })
+
   it('replaces through the closing module and never lists open tabs', async () => {
     const bar = open({ kind: 'replace', tabId: 'tab' }, 'beta')
     expect(ids(bar.items.value)).toEqual(['host:beta'])

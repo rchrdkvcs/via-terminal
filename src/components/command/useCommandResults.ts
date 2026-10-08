@@ -1,6 +1,8 @@
 import { computed, type Ref } from 'vue'
 import type { Id } from '@/ipc/types'
-import { rowOfTab } from '@/domain/space'
+import { findTab, rowOfTab } from '@/domain/space'
+import { formatQuickTarget } from '@/domain/quick-connect'
+import { useSessions } from '@/stores/sessions'
 import { useSpaces } from '@/stores/spaces'
 import { useUi, type CommandMode } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
@@ -20,11 +22,27 @@ export function useCommandResults(query: Ref<string>) {
   const ui = useUi()
   const spaces = useSpaces()
   const workbench = useWorkbench()
+  const sessions = useSessions()
   const targets = useCommandTargets()
   const actions = useCommandActions()
 
   const mode = computed<CommandMode>(() => ui.command ?? { kind: 'new' })
   const placeholder = computed(() => PLACEHOLDERS[mode.value.kind])
+
+  function initialQuery(): string {
+    const current = mode.value
+    const space = current.kind === 'replace' ? spaces.spaceOf(current.tabId) : undefined
+    const tab =
+      current.kind === 'replace'
+        ? space && findTab(space, current.tabId)
+        : current.kind === 'new'
+          ? workbench.activeTab
+          : undefined
+    if (!tab || tab.target.kind !== 'quick' || sessions.runtime(tab.id).state !== 'failed')
+      return ''
+    // Keep an explicit default port too: it can make a short hostname parseable.
+    return formatQuickTarget(tab.target) + (tab.target.port === 22 ? ':22' : '')
+  }
 
   const items = computed<CommandItem[]>(() => {
     const q = query.value
@@ -88,5 +106,5 @@ export function useCommandResults(query: Ref<string>) {
     else if (item.target) workbench.open(item.target)
   }
 
-  return { mode, placeholder, items, choose }
+  return { mode, placeholder, items, choose, initialQuery }
 }
