@@ -6,6 +6,7 @@ import { useWorkbench } from './workbench'
 
 const mocks = vi.hoisted(() => ({
   live: new Set<string>(),
+  failed: new Set<string>(),
   start: vi.fn(),
   stop: vi.fn(),
   release: vi.fn(),
@@ -26,7 +27,11 @@ vi.mock('./sessions', () => ({
     release: mocks.release,
     isLive: (id: string) => mocks.live.has(id),
     runtime: (id: string) =>
-      mocks.live.has(id) ? { state: 'ready', sessionId: 'session' } : { state: 'asleep' },
+      mocks.failed.has(id)
+        ? { state: 'failed', message: 'Connection refused' }
+        : mocks.live.has(id)
+          ? { state: 'ready', sessionId: 'session' }
+          : { state: 'asleep' },
     onEnded: mocks.onEnded,
     onHostSaved: mocks.onHostSaved,
     tabOf: mocks.tabOf,
@@ -85,6 +90,7 @@ export function setup(pinned: Row[] = [], temporary: Row[] = [], secondPinned: R
 beforeEach(() => {
   vi.resetAllMocks()
   mocks.live.clear()
+  mocks.failed.clear()
   mocks.eventHandlers.clear()
   setActivePinia(createPinia())
   vi.useFakeTimers()

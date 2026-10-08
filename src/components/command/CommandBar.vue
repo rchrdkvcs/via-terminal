@@ -19,7 +19,7 @@ const query = ref('')
 const active = ref(0)
 const input = ref<HTMLInputElement>()
 const list = ref<HTMLElement>()
-const { placeholder, items, choose } = useCommandResults(query)
+const { placeholder, items, choose, initialQuery } = useCommandResults(query)
 
 const open = computed({
   get: () => ui.command !== null,
@@ -28,7 +28,7 @@ const open = computed({
 
 watch(open, async (isOpen) => {
   if (!isOpen) return
-  query.value = ''
+  query.value = initialQuery()
   active.value = 0
   await nextTick()
   input.value?.focus()
