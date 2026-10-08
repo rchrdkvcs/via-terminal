@@ -35,7 +35,7 @@ const ui = useUi()
         <div class="flex min-h-0 flex-1">
           <SidebarFrame />
           <div
-            class="flex min-w-0 flex-1 flex-col pb-2"
+            class="flex min-w-0 flex-1 flex-col pb-2 transition-[padding] duration-200 ease-[var(--ease-drawer)] motion-reduce:transition-none"
             :class="spaces.sidebar.visible ? 'pe-2' : 'px-2'"
           >
             <main
