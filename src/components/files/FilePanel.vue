@@ -63,7 +63,7 @@ function detach() {
 <template>
   <FileDropZone
     :directory="panel.directory"
-    class="relative flex h-full min-h-0 min-w-0 flex-col overflow-y-auto"
+    class="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
     :class="docked ? 'bg-rail' : 'bg-surface'"
     aria-label="Explorateur distant"
     @drop="transfers.drop"
@@ -94,7 +94,7 @@ function detach() {
       @retry="navigate(panel.directory)"
       @dismiss="files.dismissError(tab.id)"
     />
-    <div class="flex min-h-40 flex-1 flex-col">
+    <div class="flex min-h-0 flex-1 flex-col">
       <FileList
         :entries="panel.entries"
         :selected="selected"

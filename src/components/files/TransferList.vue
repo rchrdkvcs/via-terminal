@@ -47,7 +47,7 @@ const name = (path: string) => path.split('/').pop() || path
 <template>
   <section
     v-if="transfers.length"
-    class="flex max-h-[min(12rem,35%)] shrink-0 flex-col border-t border-hairline text-xs"
+    class="relative flex max-h-[min(12rem,35%)] shrink-0 flex-col border-t border-hairline text-xs"
     :aria-labelledby="heading"
   >
     <div class="flex h-9 shrink-0 items-center gap-2 ps-3 pe-2">
@@ -57,7 +57,7 @@ const name = (path: string) => path.split('/').pop() || path
       </Button>
     </div>
     <p role="status" class="sr-only">{{ summary }}</p>
-    <ul class="min-h-0 overflow-auto px-2 pb-2">
+    <ul class="relative min-h-0 overflow-auto overscroll-contain px-2 pb-2">
       <li v-for="transfer in transfers" :key="transfer.id" class="px-1 py-1.5">
         <div class="flex min-h-6 items-center gap-2">
           <span
