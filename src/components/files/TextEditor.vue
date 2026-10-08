@@ -89,7 +89,7 @@ onMounted(() => {
           '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': {
             backgroundColor: 'rgb(127 127 127 / 30%)',
           },
-          '&.cm-focused': { outline: 'none', boxShadow: 'inset 0 0 0 1px var(--ring)' },
+          '&.cm-focused': { outline: 'none' },
         }),
       ],
     }),
