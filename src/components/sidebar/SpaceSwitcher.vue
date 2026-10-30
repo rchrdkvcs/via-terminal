@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Plus } from '@lucide/vue'
+import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
+import SpaceMenu from './SpaceMenu.vue'
 import { spaceIcon } from './spaceIcons'
 
 const spaces = useSpaces()
@@ -25,23 +27,28 @@ const button =
     <div />
     <div class="scrollbar-none -m-0.5 flex min-w-0 overflow-x-auto p-0.5">
       <div class="mx-auto flex w-max items-center gap-0.5">
-        <Tooltip v-for="(space, index) in spaces.spaces" :key="space.id">
-          <TooltipTrigger as-child>
-            <button
-              type="button"
-              :class="button"
-              :aria-label="space.name"
-              :aria-current="space.id === spaces.active.id ? 'true' : undefined"
-              @click="spaces.activate(space.id)"
-            >
-              <component :is="spaceIcon(space.icon)" :size="15" :stroke-width="1.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            {{ space.name
-            }}<span v-if="index < 9" class="ms-2 text-ink-faint">{{ digit(index) }}</span>
-          </TooltipContent>
-        </Tooltip>
+        <ContextMenu v-for="(space, index) in spaces.spaces" :key="space.id">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <ContextMenuTrigger as-child>
+                <button
+                  type="button"
+                  :class="button"
+                  :aria-label="space.name"
+                  :aria-current="space.id === spaces.active.id ? 'true' : undefined"
+                  @click="spaces.activate(space.id)"
+                >
+                  <component :is="spaceIcon(space.icon)" :size="15" :stroke-width="1.5" />
+                </button>
+              </ContextMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {{ space.name
+              }}<span v-if="index < 9" class="ms-2 text-ink-faint">{{ digit(index) }}</span>
+            </TooltipContent>
+          </Tooltip>
+          <SpaceMenu :space="space" />
+        </ContextMenu>
       </div>
     </div>
     <Tooltip>

@@ -88,6 +88,20 @@ class Registry {
     this.entries.get(tabId)?.terminal.paste(text)
   }
 
+  selectAll(tabId: Id) {
+    this.entries.get(tabId)?.terminal.selectAll()
+  }
+
+  clear(tabId: Id) {
+    this.entries.get(tabId)?.terminal.clear()
+  }
+
+  /** A program reading the mouse (vim, tmux, htop) receives right clicks itself. */
+  capturesMouse(tabId: Id): boolean {
+    const mode = this.entries.get(tabId)?.terminal.modes.mouseTrackingMode
+    return !!mode && mode !== 'none'
+  }
+
   release(tabId: Id) {
     const entry = this.entries.get(tabId)
     if (!entry) return

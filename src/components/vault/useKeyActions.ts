@@ -1,5 +1,6 @@
 import { api } from '@/ipc/client'
 import type { Id, Key } from '@/ipc/types'
+import { copyText } from '@/lib/clipboard'
 import { notify } from '@/lib/notify'
 import { useVault } from '@/stores/vault'
 import { useVaultActions } from './useVaultActions'
@@ -8,15 +9,12 @@ export function useKeyActions() {
   const vault = useVault()
   const { run } = useVaultActions()
 
-  async function copyPublicKey(key: Pick<Key, 'publicKey'>) {
-    try {
-      await navigator.clipboard.writeText(key.publicKey)
-      notify.success('Clé publique copiée')
-    } catch {
-      notify.error(
-        'Impossible d’écrire dans le presse-papiers. Sélectionnez la clé publique et copiez-la à la main.',
-      )
-    }
+  function copyPublicKey(key: Pick<Key, 'publicKey'>) {
+    return copyText(
+      key.publicKey,
+      'Clé publique copiée',
+      'Impossible d’écrire dans le presse-papiers. Sélectionnez la clé publique et copiez-la à la main.',
+    )
   }
 
   async function rename(id: Id, label: string | null) {

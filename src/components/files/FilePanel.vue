@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu'
+import { copyText } from '@/lib/clipboard'
 import FileNavigation from './FileNavigation.vue'
 import { useFiles } from '@/stores/files'
 import { useSessions } from '@/stores/sessions'
@@ -9,6 +11,7 @@ import type { RemoteEntry } from '@/ipc/files'
 import { useFileOperations } from './useFileOperations'
 import { useFileTransfers } from './useFileTransfers'
 import FileList from './FileList.vue'
+import FileMenu from './FileMenu.vue'
 import FileToolbar from './FileToolbar.vue'
 import TransferList from './TransferList.vue'
 import FileStatus from './FileStatus.vue'
@@ -54,6 +57,10 @@ function open(entry: RemoteEntry) {
   if (entry.kind === 'directory' || entry.targetKind === 'directory') navigate(entry.path)
   else workbench.openView(props.tab, { kind: 'document', path: entry.path })
 }
+function copyPaths() {
+  const paths = selection.value.map((entry) => entry.path)
+  void copyText(paths.join('\n'), paths.length > 1 ? 'Chemins copiés' : 'Chemin copié')
+}
 function detach() {
   const path = panel.value.directory
   workbench.openView(props.tab, { kind: 'files', path: path.startsWith('/') ? path : null })
@@ -70,16 +77,11 @@ function detach() {
   >
     <FileNavigation :panel="panel" :connected="!!session" @navigate="navigate">
       <FileToolbar
-        :count="selection.length"
         :enabled="!!session && !panel.busy"
         :hidden="hidden"
         :docked="docked"
         @create="operations.create"
         @upload="transfers.upload"
-        @download="transfers.download(selection)"
-        @rename="operations.change(selection[0], 'move')"
-        @chmod="operations.change(selection[0], 'chmod')"
-        @remove="operations.remove(selection)"
         @hidden="hidden = !hidden"
         @detach="detach"
         @hide="files.hide(tab.id)"
@@ -95,16 +97,40 @@ function detach() {
       @dismiss="files.dismissError(tab.id)"
     />
     <div class="flex min-h-0 flex-1 flex-col">
-      <FileList
-        :entries="panel.entries"
-        :selected="selected"
-        :busy="panel.busy"
-        :hidden="hidden"
-        :connected="!!session"
-        :failed="!!panel.error"
-        @select-all="selected = $event"
-        @open="open"
-      />
+      <ContextMenu>
+        <ContextMenuTrigger as-child>
+          <FileList
+            :entries="panel.entries"
+            :selected="selected"
+            :busy="panel.busy"
+            :hidden="hidden"
+            :connected="!!session"
+            :failed="!!panel.error"
+            @select-all="selected = $event"
+            @open="open"
+            @rename="operations.change(selection[0], 'move')"
+            @remove="operations.remove(selection)"
+          />
+        </ContextMenuTrigger>
+        <FileMenu
+          :count="selection.length"
+          :enabled="!!session && !panel.busy"
+          :hidden="hidden"
+          :docked="docked"
+          @open="open(selection[0])"
+          @copy="copyPaths"
+          @download="transfers.download(selection)"
+          @rename="operations.change(selection[0], 'move')"
+          @chmod="operations.change(selection[0], 'chmod')"
+          @remove="operations.remove(selection)"
+          @create="operations.create"
+          @upload="transfers.upload"
+          @refresh="navigate(panel.directory)"
+          @hidden="hidden = !hidden"
+          @detach="detach"
+          @hide="files.hide(tab.id)"
+        />
+      </ContextMenu>
     </div>
     <TransferList
       :transfers="files.transfers(tab.id)"

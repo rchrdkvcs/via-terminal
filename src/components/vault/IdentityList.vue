@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { KeyRound, LockKeyhole, Plus } from '@lucide/vue'
-import { computed, ref } from 'vue'
+import { KeyRound, LockKeyhole, Pencil, Plus, Trash2 } from '@lucide/vue'
+import { computed, nextTick, ref } from 'vue'
 import { Button } from '@/components/ui/button'
+import {
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+} from '@/components/ui/context-menu'
 import { useVault } from '@/stores/vault'
 import { normalize } from './search'
 import { useVaultActions } from './useVaultActions'
@@ -28,7 +33,7 @@ const ids = computed(() => identities.value.map((identity) => identity.id))
 const keyLabel = (id: string | null) => vault.view.keys.find((key) => key.id === id)?.label
 
 function focusEditor() {
-  document.getElementById('identity-label')?.focus()
+  void nextTick(() => document.getElementById('identity-label')?.focus())
 }
 </script>
 
@@ -76,6 +81,17 @@ function focusEditor() {
           role="img"
           aria-label="Mot de passe enregistré"
         />
+        <template #menu>
+          <ContextMenuItem @select="focusEditor">
+            <Pencil :stroke-width="1.5" /> Modifier
+            <ContextMenuShortcut>Entrée</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem variant="destructive" @select="actions.deleteIdentity(identity.id)">
+            <Trash2 :stroke-width="1.5" /> Supprimer
+            <ContextMenuShortcut>Suppr</ContextMenuShortcut>
+          </ContextMenuItem>
+        </template>
       </VaultRow>
     </template>
     <template #empty>

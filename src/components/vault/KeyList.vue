@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { Copy, FileUp, Plus } from '@lucide/vue'
+import { Copy, FileUp, Pencil, Plus, Trash2 } from '@lucide/vue'
 import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
+import {
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+} from '@/components/ui/context-menu'
 import type { Id } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
 import { formatDate, truncateMiddle } from './format'
@@ -92,6 +97,20 @@ async function renamed(id: Id, label: string | null) {
           >
             <Copy :stroke-width="1.5" />
           </IconAction>
+        </template>
+        <template #menu>
+          <ContextMenuItem @select="keyActions.copyPublicKey(key)">
+            <Copy :stroke-width="1.5" /> Copier la clé publique
+          </ContextMenuItem>
+          <ContextMenuItem @select="state.renaming.value = key.id">
+            <Pencil :stroke-width="1.5" /> Renommer
+            <ContextMenuShortcut>Entrée</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem variant="destructive" @select="actions.deleteKey(key.id)">
+            <Trash2 :stroke-width="1.5" /> Supprimer
+            <ContextMenuShortcut>Suppr</ContextMenuShortcut>
+          </ContextMenuItem>
         </template>
       </VaultRow>
     </template>

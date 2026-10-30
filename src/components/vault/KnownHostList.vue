@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { Trash2 } from '@lucide/vue'
+import { Copy, Trash2 } from '@lucide/vue'
 import { computed, ref } from 'vue'
+import {
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+} from '@/components/ui/context-menu'
+import { copyText } from '@/lib/clipboard'
 import { useVault } from '@/stores/vault'
 import { formatDate, truncateMiddle } from './format'
 import IconAction from './IconAction.vue'
@@ -66,6 +72,16 @@ const ids = computed(() => known.value.map((item) => item.id))
           >
             <Trash2 :stroke-width="1.5" />
           </IconAction>
+        </template>
+        <template #menu>
+          <ContextMenuItem @select="copyText(item.fingerprint, 'Empreinte copiée')">
+            <Copy :stroke-width="1.5" /> Copier l’empreinte
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem variant="destructive" @select="actions.deleteKnownHost(item.id)">
+            <Trash2 :stroke-width="1.5" /> Oublier l’empreinte
+            <ContextMenuShortcut>Suppr</ContextMenuShortcut>
+          </ContextMenuItem>
         </template>
       </VaultRow>
     </template>
