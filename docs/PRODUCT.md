@@ -33,7 +33,7 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 ## Opening things
 
 - Shortcuts use Ctrl+Shift on Windows and Linux, so the shell keeps Ctrl+W, Ctrl+D, Ctrl+L and the other line-editing keys, and ⌘ on macOS.
-- **Ctrl+Shift+T** opens the command bar. It lists local shells, recent hosts, then every host matching what you type (label, address, user, tags, group). Enter opens the selection as a new temporary tab.
+- **Ctrl+Shift+T** opens the command bar. It lists local shells, recent hosts, then every host matching what you type (label, address, user, tags, group). Enter opens the selection as a new temporary tab; a recent host already open in the space goes to its tab instead.
 - Typing `user@host`, `host:2222` or `ssh user@host -p 2222` offers **Connect to …**. When authentication succeeds, the host is saved in the vault automatically.
 - **Ctrl+Shift+L** (or clicking the address pill) opens the command bar for the current tab: Enter replaces what the tab connects to.
 - **Ctrl+Shift+P** opens the same bar with actions first: new space, open vault, settings, split, pin, rename, close.

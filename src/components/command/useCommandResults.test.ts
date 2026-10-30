@@ -86,6 +86,16 @@ describe('command bar, new tab', () => {
     expect(mocks.start).toHaveBeenCalledOnce()
   })
 
+  it('goes to the tab of a recent host already open in the space', async () => {
+    const bar = open(null)
+    bar.workbench.replace('pinned', { kind: 'host', hostId: 'alpha' })
+    bar.workbench.activate('tab', { wake: false })
+    const before = tabs(bar.spaces.active).length
+    await bar.choose(item(bar.items.value, 'host:alpha'))
+    expect(bar.workbench.activeTab?.id).toBe('pinned')
+    expect(tabs(bar.spaces.active)).toHaveLength(before)
+  })
+
   it('searches the vault by name, group and tag', () => {
     const bar = open({ kind: 'new' }, 'production')
     expect(ids(bar.items.value).filter((id) => id.startsWith('host:'))).toEqual(['host:alpha'])
