@@ -1,37 +1,50 @@
 <script setup lang="ts">
 import { Search } from '@lucide/vue'
-import { nextTick, useTemplateRef } from 'vue'
+import { nextTick, ref, useTemplateRef } from 'vue'
 import { Input } from '@/components/ui/input'
 import type { Id } from '@/ipc/types'
 import { step } from './navigation'
 
 const props = defineProps<{
   title: string
+  description: string
   ids: Id[]
-  selected: Id | null
   searchLabel?: string
 }>()
-const emit = defineEmits<{ select: [id: Id]; activate: [id: Id]; remove: [id: Id] }>()
+const emit = defineEmits<{ activate: [id: Id]; remove: [id: Id] }>()
 const query = defineModel<string>('query', { default: '' })
 const list = useTemplateRef('list')
+/** The row keyboard actions apply to. Opening a row is a click, not a selection. */
+const cursor = ref<Id | null>(null)
+
+function current(): Id | null {
+  return cursor.value && props.ids.includes(cursor.value) ? cursor.value : null
+}
 
 function focusRow(id: Id) {
+  cursor.value = id
   void nextTick(() =>
     list.value?.querySelector<HTMLElement>(`[data-row-id="${CSS.escape(id)}"]`)?.focus(),
   )
 }
 
+function onFocusin(event: FocusEvent) {
+  const row = (event.target as Element | null)?.closest<HTMLElement>('[data-row-id]')
+  if (row?.dataset.rowId) cursor.value = row.dataset.rowId
+}
+
 function onKeydown(event: KeyboardEvent) {
-  const next = step(props.ids, props.selected, event.key)
+  if ((event.target as Element | null)?.closest('input, textarea')) return
+  const next = step(props.ids, current(), event.key)
   if (next) {
     event.preventDefault()
-    emit('select', next)
     focusRow(next)
     return
   }
-  if (!props.selected) return
-  if (event.key === 'Enter') emit('activate', props.selected)
-  else if (event.key === 'Delete') emit('remove', props.selected)
+  const id = current()
+  if (!id) return
+  if (event.key === 'Enter') emit('activate', id)
+  else if (event.key === 'Delete') emit('remove', id)
   else return
   event.preventDefault()
 }
@@ -42,32 +55,34 @@ function onSearchKeydown(event: KeyboardEvent) {
     query.value = ''
   } else if (event.key === 'ArrowDown' && props.ids.length) {
     event.preventDefault()
-    const first =
-      props.selected && props.ids.includes(props.selected) ? props.selected : props.ids[0]
-    emit('select', first)
-    focusRow(first)
+    focusRow(current() ?? props.ids[0])
   }
 }
 
 function tabbable(id: Id): boolean {
-  const current =
-    props.selected && props.ids.includes(props.selected) ? props.selected : props.ids[0]
-  return id === current
+  return id === (current() ?? props.ids[0])
+}
+
+function isCurrent(id: Id): boolean {
+  return id === current()
 }
 </script>
 
 <template>
   <section class="flex h-full min-w-0 flex-col" :aria-label="title">
-    <header class="shrink-0 px-5 pt-3.5 pb-3">
-      <div class="flex h-8 items-center gap-3">
-        <h2 class="min-w-0 flex-1 truncate text-[15px] font-semibold tracking-[-0.01em]">
-          {{ title }}
-        </h2>
+    <header class="mx-auto w-full max-w-[880px] shrink-0 px-8 pt-7 pb-4">
+      <div class="flex items-start gap-4">
+        <div class="min-w-0 flex-1">
+          <h2 class="truncate text-[18px] font-semibold tracking-[-0.015em]">{{ title }}</h2>
+          <p class="mt-1 max-w-[52ch] text-xs leading-relaxed text-pretty text-ink-muted">
+            {{ description }}
+          </p>
+        </div>
         <div class="flex shrink-0 items-center gap-1.5">
           <slot name="actions" />
         </div>
       </div>
-      <div v-if="searchLabel" class="relative mt-2.5">
+      <div v-if="searchLabel" class="relative mt-4">
         <Search
           class="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-faint"
           :stroke-width="1.5"
@@ -83,16 +98,19 @@ function tabbable(id: Id): boolean {
         />
       </div>
     </header>
-    <slot name="before" />
+    <div class="mx-auto w-full max-w-[880px] px-8">
+      <slot name="before" />
+    </div>
     <div
       v-if="ids.length"
       ref="list"
       role="listbox"
       :aria-label="title"
-      class="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-3 pb-3"
+      class="mx-auto flex min-h-0 w-full max-w-[880px] flex-1 flex-col gap-px overflow-y-auto px-6 pb-6"
       @keydown="onKeydown"
+      @focusin="onFocusin"
     >
-      <slot :tabbable="tabbable" />
+      <slot :tabbable="tabbable" :current="isCurrent" />
     </div>
     <div v-else class="flex min-h-0 flex-1 items-center justify-center px-8 pb-12">
       <slot name="empty" />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FolderPlus, Pencil, Plus, Trash2 } from '@lucide/vue'
+import { FolderPlus, Pencil, Plus, SlidersHorizontal, Trash2 } from '@lucide/vue'
 import {
   ContextMenuContent,
   ContextMenuItem,
@@ -33,6 +33,10 @@ function newHost(groupId: Id | null) {
     </ContextMenuItem>
     <template v-if="groupId">
       <ContextMenuSeparator />
+      <ContextMenuItem @select="tree.edit(groupId)">
+        <SlidersHorizontal :stroke-width="1.5" />
+        Valeurs par défaut
+      </ContextMenuItem>
       <ContextMenuItem @select="state.renaming.value = groupId">
         <Pencil :stroke-width="1.5" />
         Renommer

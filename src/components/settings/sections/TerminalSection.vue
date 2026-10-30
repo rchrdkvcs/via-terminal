@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useSettings } from '@/stores/settings'
+import SettingGroup from '../SettingGroup.vue'
 import SettingRow from '../SettingRow.vue'
 import SettingSlider from '../SettingSlider.vue'
 
@@ -30,7 +31,7 @@ function onScrollback(value: unknown) {
 </script>
 
 <template>
-  <section aria-label="Terminal">
+  <SettingGroup title="Défilement et sélection">
     <SettingRow
       v-slot="{ id, descriptionId }"
       label="Historique"
@@ -80,5 +81,5 @@ function onScrollback(value: unknown) {
         @update:model-value="(on: boolean) => store.update({ copyOnSelect: on })"
       />
     </SettingRow>
-  </section>
+  </SettingGroup>
 </template>

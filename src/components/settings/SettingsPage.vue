@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useTimeoutFn } from '@vueuse/core'
-import { Keyboard, Palette, Settings2, Terminal } from '@lucide/vue'
+import { Keyboard, Palette, RotateCcw, Settings2, Terminal } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { notify } from '@/lib/notify'
@@ -49,22 +49,26 @@ function onReset() {
     close-label="Fermer les réglages"
     :sections="sections"
   >
-    <div class="flex min-w-0 flex-1 flex-col">
-      <ScrollArea class="min-h-0 flex-1">
-        <div class="mx-auto flex w-full max-w-[640px] flex-col px-8 pt-5 pb-10">
-          <h2 class="mb-4 text-[20px] font-semibold tracking-[-0.015em]">{{ section.label }}</h2>
-          <component :is="section.view" />
-
-          <div class="mt-8 flex items-center justify-between gap-6 pt-4">
-            <p class="text-xs text-muted-foreground" aria-live="polite">
-              {{ confirming ? 'Tous les réglages reprendront leur valeur initiale.' : '' }}
-            </p>
-            <Button :variant="confirming ? 'destructive' : 'secondary'" size="sm" @click="onReset">
-              {{ confirming ? 'Confirmer' : 'Rétablir les valeurs par défaut' }}
-            </Button>
-          </div>
-        </div>
-      </ScrollArea>
-    </div>
+    <template #actions>
+      <Button
+        :variant="confirming ? 'destructive' : 'ghost'"
+        size="sm"
+        class="me-1"
+        :title="confirming ? 'Tous les réglages reprendront leur valeur initiale.' : undefined"
+        @click="onReset"
+      >
+        <RotateCcw :stroke-width="1.5" aria-hidden="true" />
+        {{ confirming ? 'Confirmer' : 'Rétablir les valeurs par défaut' }}
+      </Button>
+    </template>
+    <ScrollArea class="min-h-0 min-w-0 flex-1">
+      <div class="mx-auto flex w-full max-w-[720px] flex-col px-10 pt-8 pb-12">
+        <h2 class="sr-only">{{ section.label }}</h2>
+        <p class="sr-only" aria-live="polite">
+          {{ confirming ? 'Tous les réglages reprendront leur valeur initiale.' : '' }}
+        </p>
+        <component :is="section.view" />
+      </div>
+    </ScrollArea>
   </PageShell>
 </template>

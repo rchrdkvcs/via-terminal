@@ -28,7 +28,7 @@ const cursorClass = computed(
 <template>
   <figure
     aria-label="Aperçu du terminal"
-    class="overflow-hidden rounded-lg bg-surface px-4 py-3 text-surface-ink shadow-row"
+    class="overflow-hidden rounded-xl bg-surface px-4 py-3 text-surface-ink shadow-row"
   >
     <pre
       class="m-0 whitespace-pre"

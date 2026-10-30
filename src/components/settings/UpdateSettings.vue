@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { useSettings } from '@/stores/settings'
 import { useUpdates } from '@/stores/updates'
+import SettingGroup from './SettingGroup.vue'
 import SettingRow from './SettingRow.vue'
 
 const settings = useSettings()
@@ -17,8 +18,7 @@ async function check() {
 </script>
 
 <template>
-  <section aria-label="Mises à jour" class="mt-6">
-    <h3 class="mb-2 text-sm font-medium">Mises à jour</h3>
+  <SettingGroup title="Mises à jour">
     <SettingRow
       v-slot="{ id, descriptionId }"
       label="Vérifier au démarrage"
@@ -41,14 +41,16 @@ async function check() {
         {{ updates.phase === 'checking' ? 'Vérification…' : 'Vérifier les mises à jour' }}
       </Button>
     </SettingRow>
-    <p v-if="updates.error" role="alert" class="mt-2 text-xs text-destructive">
-      {{ updates.error }}
-    </p>
-    <p v-else-if="updates.version" role="status" class="mt-2 text-xs text-muted-foreground">
-      La version {{ updates.version }} est disponible.
-    </p>
-    <p v-else-if="checked" role="status" class="mt-2 text-xs text-muted-foreground">
-      Via est à jour.
-    </p>
-  </section>
+    <template #after>
+      <p v-if="updates.error" role="alert" class="px-1 text-xs text-destructive">
+        {{ updates.error }}
+      </p>
+      <p v-else-if="updates.version" role="status" class="px-1 text-xs text-muted-foreground">
+        La version {{ updates.version }} est disponible.
+      </p>
+      <p v-else-if="checked" role="status" class="px-1 text-xs text-muted-foreground">
+        Via est à jour.
+      </p>
+    </template>
+  </SettingGroup>
 </template>

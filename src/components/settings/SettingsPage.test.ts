@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { DOMWrapper, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSettings } from '@/stores/settings'
@@ -11,8 +11,10 @@ vi.mock('@/ipc/client', () => ({
 }))
 vi.mock('@/lib/notify', () => ({ notify: { info: vi.fn(), success: vi.fn(), error: vi.fn() } }))
 
-function render() {
-  return mount(SettingsPage, { attachTo: document.body })
+async function render() {
+  const page = mount(SettingsPage, { attachTo: document.body })
+  await flushPromises()
+  return { page, body: new DOMWrapper(document.body) }
 }
 
 describe('SettingsPage', () => {
@@ -22,30 +24,33 @@ describe('SettingsPage', () => {
   })
 
   it('returns to the workbench on Escape and on the close button', async () => {
-    const page = render()
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    let { page, body } = await render()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     expect(useUi().route).toBe('workbench')
+    page.unmount()
 
     useUi().route = 'settings'
-    await page.get('[aria-label="Fermer les réglages"]').trigger('click')
+    ;({ page, body } = await render())
+    await body.get('[aria-label="Fermer les réglages"]').trigger('click')
     expect(useUi().route).toBe('workbench')
     page.unmount()
   })
 
   it('switches sections from the rail', async () => {
-    const page = render()
-    const shortcuts = page.findAll('nav button').find((b) => b.text().includes('Raccourcis'))
+    const { page, body } = await render()
+    const shortcuts = body.findAll('nav button').find((b) => b.text().includes('Raccourcis'))
     await shortcuts?.trigger('click')
-    expect(page.get('h2').text()).toBe('Raccourcis')
-    expect(page.text()).toContain('Nouvel onglet')
+    expect(body.get('h2').text()).toBe('Raccourcis')
+    expect(body.get('[aria-current="page"]').text()).toContain('Raccourcis')
+    expect(body.text()).toContain('Nouvel onglet')
     page.unmount()
   })
 
   it('asks for a second press before resetting', async () => {
     const settings = useSettings()
     settings.update({ fontSize: 20 })
-    const page = render()
-    const button = () => page.findAll('button').find((b) => /Rétablir|Confirmer/.test(b.text()))
+    const { page, body } = await render()
+    const button = () => body.findAll('button').find((b) => /Rétablir|Confirmer/.test(b.text()))
 
     await button()?.trigger('click')
     expect(button()?.text()).toBe('Confirmer')

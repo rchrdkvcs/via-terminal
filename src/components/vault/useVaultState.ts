@@ -49,12 +49,28 @@ function createState() {
     }
   })
 
+  /** Leaves the opened item and returns to its list. */
+  function back() {
+    creating.value = false
+    ui.vaultFocus = { section: ui.vaultFocus.section, id: null }
+  }
+
   function startCreating() {
     ui.vaultFocus = { section: ui.vaultFocus.section, id: null }
     creating.value = true
   }
 
-  return { section, selected, creating, scope, collapsed, renaming, inspecting, startCreating }
+  return {
+    section,
+    selected,
+    creating,
+    scope,
+    collapsed,
+    renaming,
+    inspecting,
+    back,
+    startCreating,
+  }
 }
 
 export type VaultState = ReturnType<typeof createState>

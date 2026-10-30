@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Copy, Trash2 } from '@lucide/vue'
+import { Copy, ShieldCheck, Trash2 } from '@lucide/vue'
 import { computed, ref } from 'vue'
 import {
   ContextMenuItem,
@@ -12,13 +12,11 @@ import { formatDate, truncateMiddle } from './format'
 import IconAction from './IconAction.vue'
 import { normalize } from './search'
 import { useVaultActions } from './useVaultActions'
-import { useVaultState } from './useVaultState'
 import VaultEmpty from './VaultEmpty.vue'
 import VaultListPane from './VaultListPane.vue'
 import VaultRow from './VaultRow.vue'
 
 const vault = useVault()
-const state = useVaultState()
 const actions = useVaultActions()
 const query = ref('')
 
@@ -37,21 +35,24 @@ const ids = computed(() => known.value.map((item) => item.id))
   <VaultListPane
     v-model:query="query"
     title="Empreintes connues"
+    description="Les serveurs dont vous avez accepté l’empreinte à la première connexion. Via vérifie ensuite qu’elle ne change pas. Oubliez-en une si le serveur a été réinstallé."
     search-label="Rechercher un serveur"
     :ids="ids"
-    :selected="state.selected.value"
-    @select="state.selected.value = $event"
     @remove="actions.deleteKnownHost"
   >
-    <template #default="{ tabbable }">
+    <template #default="{ tabbable, current }">
       <VaultRow
         v-for="item in known"
         :id="item.id"
         :key="item.id"
-        :selected="item.id === state.selected.value"
+        :current="current(item.id)"
         :tabbable="tabbable(item.id)"
-        @select="state.selected.value = item.id"
       >
+        <span
+          class="material-control grid size-8 shrink-0 place-items-center rounded-lg text-ink-muted"
+        >
+          <ShieldCheck :size="15" :stroke-width="1.5" />
+        </span>
         <div class="min-w-0 flex-1">
           <div class="truncate font-medium">{{ item.address }}:{{ item.port }}</div>
           <div class="text-muted-foreground flex min-w-0 gap-2 text-xs">

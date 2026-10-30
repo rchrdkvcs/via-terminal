@@ -40,23 +40,13 @@ const ui = useUi()
             class="flex min-w-0 flex-1 flex-col pb-2 transition-[padding] duration-200 ease-[var(--ease-drawer)] motion-reduce:transition-none"
             :class="spaces.sidebar.visible ? 'pe-2' : 'px-2'"
           >
-            <main
-              class="relative min-h-0 flex-1 text-surface-ink"
-              :class="
-                ui.route !== 'workbench'
-                  ? 'overflow-hidden rounded-xl bg-surface shadow-surface'
-                  : ''
-              "
-            >
-              <Workbench v-show="ui.route === 'workbench'" />
-              <VaultPage v-if="ui.route === 'vault'" class="absolute inset-0 bg-surface" />
-              <SettingsPage
-                v-else-if="ui.route === 'settings'"
-                class="absolute inset-0 bg-surface"
-              />
+            <main class="relative min-h-0 flex-1 text-surface-ink">
+              <Workbench />
             </main>
           </div>
         </div>
+        <VaultPage v-if="ui.route === 'vault'" />
+        <SettingsPage v-else-if="ui.route === 'settings'" />
         <CommandBar />
         <SpaceDialog />
         <ConfirmDialog />

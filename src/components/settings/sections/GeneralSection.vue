@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useSettings } from '@/stores/settings'
+import SettingGroup from '../SettingGroup.vue'
 import SettingRow from '../SettingRow.vue'
 import UpdateSettings from '../UpdateSettings.vue'
 
@@ -32,55 +33,60 @@ function onShell(value: unknown) {
 </script>
 
 <template>
-  <section aria-label="Général">
-    <SettingRow
-      v-slot="{ id, descriptionId }"
-      label="Shell par défaut"
-      description="Ouvert dans les nouveaux onglets locaux, sauf si l'espace en choisit un autre."
-    >
-      <Select :model-value="defaultShell" @update:model-value="onShell">
-        <SelectTrigger
+  <div class="grid gap-8">
+    <SettingGroup title="Onglets">
+      <SettingRow
+        v-slot="{ id, descriptionId }"
+        label="Shell par défaut"
+        description="Ouvert dans les nouveaux onglets locaux, sauf si l'espace en choisit un autre."
+      >
+        <Select :model-value="defaultShell" @update:model-value="onShell">
+          <SelectTrigger
+            :id="id"
+            size="sm"
+            class="w-64 text-[13px]"
+            :aria-describedby="descriptionId"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem :value="SYSTEM">{{ systemLabel }}</SelectItem>
+            <SelectItem v-for="shell in store.shells" :key="shell.path" :value="shell.path">
+              {{ shell.name }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </SettingRow>
+
+      <SettingRow
+        v-slot="{ id, descriptionId }"
+        label="Confirmer avant de fermer un onglet actif"
+        description="Demande une confirmation quand un processus tourne encore dans l'onglet."
+      >
+        <Switch
           :id="id"
-          size="sm"
-          class="w-64 text-[13px]"
           :aria-describedby="descriptionId"
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem :value="SYSTEM">{{ systemLabel }}</SelectItem>
-          <SelectItem v-for="shell in store.shells" :key="shell.path" :value="shell.path">
-            {{ shell.name }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    </SettingRow>
+          :model-value="store.settings.confirmCloseRunning"
+          @update:model-value="(on: boolean) => store.update({ confirmCloseRunning: on })"
+        />
+      </SettingRow>
+    </SettingGroup>
 
-    <SettingRow
-      v-slot="{ id, descriptionId }"
-      label="Enregistrer les connexions rapides"
-      description="Un hôte tapé dans la barre de commande rejoint le coffre une fois connecté."
-    >
-      <Switch
-        :id="id"
-        :aria-describedby="descriptionId"
-        :model-value="store.settings.saveQuickConnect"
-        @update:model-value="(on: boolean) => store.update({ saveQuickConnect: on })"
-      />
-    </SettingRow>
+    <SettingGroup title="Coffre">
+      <SettingRow
+        v-slot="{ id, descriptionId }"
+        label="Enregistrer les connexions rapides"
+        description="Un hôte tapé dans la barre de commande rejoint le coffre une fois connecté."
+      >
+        <Switch
+          :id="id"
+          :aria-describedby="descriptionId"
+          :model-value="store.settings.saveQuickConnect"
+          @update:model-value="(on: boolean) => store.update({ saveQuickConnect: on })"
+        />
+      </SettingRow>
+    </SettingGroup>
 
-    <SettingRow
-      v-slot="{ id, descriptionId }"
-      label="Confirmer avant de fermer un onglet actif"
-      description="Demande une confirmation quand un processus tourne encore dans l'onglet."
-    >
-      <Switch
-        :id="id"
-        :aria-describedby="descriptionId"
-        :model-value="store.settings.confirmCloseRunning"
-        @update:model-value="(on: boolean) => store.update({ confirmCloseRunning: on })"
-      />
-    </SettingRow>
     <UpdateSettings />
-  </section>
+  </div>
 </template>

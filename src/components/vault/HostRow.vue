@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Copy, CopyPlus, KeyRound, LockKeyhole, Plug, Server, Trash2 } from '@lucide/vue'
+import { Copy, CopyPlus, KeyRound, LockKeyhole, Pencil, Plug, Server, Trash2 } from '@lucide/vue'
 import { computed } from 'vue'
+import { Button } from '@/components/ui/button'
 import {
   ContextMenuItem,
   ContextMenuSeparator,
@@ -13,8 +14,8 @@ import { useVault } from '@/stores/vault'
 import { useVaultActions } from './useVaultActions'
 import VaultRow from './VaultRow.vue'
 
-const props = defineProps<{ host: Host; selected: boolean; tabbable: boolean }>()
-defineEmits<{ select: [] }>()
+const props = defineProps<{ host: Host; current: boolean; tabbable: boolean }>()
+defineEmits<{ open: [] }>()
 const vault = useVault()
 const hostName = useHostName()
 const actions = useVaultActions()
@@ -37,7 +38,7 @@ const shownTags = computed(() => props.host.tags.slice(0, 3))
 </script>
 
 <template>
-  <VaultRow :id="host.id" :selected="selected" :tabbable="tabbable" @select="$emit('select')">
+  <VaultRow :id="host.id" :current="current" :tabbable="tabbable" @open="$emit('open')">
     <span
       class="material-control grid size-8 shrink-0 place-items-center rounded-lg text-ink-muted"
     >
@@ -67,10 +68,19 @@ const shownTags = computed(() => props.host.tags.slice(0, 3))
         {{ credential.label }}
       </span>
     </div>
+    <template #actions>
+      <Button size="xs" tabindex="-1" @click.stop="actions.connect(host.id)">
+        <Plug :stroke-width="1.5" />
+        Connecter
+      </Button>
+    </template>
     <template #menu>
       <ContextMenuItem @select="actions.connect(host.id)">
         <Plug :stroke-width="1.5" /> Se connecter
         <ContextMenuShortcut>Entrée</ContextMenuShortcut>
+      </ContextMenuItem>
+      <ContextMenuItem @select="$emit('open')">
+        <Pencil :stroke-width="1.5" /> Modifier
       </ContextMenuItem>
       <ContextMenuItem @select="actions.duplicateHost(host.id)">
         <CopyPlus :stroke-width="1.5" /> Dupliquer

@@ -13,6 +13,7 @@ import IconAction from './IconAction.vue'
 import { hostInput, requireAddress } from './inputs'
 import InspectorLayout from './InspectorLayout.vue'
 import { useDraft } from './useDraft'
+import VaultCard from './VaultCard.vue'
 import { useVaultActions } from './useVaultActions'
 import { useVaultState } from './useVaultState'
 
@@ -64,9 +65,15 @@ function onKeydown(event: KeyboardEvent) {
         <Trash2 :stroke-width="1.5" />
       </IconAction>
     </template>
-    <HostAddressFields v-model="draft" :inherited="resolved" @commit="autosave" />
-    <HostCredentials v-model="draft" :resolved="resolved" @commit="autosave" />
-    <HostDetails v-model="draft" @commit="autosave" />
+    <VaultCard title="Serveur">
+      <HostAddressFields v-model="draft" :inherited="resolved" @commit="autosave" />
+    </VaultCard>
+    <VaultCard title="Authentification" description="Le compte utilisé pour ouvrir la session SSH.">
+      <HostCredentials v-model="draft" :resolved="resolved" @commit="autosave" />
+    </VaultCard>
+    <VaultCard title="Organisation">
+      <HostDetails v-model="draft" @commit="autosave" />
+    </VaultCard>
     <template v-if="!host" #footer>
       <Button variant="ghost" size="sm" @click="state.creating.value = false">Annuler</Button>
       <Button variant="outline" size="sm" :disabled="saving" @click="create(false)"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Copy, FileUp, Pencil, Plus, Trash2 } from '@lucide/vue'
+import { Copy, FileUp, KeyRound, Pencil, Plus, Trash2 } from '@lucide/vue'
 import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import {
@@ -45,10 +45,9 @@ async function renamed(id: Id, label: string | null) {
 <template>
   <VaultListPane
     title="Clés"
+    description="Vos clés SSH privées, générées ici ou importées. Ajoutez leur clé publique aux serveurs, puis choisissez la clé sur un hôte ou une identité."
     :ids="ids"
-    :selected="state.selected.value"
-    @select="state.selected.value = $event"
-    @activate="state.renaming.value = $event"
+    @activate="state.selected.value = $event"
     @remove="actions.deleteKey"
   >
     <template #actions>
@@ -64,15 +63,20 @@ async function renamed(id: Id, label: string | null) {
     <template #before>
       <KeyGenerateForm v-if="generating" @done="added" />
     </template>
-    <template #default="{ tabbable }">
+    <template #default="{ tabbable, current }">
       <VaultRow
         v-for="key in keys"
         :id="key.id"
         :key="key.id"
-        :selected="key.id === state.selected.value"
+        :current="current(key.id)"
         :tabbable="tabbable(key.id)"
-        @select="state.selected.value = key.id"
+        @open="state.selected.value = key.id"
       >
+        <span
+          class="material-control grid size-8 shrink-0 place-items-center rounded-lg text-ink-muted"
+        >
+          <KeyRound :size="15" :stroke-width="1.5" />
+        </span>
         <div class="min-w-0 flex-1">
           <InlineRename
             v-if="state.renaming.value === key.id"
@@ -104,7 +108,6 @@ async function renamed(id: Id, label: string | null) {
           </ContextMenuItem>
           <ContextMenuItem @select="state.renaming.value = key.id">
             <Pencil :stroke-width="1.5" /> Renommer
-            <ContextMenuShortcut>Entrée</ContextMenuShortcut>
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem variant="destructive" @select="actions.deleteKey(key.id)">
