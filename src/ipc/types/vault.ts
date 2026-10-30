@@ -1,5 +1,4 @@
 export type {
-  Defaults,
   Effective,
   Group,
   GroupInput,
@@ -10,7 +9,6 @@ export type {
   IdentityInput,
   Key,
   KeyImport,
-  KnownHost,
   Mutation,
   SecretUpdate,
   Source,

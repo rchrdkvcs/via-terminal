@@ -4,10 +4,7 @@ import type { FileRequest, FilesReply, Listing, RemoteText } from './bindings'
 
 export type {
   Collision,
-  EntryKind,
   FileRequest,
-  Listing,
-  NativeTransferState,
   RemoteEntry,
   RemoteOwner,
   RemoteText,

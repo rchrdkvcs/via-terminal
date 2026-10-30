@@ -3,7 +3,7 @@ import type { Instance } from './create'
 
 const MAX = 1000
 
-export function proposedSize(instance: Instance): Size | null {
+function proposedSize(instance: Instance): Size | null {
   if (!instance.container.isConnected) return null
   const proposed = instance.fit.proposeDimensions()
   if (!proposed || !Number.isFinite(proposed.cols) || !Number.isFinite(proposed.rows)) return null

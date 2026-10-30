@@ -5,7 +5,7 @@ type Wheel = Pick<
   'deltaX' | 'deltaY' | 'deltaMode' | 'ctrlKey' | 'shiftKey' | 'preventDefault'
 >
 
-export const RELEASE_GAP = 100
+const RELEASE_GAP = 100
 
 const DECAY_RUN = 4
 

@@ -44,7 +44,3 @@ export function on<K extends keyof EventMap>(name: K, handler: Handler<K>): () =
   }
   return () => handlers.delete(handler)
 }
-
-export function emitLocally<K extends keyof EventMap>(name: K, payload: EventMap[K]): void {
-  for (const subscriber of (subscribers.get(name) ?? []) as Set<Handler<K>>) subscriber(payload)
-}

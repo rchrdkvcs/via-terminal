@@ -57,12 +57,6 @@ export function locate(space: Space, id: Id): Location | undefined {
   return undefined
 }
 
-export function folderOf(space: Space, rowId: Id): Folder | undefined {
-  const location = locate(space, rowId)
-  if (!location?.folderId) return undefined
-  return space.pinned.find((entry): entry is Folder => entry.id === location.folderId)
-}
-
 export function newTabRow(tab: Tab): Row {
   return { kind: 'tab', ...tab }
 }

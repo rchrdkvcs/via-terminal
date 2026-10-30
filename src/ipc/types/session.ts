@@ -1,11 +1,8 @@
 export type {
-  CredentialChoice,
-  CursorStyle,
   FailureReason,
   LocalTarget,
   Prompt,
   PromptAnswer,
-  PromptField,
   QuickTarget,
   SessionPromptEvent,
   SessionState,
@@ -14,6 +11,5 @@ export type {
   Shell,
   Size,
   TerminalOutputEvent,
-  Theme,
   VaultChangedEvent,
 } from '../bindings'

@@ -28,7 +28,6 @@ base64 = "0.23"
 keyring = "4"
 chacha20poly1305 = "0.11"
 zeroize = "1.9.1"
-async-trait = "0.1.92"
 russh = { version = "0.65", default-features = false, features = ["ring", "flate2", "rsa"] }
 tokio = { version = "1", features = ["sync", "time", "rt", "macros", "net", "fs", "io-util"] }
 rand = "0.10"
