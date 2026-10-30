@@ -8,7 +8,7 @@ const host = process.env.TAURI_DEV_HOST
 export default defineConfig(async () => ({
   plugins: [vue(), tailwindcss()],
   resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
+    alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
 
   clearScreen: false,
@@ -26,17 +26,10 @@ export default defineConfig(async () => ({
   build: {
     target: 'esnext',
     sourcemap: false,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          xterm: [
-            '@xterm/xterm',
-            '@xterm/addon-fit',
-            '@xterm/addon-search',
-            '@xterm/addon-unicode11',
-            '@xterm/addon-web-links',
-            '@xterm/addon-webgl',
-          ],
+        codeSplitting: {
+          groups: [{ name: 'xterm', test: /node_modules[\\/]@xterm[\\/]/ }],
         },
       },
     },

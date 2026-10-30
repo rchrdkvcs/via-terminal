@@ -1,8 +1,5 @@
 use super::KeySource;
-use chacha20poly1305::{
-    aead::{KeyInit, OsRng},
-    ChaCha20Poly1305,
-};
+use chacha20poly1305::{aead::Generate, Key};
 use zeroize::Zeroizing;
 
 const SERVICE: &str = "dev.viaterminal.desktop";
@@ -16,7 +13,7 @@ impl KeySource for OsKeychain {
         match entry.get_secret() {
             Ok(bytes) => to_key(Zeroizing::new(bytes)),
             Err(keyring::Error::NoEntry) => {
-                let key = ChaCha20Poly1305::generate_key(&mut OsRng);
+                let key = Key::generate();
                 entry.set_secret(key.as_slice()).ok()?;
 
                 to_key(Zeroizing::new(entry.get_secret().ok()?))

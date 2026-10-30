@@ -6,8 +6,8 @@ use crate::{
     storage::{BlobChange, Storage},
 };
 use chacha20poly1305::{
-    aead::{Aead, AeadCore, KeyInit, OsRng},
-    ChaCha20Poly1305, Key, Nonce,
+    aead::{Aead, Generate, KeyInit},
+    ChaCha20Poly1305, Nonce,
 };
 use std::sync::Arc;
 use zeroize::Zeroizing;
@@ -29,7 +29,7 @@ impl Secrets {
     pub fn new(storage: Arc<Storage>, source: &dyn KeySource) -> Self {
         let cipher = source
             .master_key()
-            .map(|key| ChaCha20Poly1305::new(Key::from_slice(key.as_ref())));
+            .and_then(|key| ChaCha20Poly1305::new_from_slice(key.as_ref()).ok());
         Self { storage, cipher }
     }
 
@@ -39,7 +39,7 @@ impl Secrets {
 
     pub(crate) fn seal(&self, id: &str, secret: &[u8]) -> AppResult<BlobChange> {
         let cipher = self.cipher()?;
-        let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
+        let nonce = Nonce::generate();
         let mut sealed = nonce.to_vec();
         sealed.extend(
             cipher
@@ -66,8 +66,10 @@ impl Secrets {
             ));
         }
         let (nonce, body) = sealed.split_at(NONCE_LEN);
+        let nonce = <&Nonce>::try_from(nonce)
+            .map_err(|_| AppError::new("secrets", "le secret enregistré est corrompu"))?;
         cipher
-            .decrypt(Nonce::from_slice(nonce), body)
+            .decrypt(nonce, body)
             .map(|plain| Some(Zeroizing::new(plain)))
             .map_err(|_| {
                 AppError::new("secrets", "le secret enregistré ne peut pas être déchiffré")
