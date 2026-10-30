@@ -15,6 +15,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   selectAll: [paths: string[]]
   open: [entry: RemoteEntry]
+  rename: []
+  remove: []
 }>()
 const root = ref<HTMLElement>()
 const keys = useId()
@@ -47,6 +49,22 @@ function open(entry: RemoteEntry) {
   refocus = true
   emit('open', entry)
 }
+/** A right click acts on the clicked entry, or on the whole selection when it is part of it. */
+function pick(event: MouseEvent) {
+  const row = (event.target as Element).closest<HTMLElement>('[data-path]')
+  const path = row?.dataset.path
+  if (!path) emit('selectAll', [])
+  else if (!props.selected.includes(path)) emit('selectAll', [path])
+}
+function onKeydown(event: KeyboardEvent) {
+  keydown(event)
+  if (event.defaultPrevented || !(event.target as Element).closest('[data-path]')) return
+  const erase = event.key === 'Delete' || (event.key === 'Backspace' && event.metaKey)
+  if (event.key === 'F2' && props.selected.length === 1) emit('rename')
+  else if (erase && props.selected.length) emit('remove')
+  else return
+  event.preventDefault()
+}
 </script>
 <template>
   <div
@@ -54,12 +72,14 @@ function open(entry: RemoteEntry) {
     class="@container relative min-h-0 flex-1 overflow-auto overscroll-contain px-2 pb-2 outline-none"
     tabindex="-1"
     :aria-busy="busy"
-    @keydown="keydown"
+    @keydown="onKeydown"
+    @contextmenu="pick"
   >
     <p :id="keys" class="sr-only">
       Double-clic ou Entrée pour ouvrir, Espace pour sélectionner, Cmd ou Ctrl + clic pour ajouter
       ou retirer un élément, Maj + clic ou flèches pour sélectionner une plage, Cmd ou Ctrl + A pour
-      tout sélectionner, Échap pour tout désélectionner.
+      tout sélectionner, Échap pour tout désélectionner, F2 pour renommer, Suppr pour supprimer, Maj
+      + F10 pour les actions.
     </p>
     <div role="table" class="text-[12px]" aria-label="Fichiers distants">
       <div role="rowgroup" class="sticky top-0 z-10 -mx-2 bg-rail px-2 text-ink-muted">
@@ -86,6 +106,7 @@ function open(entry: RemoteEntry) {
             columns,
             'row h-8 has-[button:focus-visible]:ring-2 has-[button:focus-visible]:ring-ring/40',
           ]"
+          :data-path="entry.path"
           :data-selected="selected.includes(entry.path) || undefined"
           @click="select(entry, $event)"
           @dblclick="open(entry)"

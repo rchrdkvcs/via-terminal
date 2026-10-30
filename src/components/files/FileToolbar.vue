@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import {
   AppWindow,
-  Check,
-  Ellipsis,
   Eye,
+  EyeOff,
   FilePlus,
   FolderPlus,
   FolderUp,
@@ -19,15 +18,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import FileSelectionActions from './FileSelectionActions.vue'
-defineProps<{ count: number; enabled: boolean; hidden: boolean; docked: boolean }>()
+/** Selection actions live in the list's context menu; the toolbar keeps creation and view. */
+defineProps<{ enabled: boolean; hidden: boolean; docked: boolean }>()
 const emit = defineEmits<{
   create: [directory: boolean]
   upload: [directory: boolean]
-  download: []
-  rename: []
-  chmod: []
-  remove: []
   hidden: []
   detach: []
   hide: []
@@ -68,42 +63,38 @@ const emit = defineEmits<{
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-    <DropdownMenu>
-      <DropdownMenuTrigger as-child>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Autres actions"
-          title="Autres actions"
-        >
-          <Ellipsis :stroke-width="1.5" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem role="menuitemcheckbox" :aria-checked="hidden" @select="emit('hidden')">
-          <Eye :stroke-width="1.5" />Afficher les fichiers cachés
-          <Check v-if="hidden" class="ms-auto" :stroke-width="1.5" />
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <FileSelectionActions
-          :count="count"
-          :enabled="enabled"
-          @download="emit('download')"
-          @rename="emit('rename')"
-          @chmod="emit('chmod')"
-          @remove="emit('remove')"
-        />
-        <template v-if="docked">
-          <DropdownMenuSeparator />
-          <DropdownMenuItem @select="emit('detach')">
-            <AppWindow :stroke-width="1.5" />Ouvrir dans un onglet
-          </DropdownMenuItem>
-          <DropdownMenuItem @select="emit('hide')">
-            <X :stroke-width="1.5" />Masquer l’explorateur distant
-          </DropdownMenuItem>
-        </template>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      aria-label="Afficher les fichiers cachés"
+      :title="hidden ? 'Masquer les fichiers cachés' : 'Afficher les fichiers cachés'"
+      :aria-pressed="hidden"
+      @click="emit('hidden')"
+    >
+      <component :is="hidden ? Eye : EyeOff" :stroke-width="1.5" />
+    </Button>
+    <template v-if="docked">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Ouvrir dans un onglet"
+        title="Ouvrir dans un onglet"
+        @click="emit('detach')"
+      >
+        <AppWindow :stroke-width="1.5" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Masquer l’explorateur distant"
+        title="Masquer l’explorateur distant"
+        @click="emit('hide')"
+      >
+        <X :stroke-width="1.5" />
+      </Button>
+    </template>
   </div>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Plus } from '@lucide/vue'
+import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { Kbd } from '@/components/ui/kbd'
 import type { Space } from '@/domain/space'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
@@ -10,7 +11,9 @@ import { useSidebarActions } from '@/composables/useSidebarActions'
 import { useUi } from '@/stores/ui'
 import RowArea from './RowArea.vue'
 import SpaceHeader from './SpaceHeader.vue'
+import SpaceMenu from './SpaceMenu.vue'
 
+defineOptions({ inheritAttrs: false })
 const props = defineProps<{ space: Space }>()
 const ui = useUi()
 const kbd = useShortcutLabel()
@@ -26,25 +29,30 @@ useDropZone(newTab, {
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-col overflow-y-auto px-2">
-    <SpaceHeader :space="space" />
-    <RowArea area="pinned" :entries="space.pinned" label="Onglets épinglés" />
-    <div class="mx-2.5 mb-1.5 h-px bg-hairline" role="separator" />
-    <button
-      ref="newTab"
-      type="button"
-      class="row flex h-8 w-full shrink-0 items-center gap-2 px-2 text-[13px] text-ink-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
-      @click="ui.openCommand({ kind: 'new' })"
-    >
-      <Plus :size="16" :stroke-width="1.5" />
-      <span class="flex-1 text-start">Nouvel onglet</span>
-      <Kbd>{{ kbd('newTab') }}</Kbd>
-    </button>
-    <RowArea
-      area="temporary"
-      :entries="space.temporary"
-      label="Onglets temporaires"
-      class="flex-1"
-    />
-  </div>
+  <ContextMenu>
+    <ContextMenuTrigger as-child>
+      <div v-bind="$attrs" class="flex min-h-0 flex-col overflow-y-auto px-2">
+        <SpaceHeader :space="space" />
+        <RowArea area="pinned" :entries="space.pinned" label="Onglets épinglés" />
+        <div class="mx-2.5 mb-1.5 h-px bg-hairline" role="separator" />
+        <button
+          ref="newTab"
+          type="button"
+          class="row flex h-8 w-full shrink-0 items-center gap-2 px-2 text-[13px] text-ink-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+          @click="ui.openCommand({ kind: 'new' })"
+        >
+          <Plus :size="16" :stroke-width="1.5" />
+          <span class="flex-1 text-start">Nouvel onglet</span>
+          <Kbd>{{ kbd('newTab') }}</Kbd>
+        </button>
+        <RowArea
+          area="temporary"
+          :entries="space.temporary"
+          label="Onglets temporaires"
+          class="flex-1"
+        />
+      </div>
+    </ContextMenuTrigger>
+    <SpaceMenu :space="space" />
+  </ContextMenu>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ChevronRight, Folder } from '@lucide/vue'
 import { computed } from 'vue'
+import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu'
 import GroupMenu from './GroupMenu.vue'
 import InlineRename from './InlineRename.vue'
 import type { TreeNode } from './tree'
@@ -28,50 +29,58 @@ function onKeydown(event: KeyboardEvent) {
 
 <template>
   <li>
-    <div
-      class="group/item flex h-8 items-center gap-0.5 rounded-md pe-1 text-[13px]"
-      :class="current ? 'bg-row-selected shadow-row' : 'hover:bg-row-hover'"
-      :style="{ paddingInlineStart: `${node.depth * 0.875}rem` }"
-    >
-      <button
-        v-if="node.children.length"
-        type="button"
-        class="text-muted-foreground hover:text-foreground focus-visible:ring-ring grid size-6 shrink-0 place-items-center rounded-[5px] outline-none focus-visible:ring-2"
-        :aria-label="open ? `Replier ${node.group.name}` : `Déplier ${node.group.name}`"
-        :aria-expanded="open"
-        @click="tree.toggle(id)"
-      >
-        <ChevronRight
-          class="size-3.5 transition-transform duration-150 motion-reduce:transition-none"
-          :class="{ 'rotate-90': open }"
-          :stroke-width="1.5"
-        />
-      </button>
-      <span v-else class="size-6 shrink-0" aria-hidden="true" />
-      <InlineRename
-        v-if="state.renaming.value === id"
-        :value="node.group.name"
-        label="Nom du groupe"
-        @done="tree.rename(id, $event)"
-      />
-      <button
-        v-else
-        type="button"
-        class="focus-visible:ring-ring flex h-7 min-w-0 flex-1 items-center gap-2 rounded-[5px] px-1 text-start outline-none focus-visible:ring-2"
-        :aria-current="current ? 'true' : undefined"
-        @click="tree.choose(id)"
-        @keydown="onKeydown"
-      >
-        <Folder
-          class="text-muted-foreground size-3.5 shrink-0"
-          :stroke-width="1.5"
-          aria-hidden="true"
-        />
-        <span class="truncate" :class="{ 'font-medium': current }">{{ node.group.name }}</span>
-        <span class="text-muted-foreground ms-auto text-xs tabular-nums">{{ node.count }}</span>
-      </button>
-      <GroupMenu :group-id="id" :name="node.group.name" />
-    </div>
+    <ContextMenu>
+      <ContextMenuTrigger as-child>
+        <div
+          class="flex h-8 items-center gap-0.5 rounded-md pe-1 text-[13px]"
+          :class="
+            current
+              ? 'bg-row-selected shadow-row'
+              : 'hover:bg-row-hover data-[state=open]:bg-row-hover'
+          "
+          :style="{ paddingInlineStart: `${node.depth * 0.875}rem` }"
+        >
+          <button
+            v-if="node.children.length"
+            type="button"
+            class="text-muted-foreground hover:text-foreground focus-visible:ring-ring grid size-6 shrink-0 place-items-center rounded-[5px] outline-none focus-visible:ring-2"
+            :aria-label="open ? `Replier ${node.group.name}` : `Déplier ${node.group.name}`"
+            :aria-expanded="open"
+            @click="tree.toggle(id)"
+          >
+            <ChevronRight
+              class="size-3.5 transition-transform duration-150 motion-reduce:transition-none"
+              :class="{ 'rotate-90': open }"
+              :stroke-width="1.5"
+            />
+          </button>
+          <span v-else class="size-6 shrink-0" aria-hidden="true" />
+          <InlineRename
+            v-if="state.renaming.value === id"
+            :value="node.group.name"
+            label="Nom du groupe"
+            @done="tree.rename(id, $event)"
+          />
+          <button
+            v-else
+            type="button"
+            class="focus-visible:ring-ring flex h-7 min-w-0 flex-1 items-center gap-2 rounded-[5px] px-1 text-start outline-none focus-visible:ring-2"
+            :aria-current="current ? 'true' : undefined"
+            @click="tree.choose(id)"
+            @keydown="onKeydown"
+          >
+            <Folder
+              class="text-muted-foreground size-3.5 shrink-0"
+              :stroke-width="1.5"
+              aria-hidden="true"
+            />
+            <span class="truncate" :class="{ 'font-medium': current }">{{ node.group.name }}</span>
+            <span class="text-muted-foreground ms-auto text-xs tabular-nums">{{ node.count }}</span>
+          </button>
+        </div>
+      </ContextMenuTrigger>
+      <GroupMenu :group-id="id" />
+    </ContextMenu>
     <ul v-if="open && node.children.length" role="group" class="mt-0.5 grid gap-0.5">
       <GroupTreeItem v-for="child in node.children" :key="child.group.id" :node="child" />
     </ul>

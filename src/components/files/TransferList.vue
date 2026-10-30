@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed, useId } from 'vue'
-import { RotateCcw, X, Upload, Download } from '@lucide/vue'
+import { Copy, Eraser, RotateCcw, X, Upload, Download } from '@lucide/vue'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
+import { copyText } from '@/lib/clipboard'
 import {
   isActive,
   isFinished,
@@ -58,88 +66,115 @@ const name = (path: string) => path.split('/').pop() || path
     </div>
     <p role="status" class="sr-only">{{ summary }}</p>
     <ul class="relative min-h-0 overflow-auto overscroll-contain px-2 pb-2">
-      <li v-for="transfer in transfers" :key="transfer.id" class="px-1 py-1.5">
-        <div class="flex min-h-6 items-center gap-2">
-          <span
-            class="shrink-0 text-ink-muted"
-            :title="transfer.direction === 'download' ? 'Téléchargement' : 'Envoi'"
-          >
-            <Download
-              v-if="transfer.direction === 'download'"
-              :size="12"
-              :stroke-width="1.5"
-              aria-hidden="true"
+      <ContextMenu v-for="transfer in transfers" :key="transfer.id">
+        <ContextMenuTrigger as-child>
+          <li class="row px-1 py-1.5">
+            <div class="flex min-h-6 items-center gap-2">
+              <span
+                class="shrink-0 text-ink-muted"
+                :title="transfer.direction === 'download' ? 'Téléchargement' : 'Envoi'"
+              >
+                <Download
+                  v-if="transfer.direction === 'download'"
+                  :size="12"
+                  :stroke-width="1.5"
+                  aria-hidden="true"
+                />
+                <Upload v-else :size="12" :stroke-width="1.5" aria-hidden="true" />
+                <span class="sr-only">{{
+                  transfer.direction === 'download' ? 'Téléchargement de' : 'Envoi de'
+                }}</span>
+              </span>
+              <span class="min-w-0 flex-1 truncate" :title="transfer.path">{{
+                name(transfer.path)
+              }}</span>
+              <span
+                class="whitespace-nowrap tabular-nums"
+                :class="
+                  transfer.state === 'failed' ? 'font-medium text-foreground' : 'text-ink-muted'
+                "
+                >{{
+                  isProgressing(transfer.state) && transfer.total
+                    ? `${amount(transfer.bytes)} / ${amount(transfer.total)}`
+                    : labels[transfer.state]
+                }}</span
+              >
+              <Button
+                v-if="isActive(transfer.state)"
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                :aria-label="`Annuler le transfert de ${name(transfer.path)}`"
+                title="Annuler"
+                @click="emit('cancel', transfer.id)"
+              >
+                <X :stroke-width="1.5" />
+              </Button>
+              <span
+                v-else-if="transfer.state === 'failed' && transfer.retryable"
+                :title="connected ? 'Réessayer' : 'Reconnectez le terminal pour réessayer'"
+                class="shrink-0"
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  :disabled="!connected"
+                  :aria-label="`Réessayer le transfert de ${name(transfer.path)}`"
+                  @click="emit('retry', transfer.id)"
+                >
+                  <RotateCcw :stroke-width="1.5" />
+                </Button>
+              </span>
+            </div>
+            <progress
+              v-if="isProgressing(transfer.state)"
+              class="mt-1 block h-1 w-full appearance-none overflow-hidden rounded-full bg-hairline [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:bg-foreground [&::-moz-progress-bar]:bg-foreground"
+              :value="transfer.total ? transfer.bytes : undefined"
+              :max="transfer.total || 1"
+              :aria-label="`Progression de ${name(transfer.path)}`"
             />
-            <Upload v-else :size="12" :stroke-width="1.5" aria-hidden="true" />
-            <span class="sr-only">{{
-              transfer.direction === 'download' ? 'Téléchargement de' : 'Envoi de'
-            }}</span>
-          </span>
-          <span class="min-w-0 flex-1 truncate" :title="transfer.path">{{
-            name(transfer.path)
-          }}</span>
-          <span
-            class="whitespace-nowrap tabular-nums"
-            :class="transfer.state === 'failed' ? 'font-medium text-foreground' : 'text-ink-muted'"
-            >{{
-              isProgressing(transfer.state) && transfer.total
-                ? `${amount(transfer.bytes)} / ${amount(transfer.total)}`
-                : labels[transfer.state]
-            }}</span
-          >
-          <Button
-            v-if="isActive(transfer.state)"
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            :aria-label="`Annuler le transfert de ${name(transfer.path)}`"
-            title="Annuler"
-            @click="emit('cancel', transfer.id)"
-          >
-            <X :stroke-width="1.5" />
-          </Button>
-          <span
+            <p v-if="transfer.message" class="mt-1 break-words text-ink-muted">
+              {{ transfer.message }}
+            </p>
+            <details v-if="transfer.skipped.length" class="mt-1 text-ink-muted">
+              <summary
+                class="cursor-default rounded focus-visible:outline-2 focus-visible:outline-ring"
+              >
+                {{
+                  transfer.skipped.length === 1
+                    ? '1 élément ignoré'
+                    : `${transfer.skipped.length} éléments ignorés`
+                }}
+              </summary>
+              <ul class="mt-1 break-all">
+                <li v-for="path in transfer.skipped" :key="path">{{ path }}</li>
+              </ul>
+            </details>
+          </li>
+        </ContextMenuTrigger>
+        <ContextMenuContent class="w-56">
+          <ContextMenuItem v-if="isActive(transfer.state)" @select="emit('cancel', transfer.id)">
+            <X :stroke-width="1.5" />Annuler le transfert
+          </ContextMenuItem>
+          <ContextMenuItem
             v-else-if="transfer.state === 'failed' && transfer.retryable"
-            :title="connected ? 'Réessayer' : 'Reconnectez le terminal pour réessayer'"
-            class="shrink-0"
+            :disabled="!connected"
+            @select="emit('retry', transfer.id)"
           >
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              :disabled="!connected"
-              :aria-label="`Réessayer le transfert de ${name(transfer.path)}`"
-              @click="emit('retry', transfer.id)"
-            >
-              <RotateCcw :stroke-width="1.5" />
-            </Button>
-          </span>
-        </div>
-        <progress
-          v-if="isProgressing(transfer.state)"
-          class="mt-1 block h-1 w-full appearance-none overflow-hidden rounded-full bg-hairline [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:bg-foreground [&::-moz-progress-bar]:bg-foreground"
-          :value="transfer.total ? transfer.bytes : undefined"
-          :max="transfer.total || 1"
-          :aria-label="`Progression de ${name(transfer.path)}`"
-        />
-        <p v-if="transfer.message" class="mt-1 break-words text-ink-muted">
-          {{ transfer.message }}
-        </p>
-        <details v-if="transfer.skipped.length" class="mt-1 text-ink-muted">
-          <summary
-            class="cursor-default rounded focus-visible:outline-2 focus-visible:outline-ring"
-          >
-            {{
-              transfer.skipped.length === 1
-                ? '1 élément ignoré'
-                : `${transfer.skipped.length} éléments ignorés`
-            }}
-          </summary>
-          <ul class="mt-1 break-all">
-            <li v-for="path in transfer.skipped" :key="path">{{ path }}</li>
-          </ul>
-        </details>
-      </li>
+            <RotateCcw :stroke-width="1.5" />Réessayer
+          </ContextMenuItem>
+          <ContextMenuItem @select="copyText(transfer.path, 'Chemin copié')">
+            <Copy :stroke-width="1.5" />Copier le chemin
+          </ContextMenuItem>
+          <template v-if="finished">
+            <ContextMenuSeparator />
+            <ContextMenuItem @select="emit('clear')">
+              <Eraser :stroke-width="1.5" />Effacer les terminés
+            </ContextMenuItem>
+          </template>
+        </ContextMenuContent>
+      </ContextMenu>
     </ul>
   </section>
 </template>

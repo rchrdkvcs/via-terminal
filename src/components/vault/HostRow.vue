@@ -1,15 +1,23 @@
 <script setup lang="ts">
-import { KeyRound, LockKeyhole, Server } from '@lucide/vue'
+import { Copy, CopyPlus, KeyRound, LockKeyhole, Plug, Server, Trash2 } from '@lucide/vue'
 import { computed } from 'vue'
+import {
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+} from '@/components/ui/context-menu'
+import { copyText } from '@/lib/clipboard'
 import type { Host } from '@/ipc/types'
 import { useHostName } from '@/composables/useHostName'
 import { useVault } from '@/stores/vault'
+import { useVaultActions } from './useVaultActions'
 import VaultRow from './VaultRow.vue'
 
 const props = defineProps<{ host: Host; selected: boolean; tabbable: boolean }>()
 defineEmits<{ select: [] }>()
 const vault = useVault()
 const hostName = useHostName()
+const actions = useVaultActions()
 
 const credential = computed(() => {
   const effective = vault.view.effective[props.host.id]
@@ -59,5 +67,22 @@ const shownTags = computed(() => props.host.tags.slice(0, 3))
         {{ credential.label }}
       </span>
     </div>
+    <template #menu>
+      <ContextMenuItem @select="actions.connect(host.id)">
+        <Plug :stroke-width="1.5" /> Se connecter
+        <ContextMenuShortcut>Entrée</ContextMenuShortcut>
+      </ContextMenuItem>
+      <ContextMenuItem @select="actions.duplicateHost(host.id)">
+        <CopyPlus :stroke-width="1.5" /> Dupliquer
+      </ContextMenuItem>
+      <ContextMenuItem @select="copyText(vault.describe(host.id), 'Adresse copiée')">
+        <Copy :stroke-width="1.5" /> Copier l’adresse
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      <ContextMenuItem variant="destructive" @select="actions.deleteHost(host.id)">
+        <Trash2 :stroke-width="1.5" /> Supprimer
+        <ContextMenuShortcut>Suppr</ContextMenuShortcut>
+      </ContextMenuItem>
+    </template>
   </VaultRow>
 </template>

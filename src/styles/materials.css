@@ -72,6 +72,9 @@
       background-color: var(--row-hover);
     }
   }
+  &[data-state='open'] {
+    background-color: var(--row-hover);
+  }
   &[aria-current='page'],
   &[aria-selected='true'],
   &[data-selected] {

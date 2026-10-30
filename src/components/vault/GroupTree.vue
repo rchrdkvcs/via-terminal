@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { FolderPlus, Layers } from '@lucide/vue'
+import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { useVault } from '@/stores/vault'
+import GroupMenu from './GroupMenu.vue'
 import GroupTreeItem from './GroupTreeItem.vue'
 import IconAction from './IconAction.vue'
 import { useGroupTree } from './useGroupTree'
@@ -21,25 +23,32 @@ const options = useVaultOptions()
         <FolderPlus :stroke-width="1.5" />
       </IconAction>
     </div>
-    <button
-      type="button"
-      class="focus-visible:ring-ring flex h-8 items-center gap-2 rounded-md px-2.5 text-start text-[13px] outline-none focus-visible:ring-2"
-      :class="
-        state.scope.value === null ? 'bg-row-selected shadow-row font-medium' : 'hover:bg-row-hover'
-      "
-      :aria-current="state.scope.value === null ? 'true' : undefined"
-      @click="tree.choose(null)"
-    >
-      <Layers
-        class="text-muted-foreground size-3.5 shrink-0"
-        :stroke-width="1.5"
-        aria-hidden="true"
-      />
-      <span class="flex-1 truncate">Tous les hôtes</span>
-      <span class="text-muted-foreground text-xs font-normal tabular-nums">{{
-        vault.view.hosts.length
-      }}</span>
-    </button>
+    <ContextMenu>
+      <ContextMenuTrigger as-child>
+        <button
+          type="button"
+          class="focus-visible:ring-ring flex h-8 items-center gap-2 rounded-md px-2.5 text-start text-[13px] outline-none focus-visible:ring-2"
+          :class="
+            state.scope.value === null
+              ? 'bg-row-selected shadow-row font-medium'
+              : 'hover:bg-row-hover data-[state=open]:bg-row-hover'
+          "
+          :aria-current="state.scope.value === null ? 'true' : undefined"
+          @click="tree.choose(null)"
+        >
+          <Layers
+            class="text-muted-foreground size-3.5 shrink-0"
+            :stroke-width="1.5"
+            aria-hidden="true"
+          />
+          <span class="flex-1 truncate">Tous les hôtes</span>
+          <span class="text-muted-foreground text-xs font-normal tabular-nums">{{
+            vault.view.hosts.length
+          }}</span>
+        </button>
+      </ContextMenuTrigger>
+      <GroupMenu :group-id="null" />
+    </ContextMenu>
     <ul v-if="options.tree.value.length" class="grid gap-0.5" aria-label="Groupes">
       <GroupTreeItem v-for="node in options.tree.value" :key="node.group.id" :node="node" />
     </ul>
