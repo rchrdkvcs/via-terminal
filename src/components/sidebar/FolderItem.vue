@@ -86,20 +86,14 @@ const rename = (name: string) => {
       </ContextMenuContent>
     </ContextMenu>
 
-    <div
-      class="grid transition-[grid-template-rows,opacity] duration-200 ease-[var(--ease-out)] motion-reduce:transition-none"
-      :class="folder.open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'"
-      :inert="!folder.open"
-    >
-      <div class="min-h-0 overflow-hidden">
-        <RowArea
-          area="pinned"
-          :folder-id="folder.id"
-          :entries="folder.rows"
-          :label="`Contenu de ${folder.name}`"
-          class="ms-[15px] border-s border-hairline ps-1.5 pt-px"
-        />
-      </div>
-    </div>
+    <RowArea
+      area="pinned"
+      :folder-id="folder.id"
+      :entries="folder.rows"
+      :collapsed="!folder.open"
+      :label="`Contenu de ${folder.name}`"
+      class="ms-[15px] border-s border-hairline ps-1.5"
+      :class="{ 'pt-px': folder.open }"
+    />
   </div>
 </template>
