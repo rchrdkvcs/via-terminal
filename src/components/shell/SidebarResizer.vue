@@ -4,7 +4,9 @@ import ResizeHandle from '@/components/ui/resize-handle/ResizeHandle.vue'
 import { useSpaces } from '@/stores/spaces'
 
 const spaces = useSpaces()
-const clamp = (value: number) => Math.round(Math.min(480, Math.max(200, value)))
+// SidebarFrame caps the rendered width at 40% of the window: drag from what is on screen.
+const ceiling = () => Math.min(480, Math.max(200, window.innerWidth * 0.4))
+const clamp = (value: number) => Math.round(Math.min(ceiling(), Math.max(200, value)))
 
 const dragging = ref(false)
 
@@ -12,7 +14,7 @@ function start(event: PointerEvent) {
   if (event.button !== 0) return
   event.preventDefault()
   const origin = event.clientX
-  const initial = spaces.sidebar.width
+  const initial = clamp(spaces.sidebar.width)
   const target = event.currentTarget as HTMLElement
   target.setPointerCapture(event.pointerId)
   dragging.value = true

@@ -97,3 +97,16 @@ it.each(['horizontal', 'vertical'] as const)(
     view.unmount()
   },
 )
+
+it('locks the document cursor while dragging and releases it on pointerup', async () => {
+  const view = mount(SidebarResizer, { attachTo: document.body })
+  const handle = view.get('[role="separator"]')
+  await pointer(handle.element, 'pointerdown', 264)
+  expect(document.documentElement.dataset.resizing).toBe('x')
+  expect(handle.attributes('data-active')).toBeDefined()
+  window.dispatchEvent(new MouseEvent('pointerup'))
+  await nextTick()
+  expect(document.documentElement.dataset.resizing).toBeUndefined()
+  expect(handle.attributes('data-active')).toBeUndefined()
+  view.unmount()
+})
