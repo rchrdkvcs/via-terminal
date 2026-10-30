@@ -4,6 +4,7 @@ mod atomic_records;
 mod connections;
 mod credential_cases;
 mod credentials;
+mod legacy;
 mod records;
 
 use super::{input::*, Vault};
@@ -23,7 +24,6 @@ pub(super) fn vault() -> Vault {
 pub(super) fn host(address: &str) -> HostInput {
     HostInput {
         id: None,
-        group_id: None,
         label: String::new(),
         address: address.into(),
         port: None,

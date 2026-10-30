@@ -1,7 +1,5 @@
 export type {
   Effective,
-  Group,
-  GroupInput,
   Host,
   HostCredential,
   HostInput,

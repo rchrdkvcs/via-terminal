@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { Plus, SlidersHorizontal } from '@lucide/vue'
-import { computed, ref, watch } from 'vue'
+import { Plus } from '@lucide/vue'
+import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
 import { useVault } from '@/stores/vault'
 import HostRow from './HostRow.vue'
 import { matches } from './search'
-import { subtree } from './tree'
-import { useGroupTree } from './useGroupTree'
 import { useVaultActions } from './useVaultActions'
 import { useVaultState } from './useVaultState'
 import VaultEmpty from './VaultEmpty.vue'
@@ -17,23 +15,13 @@ const vault = useVault()
 const kbd = useShortcutLabel()
 const state = useVaultState()
 const actions = useVaultActions()
-const tree = useGroupTree()
 const query = ref('')
 
-const scopeGroup = computed(() => vault.group(state.scope.value))
-const inScope = computed(() => {
-  const groups = scopeGroup.value ? subtree(vault.view.groups, scopeGroup.value.id) : null
-  return vault.view.hosts.filter((host) => !groups || (host.groupId && groups.has(host.groupId)))
-})
 const hosts = computed(() =>
-  inScope.value
+  vault.view.hosts
     .filter((host) =>
       matches(
-        {
-          host,
-          username: vault.view.effective[host.id]?.username?.value ?? null,
-          groupPath: vault.groupPath(host.groupId),
-        },
+        { host, username: vault.view.effective[host.id]?.username?.value ?? null },
         query.value,
       ),
     )
@@ -41,34 +29,11 @@ const hosts = computed(() =>
 )
 const ids = computed(() => hosts.value.map((host) => host.id))
 
-watch(
-  () => state.selected.value,
-  (id) => {
-    const host = id ? vault.host(id) : undefined
-    if (host && !inScope.value.includes(host)) state.scope.value = null
-  },
-  { immediate: true },
-)
-
-const description = computed(() =>
-  scopeGroup.value
-    ? 'Les hôtes de ce groupe reprennent son utilisateur, son port et son identité, sauf s’ils en choisissent d’autres.'
-    : 'Les serveurs SSH où vous vous connectez. Cliquez sur un hôte pour le modifier, Entrée pour vous y connecter.',
-)
-
 const empty = computed(() => {
   if (query.value.trim()) {
     return {
       title: `Aucun hôte ne correspond à « ${query.value.trim()} »`,
-      description:
-        'La recherche porte sur le libellé, l’adresse, l’utilisateur, les tags et le groupe.',
-    }
-  }
-  if (scopeGroup.value) {
-    return {
-      title: 'Ce groupe est vide',
-      description:
-        'Ajoutez un hôte ici, ou choisissez ce groupe dans le champ Groupe d’un hôte existant.',
+      description: 'La recherche porte sur le libellé, l’adresse, l’utilisateur et les tags.',
     }
   }
   return {
@@ -81,18 +46,14 @@ const empty = computed(() => {
 <template>
   <VaultListPane
     v-model:query="query"
-    :title="scopeGroup?.name ?? 'Tous les hôtes'"
-    :description="description"
+    title="Tous les hôtes"
+    description="Les serveurs SSH où vous vous connectez. Cliquez sur un hôte pour le modifier, Entrée pour vous y connecter."
     search-label="Rechercher un hôte"
     :ids="ids"
     @activate="actions.connect"
     @remove="actions.deleteHost"
   >
     <template #actions>
-      <Button v-if="scopeGroup" variant="outline" @click="tree.edit(scopeGroup.id)">
-        <SlidersHorizontal :stroke-width="1.5" />
-        Valeurs par défaut
-      </Button>
       <Button @click="state.startCreating()">
         <Plus :stroke-width="1.5" />
         Nouvel hôte

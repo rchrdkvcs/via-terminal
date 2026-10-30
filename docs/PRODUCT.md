@@ -33,7 +33,7 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 ## Opening things
 
 - Shortcuts use Ctrl+Shift on Windows and Linux, so the shell keeps Ctrl+W, Ctrl+D, Ctrl+L and the other line-editing keys, and ⌘ on macOS.
-- **Ctrl+Shift+T** opens the command bar. It lists local shells, recent hosts, then every host matching what you type (label, address, user, tags, group). Enter opens the selection as a new temporary tab; a recent host already open in the space goes to its tab instead.
+- **Ctrl+Shift+T** opens the command bar. It lists local shells, recent hosts, then every host matching what you type (label, address, user, tags). Enter opens the selection as a new temporary tab; a recent host already open in the space goes to its tab instead.
 - Typing `user@host`, `host:2222` or `ssh user@host -p 2222` offers **Connect to …**. When authentication succeeds, the host is saved in the vault automatically.
 - **Ctrl+Shift+L** (or clicking the address pill) opens the command bar for the current tab: Enter replaces what the tab connects to.
 - **Ctrl+Shift+P** opens the same bar with actions first: new space, open vault, settings, split, pin, rename, close.
@@ -69,7 +69,7 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 - Via has its own SSH client. It never reads `~/.ssh/config`, the system `known_hosts` or `~/.ssh/id_*`.
 - While connecting, the pane shows the steps (resolving, connecting, verifying the server, authenticating) instead of a blank terminal.
 - **New server key**: the pane shows the fingerprint and asks Trust and connect / Cancel. **Changed key**: the pane warns clearly, shows both fingerprints and requires an explicit Replace and connect.
-- **Credentials** are tried in this order: the key, then the stored password, from the host first, then its identity, then its groups. Missing credentials are asked for in the pane, with a Remember option that stores them in the vault.
+- **Credentials** are tried in this order: the key, then the stored password, from the host first, then its identity. Missing credentials are asked for in the pane, with a Remember option that stores them in the vault.
 - Keyboard-interactive challenges (2FA codes) are asked in the pane and never stored.
 - An unexpected disconnect keeps the output and shows Reconnect. Typing Enter in a disconnected pane also reconnects.
 
@@ -81,12 +81,12 @@ SSH tabs offer an independent remote explorer through the top-right file-tree ic
 
 A full page (sidebar stays) with:
 
-- **Hosts**: groups as a tree on the left, hosts of the selected group in the middle (including sub-groups), and an editor on the right. Creating a host only needs an address; everything else is optional. Search filters by label, address, user and tags.
-- **Identities**: username plus a password or key, referenced by hosts and groups.
+- **Hosts**: every host in a searchable list, and an editor for the selected one. Creating a host only needs an address; everything else is optional. Search filters by label, address, user and tags.
+- **Identities**: username plus a password or key, referenced by hosts.
 - **Keys**: generate Ed25519, import by pasting or choosing a file (the file is copied into the vault), copy the public key, delete.
 - **Known hosts**: accepted fingerprints, removable.
 - Every change is saved immediately; there is no Save button except when creating.
-- Inherited values appear as placeholders showing where they come from.
+- Values a host does not set itself, such as the default port or an identity's username, appear as placeholders showing where they come from.
 - Deleting a host used by pinned tabs asks for confirmation; those tabs stay and show that their host is gone.
 
 ## Settings

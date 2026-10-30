@@ -23,9 +23,8 @@ function host(id: string, label: string, extra: Partial<Host> = {}): Host {
     id,
     label,
     address: `${id}.example`,
-    groupId: null,
     port: null,
-    credential: { kind: 'inherit', username: null, key: null },
+    credential: { kind: 'password', username: null },
     tags: [],
     notes: '',
     createdAt: 0,
@@ -35,9 +34,8 @@ function host(id: string, label: string, extra: Partial<Host> = {}): Host {
 }
 
 const view: VaultView = {
-  groups: [{ id: 'prod', parentId: null, name: 'Production', position: 0, defaults: {} as never }],
   hosts: [
-    host('alpha', 'Alpha', { groupId: 'prod', lastConnectedAt: 10 }),
+    host('alpha', 'Alpha', { tags: ['production'], lastConnectedAt: 10 }),
     host('beta', 'Beta', { tags: ['database'] }),
   ],
   identities: [],
@@ -96,7 +94,7 @@ describe('command bar, new tab', () => {
     expect(tabs(bar.spaces.active)).toHaveLength(before)
   })
 
-  it('searches the vault by name, group and tag', () => {
+  it('searches the vault by name and tag', () => {
     const bar = open({ kind: 'new' }, 'production')
     expect(ids(bar.items.value).filter((id) => id.startsWith('host:'))).toEqual(['host:alpha'])
     bar.query.value = 'database'

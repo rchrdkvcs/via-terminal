@@ -1,11 +1,11 @@
-import { computed, inject, provide, reactive, ref, type InjectionKey } from 'vue'
+import { computed, inject, provide, ref, type InjectionKey } from 'vue'
 import { useHostName } from '@/composables/useHostName'
 import type { Id } from '@/ipc/types'
 import { useUi } from '@/stores/ui'
 import { useVault } from '@/stores/vault'
 
 export type Section = 'hosts' | 'identities' | 'keys' | 'knownHosts'
-type Inspecting = 'host' | 'group' | 'identity' | 'key' | 'new-host' | 'new-identity' | null
+type Inspecting = 'host' | 'identity' | 'key' | 'new-host' | 'new-identity' | null
 
 function createState() {
   const ui = useUi()
@@ -28,9 +28,6 @@ function createState() {
 
   const creating = ref(false)
 
-  const scope = ref<Id | null>(null)
-  const collapsed = reactive(new Set<Id>())
-
   const renaming = ref<Id | null>(null)
 
   const inspecting = computed<Inspecting>(() => {
@@ -38,8 +35,7 @@ function createState() {
     switch (section.value) {
       case 'hosts':
         if (creating.value) return 'new-host'
-        if (id && vault.host(id)) return 'host'
-        return id && vault.group(id) ? 'group' : null
+        return id && vault.host(id) ? 'host' : null
       case 'identities':
         if (creating.value) return 'new-identity'
         return id && vault.view.identities.some((item) => item.id === id) ? 'identity' : null
@@ -65,8 +61,6 @@ function createState() {
         return hostName(id)
       case 'new-host':
         return 'Nouvel hôte'
-      case 'group':
-        return vault.group(id)?.name ?? 'Groupe'
       case 'identity':
         return vault.view.identities.find((item) => item.id === id)?.label ?? 'Identité'
       case 'new-identity':
@@ -87,8 +81,6 @@ function createState() {
     section,
     selected,
     creating,
-    scope,
-    collapsed,
     renaming,
     inspecting,
     detail,

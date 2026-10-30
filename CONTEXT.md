@@ -30,7 +30,7 @@ _Avoid_: Unpinned tab, open tab
 
 **Folder**:
 A named, one-level container of pinned rows.
-_Avoid_: Group (that word belongs to the vault)
+_Avoid_: Group
 
 **Asleep**:
 The state of a tab without a session. Only an explicit activation wakes it.
@@ -79,19 +79,15 @@ _Avoid_: Buffer, local file
 ## Vault
 
 **Vault**:
-The application-wide library of hosts, groups, identities, keys and known hosts, shared by every space. It never reads the system SSH configuration.
+The application-wide library of hosts, identities, keys and known hosts, shared by every space. It never reads the system SSH configuration.
 _Avoid_: Keychain (that is the OS store), resources
 
 **Host**:
-A saved SSH destination: an address with optional port, authentication choice, tags and notes. Its **host credential** either inherits the group defaults or chooses a vault identity, a vault key with its username, or a username and password. An explicit host credential replaces group authentication defaults; the port can still be inherited. A selected identity supplies its username and credential together. Records saved before the host credential existed keep their effective values: a username or key they stored on top of group defaults stays an override of that part only, and the group identity still applies. Deleting a selected identity or key leaves its username and asks for a password.
+A saved SSH destination: an address with optional port, authentication choice, tags and notes. Its **host credential** chooses a vault identity, a vault key with its username, or a username and password. A selected identity supplies its username and credential together. Records saved while hosts could sit in groups keep their effective username, port and key: loading writes what they drew from their groups onto the host itself. Deleting a selected identity or key leaves its username and asks for a password.
 _Avoid_: Server, resource, connection
 
-**Group**:
-A nested folder of hosts whose defaults (username, port, identity) are inherited unless overridden.
-_Avoid_: Folder (that word belongs to spaces), tag
-
 **Identity**:
-A reusable username with its credential, referenced by hosts and groups.
+A reusable username with its credential, referenced by hosts.
 _Avoid_: Account, user, profile
 
 **Key**:

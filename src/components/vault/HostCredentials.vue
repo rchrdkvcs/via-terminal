@@ -4,7 +4,6 @@ import {
   choose,
   credentialOption,
   credentialUsername,
-  inherited,
   optionId,
   parseOption,
   withUsername,
@@ -12,7 +11,6 @@ import {
 import type { Effective, HostInput } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
 import CredentialSelect from './CredentialSelect.vue'
-import { identityHint } from './inherit'
 import SecretField from './SecretField.vue'
 import UsernameField from './UsernameField.vue'
 import VaultField from './VaultField.vue'
@@ -21,15 +19,7 @@ const props = defineProps<{ resolved: Effective }>()
 const draft = defineModel<HostInput>({ required: true })
 const emit = defineEmits<{ commit: [] }>()
 const vault = useVault()
-const groupDefaults = computed(() => inherited(vault.view, draft.value.groupId))
-const inheritance = computed(() =>
-  groupDefaults.value.identityId
-    ? identityHint(vault.view, groupDefaults.value.identityId)
-    : groupDefaults.value.username
-      ? `Hérité : ${groupDefaults.value.username.value}`
-      : undefined,
-)
-const option = computed(() => credentialOption(draft.value.credential, Boolean(inheritance.value)))
+const option = computed(() => credentialOption(draft.value.credential))
 const selection = computed({
   get: () => optionId(option.value),
   set: (id: string | null) => {
@@ -51,8 +41,6 @@ function commitPersonal() {
 }
 const explanation = computed(() => {
   switch (option.value?.kind) {
-    case 'inherit':
-      return 'Reprend l’utilisateur et l’identité définis sur le groupe.'
     case 'identity':
       return 'L’identité fournit l’utilisateur et sa clé ou son mot de passe.'
     case 'key':
@@ -61,17 +49,12 @@ const explanation = computed(() => {
       return 'Un utilisateur et un mot de passe propres à cet hôte.'
   }
 })
-const personal = computed(
-  () =>
-    !option.value ||
-    option.value.kind === 'key' ||
-    credentialUsername(draft.value.credential) !== null,
-)
+const personal = computed(() => option.value?.kind !== 'identity')
 </script>
 
 <template>
   <VaultField label="Se connecter avec" for="host-credential" :hint="explanation">
-    <CredentialSelect id="host-credential" v-model="selection" :inherit="inheritance" />
+    <CredentialSelect id="host-credential" v-model="selection" />
   </VaultField>
   <UsernameField
     v-if="personal"

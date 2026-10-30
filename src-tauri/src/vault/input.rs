@@ -1,6 +1,6 @@
 use super::{
     credential::HostCredential,
-    model::{Defaults, Id, VaultData},
+    model::{Id, VaultData},
 };
 use crate::error::{AppError, AppResult};
 use serde::Deserialize;
@@ -19,7 +19,6 @@ pub enum SecretUpdate {
 #[serde(rename_all = "camelCase")]
 pub struct HostInput {
     pub id: Option<Id>,
-    pub group_id: Option<Id>,
     #[serde(default)]
     pub label: String,
     pub address: String,
@@ -32,16 +31,6 @@ pub struct HostInput {
     pub notes: String,
     #[serde(default)]
     pub password: SecretUpdate,
-}
-
-#[derive(Debug, Clone, Deserialize, TS)]
-#[serde(rename_all = "camelCase")]
-pub struct GroupInput {
-    pub id: Option<Id>,
-    pub parent_id: Option<Id>,
-    pub name: String,
-    #[serde(default)]
-    pub defaults: Defaults,
 }
 
 #[derive(Debug, Clone, Deserialize, TS)]
@@ -95,51 +84,11 @@ pub fn validate_port(port: Option<u16>) -> AppResult<()> {
     Ok(())
 }
 
-pub fn validate_defaults(data: &VaultData, defaults: &Defaults) -> AppResult<()> {
-    validate_port(defaults.port)?;
-    if let Some(username) = &defaults.username {
-        validate_username(username)?;
-    }
-    if let Some(id) = defaults.identity_id {
-        if !data.identities.iter().any(|identity| identity.id == id) {
-            return Err(AppError::not_found("identité"));
-        }
-    }
-    Ok(())
-}
-
 pub fn validate_key_ref(data: &VaultData, key_id: Option<Id>) -> AppResult<()> {
     match key_id {
         Some(id) if !data.keys.iter().any(|key| key.id == id) => Err(AppError::not_found("clé")),
         _ => Ok(()),
     }
-}
-
-pub fn validate_group_ref(data: &VaultData, group_id: Option<Id>) -> AppResult<()> {
-    match group_id {
-        Some(id) if !data.groups.iter().any(|group| group.id == id) => {
-            Err(AppError::not_found("groupe"))
-        }
-        _ => Ok(()),
-    }
-}
-
-pub fn validate_parent(data: &VaultData, group_id: Id, parent_id: Option<Id>) -> AppResult<()> {
-    validate_group_ref(data, parent_id)?;
-    let mut cursor = parent_id;
-    while let Some(id) = cursor {
-        if id == group_id {
-            return Err(AppError::invalid(
-                "un groupe ne peut pas être placé dans lui-même",
-            ));
-        }
-        cursor = data
-            .groups
-            .iter()
-            .find(|group| group.id == id)
-            .and_then(|g| g.parent_id);
-    }
-    Ok(())
 }
 
 pub fn clean_tags(tags: Vec<String>) -> Vec<String> {

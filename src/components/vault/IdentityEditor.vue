@@ -35,13 +35,8 @@ const usage = computed(() => {
   const hosts = vault.view.hosts.filter(
     ({ credential }) => credential.kind === 'identity' && credential.id === id,
   ).length
-  const groups = vault.view.groups.filter((group) => group.defaults.identityId === id).length
-  if (!hosts && !groups) return 'Utilisée par aucun hôte ni groupe'
-  const parts = [
-    hosts && `${hosts} hôte${hosts > 1 ? 's' : ''}`,
-    groups && `${groups} groupe${groups > 1 ? 's' : ''}`,
-  ]
-  return `Utilisée par ${parts.filter(Boolean).join(' et ')}`
+  if (!hosts) return 'Utilisée par aucun hôte'
+  return `Utilisée par ${hosts} hôte${hosts > 1 ? 's' : ''}`
 })
 
 function setKey(id: Id | null) {

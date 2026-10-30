@@ -48,13 +48,7 @@ const selectedIcon = computed(() => (model.value ? selected.value?.icon : props.
       <SelectItem v-if="!known && model" :value="model" disabled class="text-[13px]">
         Élément supprimé
       </SelectItem>
-      <SelectItem
-        v-for="option in options"
-        :key="option.id"
-        :value="option.id"
-        class="text-[13px]"
-        :style="{ paddingInlineStart: `${0.5 + (option.depth ?? 0) * 0.875}rem` }"
-      >
+      <SelectItem v-for="option in options" :key="option.id" :value="option.id" class="text-[13px]">
         <component :is="option.icon" v-if="option.icon" :stroke-width="1.5" aria-hidden="true" />
         {{ option.label }}
       </SelectItem>

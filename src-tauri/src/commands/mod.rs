@@ -37,8 +37,6 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static 
         vault::host_save,
         vault::host_delete,
         vault::host_duplicate,
-        vault::group_save,
-        vault::group_delete,
         vault::identity_save,
         vault::identity_delete,
         vault::key_import,

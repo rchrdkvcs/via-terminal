@@ -56,7 +56,6 @@ export function useCommandTargets() {
           host.address,
           vault.view.effective[host.id]?.username?.value,
           host.tags.join(' '),
-          vault.groupPath(host.groupId).join(' '),
         ])
       : [...vault.recentHosts, ...all.filter((host) => !host.lastConnectedAt)].slice(0, RECENT)
     const recent = !query.trim()
@@ -64,7 +63,7 @@ export function useCommandTargets() {
       id: `host:${host.id}`,
       section: recent ? 'Hôtes récents' : 'Hôtes',
       label: hostName(host.id),
-      detail: [vault.describe(host.id), ...vault.groupPath(host.groupId)].join('  '),
+      detail: vault.describe(host.id),
       icon: Server,
       target: { kind: 'host', hostId: host.id },
       reuse: recent,

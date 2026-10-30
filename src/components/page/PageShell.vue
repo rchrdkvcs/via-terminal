@@ -22,8 +22,6 @@ const props = defineProps<{
   sections: PageSection<T>[]
   /** Last breadcrumb, when the page shows one item of the current section. */
   detail?: string | null
-  /** The section is narrowed by something in the rail slot, which then holds the highlight. */
-  scoped?: boolean
 }>()
 const emit = defineEmits<{ back: [] }>()
 const current = defineModel<T>({ required: true })
@@ -87,29 +85,28 @@ function choose(id: T) {
           <h2 class="flex h-7 items-center px-2.5 text-xs font-medium text-ink-faint">
             {{ group.label }}
           </h2>
-          <template v-for="item in group.items" :key="item.id">
-            <button
-              type="button"
-              :aria-current="current === item.id && !scoped ? 'page' : undefined"
-              class="row flex h-8 items-center gap-2.5 px-2.5 text-start text-ink-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 aria-[current=page]:font-medium"
-              @click="choose(item.id)"
+          <button
+            v-for="item in group.items"
+            :key="item.id"
+            type="button"
+            :aria-current="current === item.id ? 'page' : undefined"
+            class="row flex h-8 items-center gap-2.5 px-2.5 text-start text-ink-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 aria-[current=page]:font-medium"
+            @click="choose(item.id)"
+          >
+            <component
+              :is="item.icon"
+              class="size-4 shrink-0"
+              :stroke-width="1.5"
+              aria-hidden="true"
+            />
+            <span class="flex-1 truncate">{{ item.label }}</span>
+            <span
+              v-if="item.count !== undefined"
+              class="text-xs font-normal text-ink-faint tabular-nums"
             >
-              <component
-                :is="item.icon"
-                class="size-4 shrink-0"
-                :stroke-width="1.5"
-                aria-hidden="true"
-              />
-              <span class="flex-1 truncate">{{ item.label }}</span>
-              <span
-                v-if="item.count !== undefined"
-                class="text-xs font-normal text-ink-faint tabular-nums"
-              >
-                {{ item.count }}
-              </span>
-            </button>
-            <slot v-if="item.id === current" name="rail" />
-          </template>
+              {{ item.count }}
+            </span>
+          </button>
         </div>
       </nav>
       <div class="flex min-w-0 flex-1 flex-col bg-surface">

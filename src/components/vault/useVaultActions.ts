@@ -66,25 +66,13 @@ export function useVaultActions() {
     })
   }
 
-  function deleteGroup(id: Id) {
-    const group = vault.group(id)
-    const parent = vault.group(group?.parentId ?? null)
-    const destination = parent ? `dans « ${parent.name} »` : 'à la racine'
-    remove({
-      id,
-      title: `Supprimer le groupe « ${group?.name ?? ''} » ?`,
-      description: `Ses hôtes et ses sous-groupes remontent ${destination}. Aucun hôte n’est supprimé, mais ils perdent les valeurs par défaut de ce groupe.`,
-      run: () => vault.remove('group', id),
-    })
-  }
-
   function deleteIdentity(id: Id) {
     const identity = vault.view.identities.find((item) => item.id === id)
     remove({
       id,
       title: `Supprimer l’identité « ${identity?.label ?? ''} » ?`,
       description:
-        'Les hôtes et groupes qui l’utilisent perdent cette référence et reprennent les valeurs héritées. Son mot de passe enregistré est oublié.',
+        'Les hôtes qui l’utilisent gardent son nom d’utilisateur et demanderont un mot de passe. Son mot de passe enregistré est oublié.',
       run: () => vault.remove('identity', id),
     })
   }
@@ -110,20 +98,14 @@ export function useVaultActions() {
     })
   }
 
-  function createGroup(parentId: Id | null): Promise<Id | null> {
-    return attempt(() => vault.createGroup(parentId))
-  }
-
   return {
     run,
     attempt,
     connect,
     duplicateHost,
     deleteHost,
-    deleteGroup,
     deleteIdentity,
     deleteKey,
     deleteKnownHost,
-    createGroup,
   }
 }

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import GroupEditor from './GroupEditor.vue'
 import HostEditor from './HostEditor.vue'
 import HostList from './HostList.vue'
 import IdentityEditor from './IdentityEditor.vue'
@@ -36,7 +35,6 @@ const inspectorKey = computed(() => `${state.inspecting.value}:${state.selected.
     <div v-if="state.inspecting.value" :key="inspectorKey" class="flex min-w-0 flex-1">
       <HostEditor v-if="state.inspecting.value === 'host'" :host-id="id" />
       <HostEditor v-else-if="state.inspecting.value === 'new-host'" :host-id="null" />
-      <GroupEditor v-else-if="state.inspecting.value === 'group'" :group-id="id" />
       <IdentityEditor v-else-if="state.inspecting.value === 'identity'" :identity-id="id" />
       <IdentityEditor v-else-if="state.inspecting.value === 'new-identity'" :identity-id="null" />
       <KeyInspector v-else-if="state.inspecting.value === 'key'" :key-id="id" />

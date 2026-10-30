@@ -10,7 +10,7 @@ In `via.sqlite`, in the application data directory:
 
 - Spaces, pinned tabs, their last remote explorer directory, folders and split layouts.
 - Settings.
-- The vault: host labels, addresses, ports, usernames, tags, notes, groups, identities, public keys and accepted server fingerprints.
+- The vault: host labels, addresses, ports, usernames, tags, notes, identities, public keys and accepted server fingerprints.
 - Secrets (passwords, passphrases, private keys), **encrypted** with ChaCha20-Poly1305. The 256-bit key lives in the operating system keychain (Windows Credential Manager, macOS Keychain, Secret Service), under the service `dev.viaterminal.desktop`.
 
 Everything except secrets is stored unencrypted. Anyone with access to the user's OS account can read hosts and addresses.

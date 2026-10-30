@@ -6,7 +6,6 @@ import { hostInput } from './inputs'
 vi.mock('@/stores/vault', () => ({
   useVault: () => ({
     view: {
-      groups: [],
       identities: [{ id: 'identity', label: 'Production', username: 'deploy', keyId: 'key' }],
       keys: [{ id: 'key', label: 'SSH' }],
       secretsAvailable: true,
@@ -41,9 +40,9 @@ it('selects one identity and removes credentials that would override it', async 
   expect(view.emitted('commit')).toHaveLength(1)
 })
 
-it('keeps an older username override on top of the inherited identity when saved', async () => {
+it('saves the username typed for a password', async () => {
   const draft = hostInput(undefined)
-  draft.credential = { kind: 'inherit', username: 'root', key: null }
+  draft.credential = { kind: 'password', username: 'root' }
   const view = mount(HostCredentials, {
     props: {
       modelValue: draft,
@@ -58,6 +57,6 @@ it('keeps an older username override on top of the inherited identity when saved
   const input = view.find('#host-username')
   expect((input.element as HTMLInputElement).value).toBe('root')
   await input.trigger('blur')
-  expect(draft.credential).toEqual({ kind: 'inherit', username: 'root', key: null })
+  expect(draft.credential).toEqual({ kind: 'password', username: 'root' })
   expect(view.emitted('commit')).toHaveLength(1)
 })

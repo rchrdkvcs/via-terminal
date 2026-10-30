@@ -1,4 +1,7 @@
-use super::credential::HostCredential;
+use super::{
+    credential::HostCredential,
+    legacy::{StoredHost, StoredVault},
+};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use uuid::Uuid;
@@ -6,30 +9,9 @@ use uuid::Uuid;
 pub type Id = Uuid;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "camelCase")]
-pub struct Group {
-    pub id: Id,
-    pub parent_id: Option<Id>,
-    pub name: String,
-    #[serde(default)]
-    pub position: i64,
-    #[serde(default)]
-    pub defaults: Defaults,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "camelCase")]
-pub struct Defaults {
-    pub username: Option<String>,
-    pub port: Option<u16>,
-    pub identity_id: Option<Id>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", from = "StoredHost")]
 pub struct Host {
     pub id: Id,
-    pub group_id: Option<Id>,
     pub label: String,
     pub address: String,
     pub port: Option<u16>,
@@ -40,50 +22,9 @@ pub struct Host {
     pub last_connected_at: Option<i64>,
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct StoredHost {
-    id: Id,
-    group_id: Option<Id>,
-    label: String,
-    address: String,
-    port: Option<u16>,
-    credential: Option<HostCredential>,
-    #[serde(default)]
-    own_credentials: bool,
-    #[serde(default)]
-    overrides: Defaults,
-    key_id: Option<Id>,
-    #[serde(default)]
-    tags: Vec<String>,
-    #[serde(default)]
-    notes: String,
-    #[serde(default)]
-    created_at: i64,
-    #[serde(default)]
-    last_connected_at: Option<i64>,
-}
-
 impl From<StoredHost> for Host {
     fn from(stored: StoredHost) -> Self {
-        Self {
-            id: stored.id,
-            group_id: stored.group_id,
-            label: stored.label,
-            address: stored.address,
-            port: stored.port.or(stored.overrides.port),
-            credential: stored.credential.unwrap_or_else(|| {
-                HostCredential::from_legacy(
-                    stored.own_credentials,
-                    &stored.overrides,
-                    stored.key_id,
-                )
-            }),
-            tags: stored.tags,
-            notes: stored.notes,
-            created_at: stored.created_at,
-            last_connected_at: stored.last_connected_at,
-        }
+        stored.migrate(&[], &[])
     }
 }
 
@@ -123,10 +64,8 @@ pub struct KnownHost {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", from = "StoredVault")]
 pub struct VaultData {
-    #[serde(default)]
-    pub groups: Vec<Group>,
     #[serde(default)]
     pub hosts: Vec<Host>,
     #[serde(default)]
