@@ -14,7 +14,7 @@ import {
 } from '@lucide/vue'
 import type { Component } from 'vue'
 
-export const spaceIconComponents: Record<string, Component> = {
+const spaceIconComponents: Record<string, Component> = {
   terminal: Terminal,
   server: Server,
   briefcase: Briefcase,

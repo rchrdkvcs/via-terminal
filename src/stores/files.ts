@@ -5,7 +5,7 @@ import { describeError } from '@/ipc/client'
 import { useSessions } from './sessions'
 import { documentActions } from './file-document'
 import { transferActions } from './file-transfers'
-export type { RemoteDocument, Ownership } from './file-document'
+export type { RemoteDocument } from './file-document'
 export type { DroppedFile, Transfer, TransferState } from './file-transfers'
 export { isActive, isFinished, isProgressing } from './file-transfers'
 /** The remote explorer of one tab; `owner` is its current connection's, once a reply told it. */

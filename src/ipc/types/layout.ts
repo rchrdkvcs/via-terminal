@@ -6,7 +6,6 @@ export type {
   Layout,
   PersistedSpace,
   Row,
-  Sidebar,
   Split,
   Tab,
   TabView,

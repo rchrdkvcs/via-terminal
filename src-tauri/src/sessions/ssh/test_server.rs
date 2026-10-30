@@ -54,7 +54,7 @@ impl server::Handler for Shell {
     async fn auth_publickey(
         &mut self,
         user: &str,
-        _: &russh::keys::PublicKey,
+        _: server::VerifiedPublicKey<'_>,
     ) -> Result<Auth, Self::Error> {
         Ok(if user == "via-key" {
             Auth::Accept

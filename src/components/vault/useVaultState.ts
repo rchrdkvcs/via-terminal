@@ -4,7 +4,7 @@ import { useUi } from '@/stores/ui'
 import { useVault } from '@/stores/vault'
 
 export type Section = 'hosts' | 'identities' | 'keys' | 'knownHosts'
-export type Inspecting = 'host' | 'group' | 'identity' | 'key' | 'new-host' | 'new-identity' | null
+type Inspecting = 'host' | 'group' | 'identity' | 'key' | 'new-host' | 'new-identity' | null
 
 function createState() {
   const ui = useUi()

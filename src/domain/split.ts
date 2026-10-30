@@ -5,7 +5,7 @@ import { type Space, newTabRow, rows, tabFromRow } from './space'
 
 export type Edge = 'left' | 'right' | 'top' | 'bottom'
 
-export function directionOf(edge: Edge): Direction {
+function directionOf(edge: Edge): Direction {
   return edge === 'left' || edge === 'right' ? 'horizontal' : 'vertical'
 }
 

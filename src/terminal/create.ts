@@ -17,9 +17,9 @@ export interface Instance {
   dispose(): void
 }
 
-export const MONO_STACK = "'IBM Plex Mono', 'Cascadia Mono', Menlo, Consolas, monospace"
+const MONO_STACK = "'IBM Plex Mono', 'Cascadia Mono', Menlo, Consolas, monospace"
 
-export function fontFamily(presentation: Presentation): string {
+function fontFamily(presentation: Presentation): string {
   return presentation.fontFamily ? `'${presentation.fontFamily}', ${MONO_STACK}` : MONO_STACK
 }
 

@@ -6,7 +6,7 @@ import type { Bootstrap, Settings, Shell } from '@/ipc/types'
 import { notify } from '@/lib/notify'
 import { deferredSave } from '@/lib/deferred-save'
 
-export const defaultSettings: Settings = {
+const defaultSettings: Settings = {
   theme: 'system',
   fontFamily: '',
   fontSize: 14,

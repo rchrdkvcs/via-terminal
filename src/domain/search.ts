@@ -26,7 +26,7 @@ export function scoreText(query: string, text: string): number {
   return Math.min(score, 500)
 }
 
-export function scoreFields(query: string, fields: Array<string | null | undefined>): number {
+function scoreFields(query: string, fields: Array<string | null | undefined>): number {
   let best = 0
   fields.forEach((field, index) => {
     if (!field) return
