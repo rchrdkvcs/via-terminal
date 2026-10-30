@@ -16,7 +16,12 @@ const shells = [
 
 vi.mock('@/stores/workbench', () => ({ useWorkbench: () => workbench }))
 vi.mock('@/stores/settings', () => ({
-  useSettings: () => ({ shells, shellFor: () => shells[0], platform: 'macos' }),
+  useSettings: () => ({
+    shells,
+    shellFor: () => shells[0],
+    platform: 'macos',
+    settings: { keybindings: {} },
+  }),
 }))
 vi.mock('@/stores/spaces', () => ({
   useSpaces: () => ({
