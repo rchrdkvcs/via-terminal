@@ -105,6 +105,7 @@ A full page with General (default shell, behavior on close, quick-connect auto-s
 - Depth comes from materials, not color: the sidebar sits on the window chrome; content is a raised surface; menus, dialogs and inspectors float above it with a lit top edge; controls are lit keys with a hairline and a soft drop; fields are pressed into the surface.
 - Full pages (vault, settings) share one frame: a wide rail of sections on a half-step tint, the page beside it, no borders between them. Inspectors float on the right and can be resized.
 - Selected rows are lit; asleep rows are dimmed; connection progress is the only animated indicator.
+- The empty workbench is the one ambient scene: this machine at the center, recent hosts orbiting it, slow and quiet, frozen with reduced motion.
 - Things used many times a day (command bar, space switch, shortcuts) appear at once. Motion is reserved for spatial changes, stays under 250 ms, and disappears with reduced motion.
 - A drop target is always one line in one gap; a drop that would change nothing shows nothing.
 - The window chrome quiets down while the window is in the background.
