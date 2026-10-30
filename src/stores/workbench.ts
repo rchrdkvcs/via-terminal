@@ -87,6 +87,17 @@ export const useWorkbench = defineStore('workbench', () => {
     return row.id
   }
 
+  /** Goes to a terminal of `target` already in the active space, or opens one. */
+  function show(target: Target): Id | undefined {
+    const same = JSON.stringify(target)
+    const existing = tabs(spaces.active).find(
+      (tab) => !tab.view && JSON.stringify(tab.target) === same,
+    )
+    if (!existing) return open(target)
+    activate(existing.id)
+    return existing.id
+  }
+
   function replace(tabId: Id, target: Target): Id | undefined {
     const space = spaces.spaceOf(tabId)
     if (
@@ -315,6 +326,7 @@ export const useWorkbench = defineStore('workbench', () => {
     activeRow,
     activate,
     open,
+    show,
     replace,
     openView,
     openBeside,

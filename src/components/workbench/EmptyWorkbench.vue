@@ -76,7 +76,7 @@ const hasRows = computed(() => rows(spaces.active).length > 0)
             <button
               type="button"
               class="row flex h-9 w-full items-center gap-3 px-2.5 text-start text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-              @click="workbench.open({ kind: 'host', hostId: host.id })"
+              @click="workbench.show({ kind: 'host', hostId: host.id })"
             >
               <Server :size="16" :stroke-width="1.5" class="text-ink-muted" />
               <span class="min-w-0 flex-1 truncate">{{ hostName(host.id) }}</span>

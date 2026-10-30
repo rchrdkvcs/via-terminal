@@ -10,6 +10,8 @@ export interface CommandItem {
   shortcut?: string
 
   target?: Target
+  /** Opening it goes to a tab already showing `target` in the space, if any. */
+  reuse?: boolean
 
   tabId?: string
   run?: () => void

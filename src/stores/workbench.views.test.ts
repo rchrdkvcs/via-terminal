@@ -42,6 +42,20 @@ describe('workbench views', () => {
     expect(rows(spaces.active)).toHaveLength(3)
   })
 
+  it('goes to the terminal already showing a target instead of opening another', () => {
+    const { spaces, workbench } = setup(
+      [{ ...remote('files'), view: { kind: 'files', path: '/' } }, remote('pinned')],
+      [row('local')],
+    )
+    workbench.activate('local', { wake: false })
+    expect(workbench.show({ kind: 'host', hostId: 'host' })).toBe('pinned')
+    expect(workbench.activeTab?.id).toBe('pinned')
+    expect(rows(spaces.active)).toHaveLength(3)
+    const opened = workbench.show({ kind: 'host', hostId: 'other' })
+    expect(rows(spaces.active)).toHaveLength(4)
+    expect(workbench.activeTab?.id).toBe(opened)
+  })
+
   it('shows no view of a local shell', () => {
     const { spaces, workbench } = setup([], [row('local')])
     const local = findTab(spaces.active, 'local')!

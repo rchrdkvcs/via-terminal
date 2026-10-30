@@ -103,6 +103,7 @@ export function useCommandResults(query: Ref<string>) {
     else if (item.tabId) workbench.activate(item.tabId)
     else if (item.target && current.kind === 'replace')
       await closing.replaceTab(current.tabId, item.target)
+    else if (item.target && item.reuse) workbench.show(item.target)
     else if (item.target) workbench.open(item.target)
   }
 

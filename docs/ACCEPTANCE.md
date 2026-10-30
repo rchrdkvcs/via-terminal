@@ -8,7 +8,7 @@ Each scenario is run in the real application, not only through unit tests. The b
 - Type `user@10.0.0.5:2222` and press Enter: the pane shows the connection steps. After authentication, the host appears in the vault with that user and port.
 - Turn off quick-connect saving in settings: a successful quick connect leaves the vault unchanged.
 - Ctrl+Shift+L on a running tab, choose another target: the same row now connects there, and its old session is closed.
-- With nothing open, the content shows the default shell and recent hosts. One click opens any of them.
+- With nothing open, the content shows the default shell and recent hosts. One click opens any of them, or goes to the tab of a recent host already open in the space.
 
 ## SSH
 
