@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { appliesWhileEditing, bindings, formatShortcut, keyLabels, match } from './shortcuts'
+import {
+  appliesWhileEditing,
+  bindings,
+  comboOf,
+  formatShortcut,
+  keyLabels,
+  match,
+  refusal,
+} from './shortcuts'
 
 const press = (code: string, mods: Partial<KeyboardEvent> = {}, key = code) =>
   ({
@@ -53,5 +61,40 @@ describe('shortcuts', () => {
     expect(appliesWhileEditing(match(press('KeyT', { metaKey: true }, 't'), 'macos')!.id)).toBe(
       true,
     )
+  })
+
+  it('follows the combinations the user chose instead of the defaults', () => {
+    const overrides = { closeTab: ['Alt', 'Cmd', 'W'] }
+    expect(match(press('KeyW', { metaKey: true }, 'w'), 'macos', overrides)).toBeNull()
+    expect(match(press('KeyW', { metaKey: true, altKey: true }, '∑'), 'macos', overrides)).toEqual({
+      id: 'closeTab',
+    })
+    expect(formatShortcut('closeTab', 'macos', overrides)).toBe('⌥⌘W')
+  })
+
+  it('never lets the space digits be overridden', () => {
+    expect(
+      match(press('Digit2', { metaKey: true }, '2'), 'macos', { space: ['Ctrl', 'J'] }),
+    ).toEqual({ id: 'space', digit: 2 })
+  })
+
+  it('records a key press as a combination, ignoring lone modifiers', () => {
+    expect(comboOf(press('ShiftLeft', { shiftKey: true }, 'Shift'))).toBeNull()
+    expect(comboOf(press('KeyJ', { metaKey: true, shiftKey: true }, 'J'))).toEqual([
+      'Shift',
+      'Cmd',
+      'J',
+    ])
+    expect(comboOf(press('BracketLeft', { ctrlKey: true }, '['))).toEqual(['Ctrl', '['])
+  })
+
+  it('refuses combinations that would type text, clash or belong to macOS', () => {
+    expect(refusal(['J'], 'closeTab', 'macos')).toMatch(/modification/)
+    expect(refusal(['Shift', 'J'], 'closeTab', 'macos')).toMatch(/majuscules/)
+    expect(refusal(['Cmd', 'Q'], 'closeTab', 'macos')).toMatch(/macOS/)
+    expect(refusal(['Cmd', 'T'], 'closeTab', 'macos')).toMatch(/Nouvel onglet/)
+    expect(refusal(['Cmd', '4'], 'closeTab', 'macos')).toMatch(/Espace/)
+    expect(refusal(['Cmd', 'T'], 'closeTab', 'macos', { newTab: ['Cmd', 'N'] })).toBeNull()
+    expect(refusal(['F5'], 'closeTab', 'windows')).toBeNull()
   })
 })

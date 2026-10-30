@@ -5,10 +5,10 @@ defineProps<{ title: string; subtitle?: string; error?: string | null }>()
 <template>
   <div class="flex h-full min-w-0 flex-1 flex-col">
     <div class="min-h-0 flex-1 overflow-y-auto">
-      <div class="mx-auto grid w-full max-w-[680px] gap-6 px-10 pt-8 pb-10">
+      <div class="mx-auto grid w-full max-w-[720px] gap-7 px-10 pt-8 pb-10">
         <header class="flex items-start gap-3">
           <div class="min-w-0 flex-1">
-            <h2 class="truncate text-[18px] font-semibold tracking-[-0.015em]">{{ title }}</h2>
+            <h2 class="truncate text-[20px] font-semibold tracking-[-0.02em]">{{ title }}</h2>
             <p v-if="subtitle" class="mt-1 text-xs text-pretty text-ink-muted">{{ subtitle }}</p>
           </div>
           <div class="flex shrink-0 items-center gap-1">

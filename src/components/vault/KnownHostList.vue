@@ -48,11 +48,11 @@ const ids = computed(() => known.value.map((item) => item.id))
         :current="current(item.id)"
         :tabbable="tabbable(item.id)"
       >
-        <span
-          class="material-control grid size-8 shrink-0 place-items-center rounded-lg text-ink-muted"
-        >
-          <ShieldCheck :size="15" :stroke-width="1.5" />
-        </span>
+        <ShieldCheck
+          class="size-4 shrink-0 text-ink-muted"
+          :stroke-width="1.5"
+          aria-hidden="true"
+        />
         <div class="min-w-0 flex-1">
           <div class="truncate font-medium">{{ item.address }}:{{ item.port }}</div>
           <div class="text-muted-foreground flex min-w-0 gap-2 text-xs">
@@ -62,7 +62,8 @@ const ids = computed(() => known.value.map((item) => item.id))
             </span>
           </div>
         </div>
-        <span class="text-muted-foreground shrink-0 text-xs"
+        <span
+          class="text-muted-foreground shrink-0 text-xs group-hover/row:hidden group-focus-visible/row:hidden group-data-[state=open]/row:hidden"
           >Ajoutée le {{ formatDate(item.addedAt) }}</span
         >
         <template #actions>

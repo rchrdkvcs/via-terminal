@@ -44,7 +44,7 @@ const keyLabel = (id: string | null) => vault.view.keys.find((key) => key.id ===
     @remove="actions.deleteIdentity"
   >
     <template #actions>
-      <Button size="sm" class="h-8" @click="state.startCreating()">
+      <Button @click="state.startCreating()">
         <Plus :stroke-width="1.5" />
         Nouvelle identité
       </Button>
@@ -58,11 +58,7 @@ const keyLabel = (id: string | null) => vault.view.keys.find((key) => key.id ===
         :tabbable="tabbable(identity.id)"
         @open="state.selected.value = identity.id"
       >
-        <span
-          class="material-control grid size-8 shrink-0 place-items-center rounded-lg text-ink-muted"
-        >
-          <UserRound :size="15" :stroke-width="1.5" />
-        </span>
+        <UserRound class="size-4 shrink-0 text-ink-muted" :stroke-width="1.5" aria-hidden="true" />
         <div class="min-w-0 flex-1">
           <div class="truncate font-medium">{{ identity.label }}</div>
           <div class="text-muted-foreground truncate text-xs">{{ identity.username }}</div>

@@ -54,16 +54,18 @@ function onKeydown(event: KeyboardEvent) {
 <template>
   <InspectorLayout :title="title" :subtitle="subtitle" :error="error" @keydown="onKeydown">
     <template v-if="host" #actions>
-      <Button size="xs" class="me-1" @click="actions.connect(host.id)">
+      <Button size="sm" @click="actions.connect(host.id)">
         <Plug :stroke-width="1.5" />
         Connecter
       </Button>
-      <IconAction label="Dupliquer" @click="actions.duplicateHost(host.id)">
-        <Copy :stroke-width="1.5" />
-      </IconAction>
-      <IconAction label="Supprimer" @click="actions.deleteHost(host.id)">
-        <Trash2 :stroke-width="1.5" />
-      </IconAction>
+      <div class="ms-2 flex items-center gap-0.5 border-s border-hairline ps-2">
+        <IconAction label="Dupliquer" @click="actions.duplicateHost(host.id)">
+          <Copy :stroke-width="1.5" />
+        </IconAction>
+        <IconAction label="Supprimer" @click="actions.deleteHost(host.id)">
+          <Trash2 :stroke-width="1.5" />
+        </IconAction>
+      </div>
     </template>
     <VaultCard title="Serveur">
       <HostAddressFields v-model="draft" :inherited="resolved" @commit="autosave" />

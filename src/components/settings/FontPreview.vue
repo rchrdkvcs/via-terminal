@@ -7,11 +7,12 @@ const MONO_STACK = "'IBM Plex Mono', 'Cascadia Mono', Menlo, Consolas, monospace
 const store = useSettings()
 
 const style = computed(() => {
-  const { fontFamily, fontSize, lineHeight } = store.settings
+  const { fontFamily, fontSize, lineHeight, letterSpacing } = store.settings
   return {
     fontFamily: fontFamily ? `'${fontFamily}', ${MONO_STACK}` : MONO_STACK,
     fontSize: `${fontSize}px`,
     lineHeight: String(lineHeight),
+    letterSpacing: `${letterSpacing}px`,
   }
 })
 
@@ -28,7 +29,7 @@ const cursorClass = computed(
 <template>
   <figure
     aria-label="Aperçu du terminal"
-    class="overflow-hidden rounded-xl bg-surface px-4 py-3 text-surface-ink shadow-row"
+    class="overflow-hidden rounded-xl bg-background px-4 py-3 text-surface-ink shadow-[var(--shadow-panel)]"
   >
     <pre
       class="m-0 whitespace-pre"

@@ -47,8 +47,9 @@ export function useShortcuts() {
   }
 
   function onKeydown(event: KeyboardEvent) {
+    if (ui.recordingShortcut) return
     const target = event.target instanceof Element ? event.target : null
-    const found = match(event, settings.platform)
+    const found = match(event, settings.platform, settings.settings.keybindings)
     if (!found) return
     const editing =
       !target?.closest('.xterm') &&

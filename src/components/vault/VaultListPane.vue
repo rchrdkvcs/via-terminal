@@ -70,35 +70,31 @@ function isCurrent(id: Id): boolean {
 
 <template>
   <section class="flex h-full min-w-0 flex-col" :aria-label="title">
-    <header class="mx-auto w-full max-w-[880px] shrink-0 px-8 pt-7 pb-4">
-      <div class="flex items-start gap-4">
-        <div class="min-w-0 flex-1">
-          <h2 class="truncate text-[18px] font-semibold tracking-[-0.015em]">{{ title }}</h2>
-          <p class="mt-1 max-w-[52ch] text-xs leading-relaxed text-pretty text-ink-muted">
-            {{ description }}
-          </p>
+    <header class="mx-auto grid w-full max-w-[720px] shrink-0 gap-4 px-10 pt-8 pb-4">
+      <h2 class="sr-only">{{ title }}</h2>
+      <p class="px-1 text-xs leading-relaxed text-pretty text-ink-muted">{{ description }}</p>
+      <div class="flex items-center gap-2">
+        <div v-if="searchLabel" class="relative flex-1">
+          <Search
+            class="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-faint"
+            :stroke-width="1.5"
+            aria-hidden="true"
+          />
+          <Input
+            v-model="query"
+            type="search"
+            :aria-label="searchLabel"
+            :placeholder="searchLabel"
+            class="ps-8"
+            @keydown="onSearchKeydown"
+          />
         </div>
-        <div class="flex shrink-0 items-center gap-1.5">
+        <div class="ms-auto flex shrink-0 items-center gap-1.5">
           <slot name="actions" />
         </div>
       </div>
-      <div v-if="searchLabel" class="relative mt-4">
-        <Search
-          class="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-faint"
-          :stroke-width="1.5"
-          aria-hidden="true"
-        />
-        <Input
-          v-model="query"
-          type="search"
-          :aria-label="searchLabel"
-          :placeholder="searchLabel"
-          class="ps-8"
-          @keydown="onSearchKeydown"
-        />
-      </div>
     </header>
-    <div class="mx-auto w-full max-w-[880px] px-8">
+    <div class="mx-auto w-full max-w-[720px] px-10">
       <slot name="before" />
     </div>
     <div
@@ -106,7 +102,7 @@ function isCurrent(id: Id): boolean {
       ref="list"
       role="listbox"
       :aria-label="title"
-      class="mx-auto flex min-h-0 w-full max-w-[880px] flex-1 flex-col gap-px overflow-y-auto px-6 pb-6"
+      class="mx-auto flex min-h-0 w-full max-w-[720px] flex-1 flex-col gap-px overflow-y-auto px-[30px] pb-8"
       @keydown="onKeydown"
       @focusin="onFocusin"
     >

@@ -32,12 +32,8 @@ function onKeydown(event: KeyboardEvent) {
     <ContextMenu>
       <ContextMenuTrigger as-child>
         <div
-          class="flex h-8 items-center gap-0.5 rounded-md pe-1 text-[13px]"
-          :class="
-            current
-              ? 'bg-row-selected shadow-row'
-              : 'hover:bg-row-hover data-[state=open]:bg-row-hover'
-          "
+          class="row flex h-8 items-center gap-0.5 pe-1 text-[13px] text-ink-muted hover:text-foreground"
+          :aria-current="current ? 'page' : undefined"
           :style="{ paddingInlineStart: `${node.depth * 0.875}rem` }"
         >
           <button
@@ -65,17 +61,14 @@ function onKeydown(event: KeyboardEvent) {
             v-else
             type="button"
             class="focus-visible:ring-ring flex h-7 min-w-0 flex-1 items-center gap-2 rounded-[5px] px-1 text-start outline-none focus-visible:ring-2"
-            :aria-current="current ? 'true' : undefined"
             @click="tree.choose(id)"
             @keydown="onKeydown"
           >
-            <Folder
-              class="text-muted-foreground size-3.5 shrink-0"
-              :stroke-width="1.5"
-              aria-hidden="true"
-            />
-            <span class="truncate" :class="{ 'font-medium': current }">{{ node.group.name }}</span>
-            <span class="text-muted-foreground ms-auto text-xs tabular-nums">{{ node.count }}</span>
+            <Folder class="size-4 shrink-0" :stroke-width="1.5" aria-hidden="true" />
+            <span class="truncate" :class="current ? 'font-medium text-foreground' : ''">{{
+              node.group.name
+            }}</span>
+            <span class="ms-auto text-xs text-ink-faint tabular-nums">{{ node.count }}</span>
           </button>
         </div>
       </ContextMenuTrigger>

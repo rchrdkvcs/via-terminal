@@ -27,7 +27,7 @@ function onUpdate(next: unknown) {
       v-for="option in options"
       :key="option.value"
       :value="option.value"
-      class="h-6 min-w-0 rounded-[6px] px-3 text-[12.5px] font-normal text-ink-muted transition-[background-color,color,box-shadow] duration-100 hover:bg-transparent hover:text-foreground data-[state=on]:bg-control data-[state=on]:text-foreground data-[state=on]:shadow-[var(--shadow-control)]"
+      class="h-6 min-w-0 rounded-[6px] px-3 text-[13px] font-normal text-ink-muted transition-[background-color,color,box-shadow] duration-100 hover:bg-transparent hover:text-foreground data-[state=on]:bg-control data-[state=on]:text-foreground data-[state=on]:shadow-[var(--shadow-control)]"
     >
       {{ option.label }}
     </ToggleGroupItem>

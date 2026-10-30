@@ -18,8 +18,9 @@ import { useShortcuts } from '@/composables/useShortcuts'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 
-const VaultPage = defineAsyncComponent(() => import('@/components/vault/VaultPage.vue'))
-const SettingsPage = defineAsyncComponent(() => import('@/components/settings/SettingsPage.vue'))
+const PreferencesDialog = defineAsyncComponent(
+  () => import('@/components/page/PreferencesDialog.vue'),
+)
 
 const { ready, failure } = useBootstrap()
 useShortcuts()
@@ -45,8 +46,7 @@ const ui = useUi()
             </main>
           </div>
         </div>
-        <VaultPage v-if="ui.route === 'vault'" />
-        <SettingsPage v-else-if="ui.route === 'settings'" />
+        <PreferencesDialog v-if="ui.route !== 'workbench'" />
         <CommandBar />
         <SpaceDialog />
         <ConfirmDialog />

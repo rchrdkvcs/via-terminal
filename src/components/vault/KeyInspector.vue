@@ -72,24 +72,17 @@ function rename() {
       title="Clé publique"
       description="Ajoutez-la au fichier ~/.ssh/authorized_keys des serveurs qui doivent accepter cette clé."
     >
-      <textarea
+      <template #actions>
+        <Button variant="ghost" size="sm" @click="keyActions.copyPublicKey(key)">
+          <Copy :stroke-width="1.5" />
+          Copier
+        </Button>
+      </template>
+      <pre
         id="key-public"
         aria-label="Clé publique"
-        readonly
-        :value="key.publicKey"
-        rows="4"
-        class="material-field w-full resize-none rounded-md px-2.5 py-2 font-mono text-xs break-all outline-none"
-        @focus="($event.target as HTMLTextAreaElement).select()"
-      />
-      <Button
-        variant="outline"
-        size="sm"
-        class="justify-self-start"
-        @click="keyActions.copyPublicKey(key)"
-      >
-        <Copy :stroke-width="1.5" />
-        Copier la clé publique
-      </Button>
+        class="material-field rounded-md px-2.5 py-2 font-mono text-xs break-all whitespace-pre-wrap select-all"
+        >{{ key.publicKey }}</pre>
     </VaultCard>
   </InspectorLayout>
 </template>

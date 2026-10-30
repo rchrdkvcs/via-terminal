@@ -7,6 +7,8 @@ export interface Presentation {
   cursorStyle: 'block' | 'bar' | 'underline'
   cursorBlink: boolean
   scrollback: number
+  optionAsMeta: boolean
+  letterSpacing: number
   appearance: 'dark' | 'light'
 }
 
@@ -17,6 +19,8 @@ export const defaultPresentation: Presentation = {
   cursorStyle: 'bar',
   cursorBlink: true,
   scrollback: 10_000,
+  optionAsMeta: true,
+  letterSpacing: 0,
   appearance: 'dark',
 }
 

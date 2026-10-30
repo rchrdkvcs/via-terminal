@@ -30,8 +30,66 @@ fn build(app: &tauri::AppHandle) -> Result<App, Box<dyn std::error::Error>> {
     })
 }
 
+/// The default macOS menu, minus Close Window: its Cmd+W would close the whole window
+/// before the webview sees the key, while Via binds it to closing the active tab.
+#[cfg(target_os = "macos")]
+fn menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tauri::menu::Menu<R>> {
+    use tauri::menu::{AboutMetadata, Menu, PredefinedMenuItem as Item, Submenu};
+    let name = app.package_info().name.clone();
+    let about = AboutMetadata {
+        name: Some(name.clone()),
+        version: Some(app.package_info().version.to_string()),
+        ..Default::default()
+    };
+    Menu::with_items(
+        app,
+        &[
+            &Submenu::with_items(
+                app,
+                name,
+                true,
+                &[
+                    &Item::about(app, None, Some(about))?,
+                    &Item::separator(app)?,
+                    &Item::services(app, None)?,
+                    &Item::separator(app)?,
+                    &Item::hide(app, None)?,
+                    &Item::hide_others(app, None)?,
+                    &Item::show_all(app, None)?,
+                    &Item::separator(app)?,
+                    &Item::quit(app, None)?,
+                ],
+            )?,
+            &Submenu::with_items(
+                app,
+                "Edit",
+                true,
+                &[
+                    &Item::undo(app, None)?,
+                    &Item::redo(app, None)?,
+                    &Item::separator(app)?,
+                    &Item::cut(app, None)?,
+                    &Item::copy(app, None)?,
+                    &Item::paste(app, None)?,
+                    &Item::select_all(app, None)?,
+                ],
+            )?,
+            &Submenu::with_items(app, "View", true, &[&Item::fullscreen(app, None)?])?,
+            &Submenu::with_items(
+                app,
+                "Window",
+                true,
+                &[&Item::minimize(app, None)?, &Item::maximize(app, None)?],
+            )?,
+        ],
+    )
+}
+
 pub fn run() {
-    let app = tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(menu);
+    let app = builder
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();

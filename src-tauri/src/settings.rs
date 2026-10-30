@@ -3,7 +3,10 @@ use crate::{
     storage::Storage,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex},
+};
 use ts_rs::TS;
 
 const DOCUMENT: &str = "settings";
@@ -48,7 +51,18 @@ pub struct Settings {
     pub confirm_close_running: bool,
     /// Check the public release endpoint once after startup.
     pub check_for_updates: bool,
+
+    /// macOS only: Option sends Meta (Esc prefix) instead of composing characters.
+    pub option_as_meta: bool,
+    /// Extra pixels between terminal glyphs.
+    pub letter_spacing: f32,
+    /// Shortcut overrides by action id; absent actions keep their default combination.
+    pub keybindings: BTreeMap<String, Vec<String>>,
 }
+
+const MAX_KEYBINDINGS: usize = 64;
+const MAX_COMBO_KEYS: usize = 5;
+const MAX_KEY_LENGTH: usize = 16;
 
 impl Default for Settings {
     fn default() -> Self {
@@ -65,6 +79,9 @@ impl Default for Settings {
             save_quick_connect: true,
             confirm_close_running: false,
             check_for_updates: true,
+            option_as_meta: true,
+            letter_spacing: 0.0,
+            keybindings: BTreeMap::new(),
         }
     }
 }
@@ -74,7 +91,16 @@ impl Settings {
         let valid = (8..=32).contains(&self.font_size)
             && (1.0..=2.0).contains(&self.line_height)
             && (100..=200_000).contains(&self.scrollback)
-            && self.font_family.len() <= 200;
+            && self.font_family.len() <= 200
+            && (0.0..=4.0).contains(&self.letter_spacing)
+            && self.keybindings.len() <= MAX_KEYBINDINGS
+            && self.keybindings.iter().all(|(action, combo)| {
+                action.len() <= 32
+                    && (1..=MAX_COMBO_KEYS).contains(&combo.len())
+                    && combo
+                        .iter()
+                        .all(|key| !key.is_empty() && key.len() <= MAX_KEY_LENGTH)
+            });
         if valid {
             Ok(())
         } else {
@@ -118,7 +144,7 @@ impl SettingsStore {
 mod tests {
     use super::{CursorStyle, Settings, SettingsStore, Theme, DOCUMENT};
     use crate::storage::Storage;
-    use std::sync::Arc;
+    use std::{collections::BTreeMap, sync::Arc};
 
     fn changed() -> Settings {
         Settings {
@@ -128,6 +154,8 @@ mod tests {
             cursor_style: CursorStyle::Block,
             default_shell: Some("/bin/zsh".into()),
             confirm_close_running: true,
+            option_as_meta: false,
+            keybindings: BTreeMap::from([("closeTab".into(), vec!["Cmd".into(), "W".into()])]),
             ..Settings::default()
         }
     }
@@ -166,6 +194,18 @@ mod tests {
             },
             Settings {
                 font_family: "x".repeat(201),
+                ..changed()
+            },
+            Settings {
+                letter_spacing: 5.0,
+                ..changed()
+            },
+            Settings {
+                keybindings: BTreeMap::from([("closeTab".into(), Vec::new())]),
+                ..changed()
+            },
+            Settings {
+                keybindings: BTreeMap::from([("closeTab".into(), vec!["x".repeat(17)])]),
                 ..changed()
             },
         ] {

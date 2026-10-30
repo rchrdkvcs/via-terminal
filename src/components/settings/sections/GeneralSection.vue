@@ -41,12 +41,7 @@ function onShell(value: unknown) {
         description="Ouvert dans les nouveaux onglets locaux, sauf si l'espace en choisit un autre."
       >
         <Select :model-value="defaultShell" @update:model-value="onShell">
-          <SelectTrigger
-            :id="id"
-            size="sm"
-            class="w-64 text-[13px]"
-            :aria-describedby="descriptionId"
-          >
+          <SelectTrigger :id="id" size="sm" class="w-60" :aria-describedby="descriptionId">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

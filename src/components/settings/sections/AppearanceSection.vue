@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { Minus, Plus } from '@lucide/vue'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import type { Settings } from '@/ipc/types'
@@ -58,7 +56,7 @@ function setSize(size: number) {
       >
         <Input
           :id="id"
-          class="h-8 w-56 text-[13px]"
+          class="h-7 w-60"
           placeholder="IBM Plex Mono"
           spellcheck="false"
           autocomplete="off"
@@ -70,15 +68,6 @@ function setSize(size: number) {
       </SettingRow>
 
       <SettingRow label="Taille" description="Taille du texte dans le terminal, en pixels.">
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Réduire la taille"
-          :disabled="store.settings.fontSize <= MIN_SIZE"
-          @click="setSize(store.settings.fontSize - 1)"
-        >
-          <Minus :stroke-width="1.5" aria-hidden="true" />
-        </Button>
         <SettingSlider
           label="Taille"
           :min="MIN_SIZE"
@@ -88,15 +77,18 @@ function setSize(size: number) {
           :model-value="store.settings.fontSize"
           @update:model-value="setSize"
         />
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Augmenter la taille"
-          :disabled="store.settings.fontSize >= MAX_SIZE"
-          @click="setSize(store.settings.fontSize + 1)"
-        >
-          <Plus :stroke-width="1.5" aria-hidden="true" />
-        </Button>
+      </SettingRow>
+
+      <SettingRow label="Espacement des lettres" description="Pixels ajoutés entre les caractères.">
+        <SettingSlider
+          label="Espacement des lettres"
+          :min="0"
+          :max="4"
+          :step="0.5"
+          :format="(value) => `${value} px`"
+          :model-value="store.settings.letterSpacing"
+          @update:model-value="(letterSpacing) => store.update({ letterSpacing })"
+        />
       </SettingRow>
 
       <SettingRow
@@ -119,9 +111,11 @@ function setSize(size: number) {
           @update:model-value="(on: boolean) => store.update({ cursorBlink: on })"
         />
       </SettingRow>
-      <template #after>
-        <FontPreview />
-      </template>
     </SettingGroup>
+
+    <section aria-label="Aperçu" class="grid gap-2.5">
+      <h3 class="px-1 text-[13px] font-semibold tracking-[-0.005em]">Aperçu</h3>
+      <FontPreview />
+    </section>
   </div>
 </template>

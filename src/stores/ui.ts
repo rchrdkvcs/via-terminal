@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { Id } from '@/ipc/types'
 
 export type Route = 'workbench' | 'vault' | 'settings'
+export type SettingsSection = 'general' | 'appearance' | 'terminal' | 'shortcuts'
 
 export type CommandMode =
   | { kind: 'new' }
@@ -32,6 +33,9 @@ export const useUi = defineStore('ui', () => {
     id: null,
   })
   const searching = ref(false)
+  const settingsSection = ref<SettingsSection>('general')
+  /** True while the shortcut editor waits for a key press, so it is not run as a shortcut. */
+  const recordingShortcut = ref(false)
 
   function openCommand(mode: CommandMode = { kind: 'new' }) {
     command.value = mode
@@ -61,6 +65,8 @@ export const useUi = defineStore('ui', () => {
     confirmation,
     vaultFocus,
     searching,
+    settingsSection,
+    recordingShortcut,
     openCommand,
     closeCommand,
     confirm,

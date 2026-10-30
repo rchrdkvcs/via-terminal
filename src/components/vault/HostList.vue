@@ -89,17 +89,11 @@ const empty = computed(() => {
     @remove="actions.deleteHost"
   >
     <template #actions>
-      <Button
-        v-if="scopeGroup"
-        variant="outline"
-        size="sm"
-        class="h-8"
-        @click="tree.edit(scopeGroup.id)"
-      >
+      <Button v-if="scopeGroup" variant="outline" @click="tree.edit(scopeGroup.id)">
         <SlidersHorizontal :stroke-width="1.5" />
         Valeurs par défaut
       </Button>
-      <Button size="sm" class="h-8" @click="state.startCreating()">
+      <Button @click="state.startCreating()">
         <Plus :stroke-width="1.5" />
         Nouvel hôte
       </Button>

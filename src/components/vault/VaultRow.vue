@@ -14,13 +14,13 @@ const emit = defineEmits<{ open: [] }>()
         :data-row-id="id"
         :aria-selected="current"
         :tabindex="tabbable ? 0 : -1"
-        class="group/row relative flex min-h-12 cursor-default items-center gap-3 rounded-lg px-2.5 py-1.5 text-[13px] outline-none select-none hover:bg-row-hover focus-visible:ring-2 focus-visible:ring-ring/40 data-[state=open]:bg-row-hover"
+        class="group/row relative flex min-h-11 cursor-default items-center gap-3 rounded-lg px-2.5 py-1.5 text-[13px] outline-none select-none hover:bg-row-hover focus-visible:ring-2 focus-visible:ring-ring/40 data-[state=open]:bg-row-hover"
         @click="emit('open')"
       >
         <slot />
         <div
           v-if="$slots.actions"
-          class="ms-auto flex shrink-0 items-center gap-1 opacity-0 group-hover/row:opacity-100 group-focus-visible/row:opacity-100 group-data-[state=open]/row:opacity-100"
+          class="ms-auto hidden shrink-0 items-center gap-1 group-hover/row:flex group-focus-visible/row:flex group-data-[state=open]/row:flex"
         >
           <slot name="actions" />
         </div>

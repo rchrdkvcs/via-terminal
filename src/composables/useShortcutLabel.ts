@@ -3,5 +3,5 @@ import { useSettings } from '@/stores/settings'
 
 export function useShortcutLabel() {
   const settings = useSettings()
-  return (id: ActionId) => formatShortcut(id, settings.platform)
+  return (id: ActionId) => formatShortcut(id, settings.platform, settings.settings.keybindings)
 }
