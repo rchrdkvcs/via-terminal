@@ -12,7 +12,6 @@ import {
 } from '@lucide/vue'
 import PageShell, { type PageSection } from '@/components/page/PageShell.vue'
 import SettingsView from '@/components/settings/SettingsView.vue'
-import GroupTree from '@/components/vault/GroupTree.vue'
 import { provideVaultState, type Section as VaultSection } from '@/components/vault/useVaultState'
 import VaultView from '@/components/vault/VaultView.vue'
 import { useUi, type SettingsSection } from '@/stores/ui'
@@ -65,18 +64,8 @@ const current = computed<Section>({
   },
 })
 const label = computed(() => sections.value.find((item) => item.id === current.value)?.label ?? '')
-const scopeName = computed(() => vault.group(state.scope.value)?.name ?? null)
-/** An opened item, or else the group the host list is narrowed to. */
-const detail = computed(() =>
-  ui.route === 'vault'
-    ? (state.detail.value ?? (current.value === 'hosts' ? scopeName.value : null))
-    : null,
-)
-
-function back() {
-  if (state.inspecting.value) state.back()
-  else state.scope.value = null
-}
+/** The opened vault item, if any. */
+const detail = computed(() => (ui.route === 'vault' ? state.detail.value : null))
 </script>
 
 <template>
@@ -86,14 +75,8 @@ function back() {
     close-label="Fermer"
     :sections="sections"
     :detail="detail"
-    :scoped="current === 'hosts' && scopeName !== null"
-    @back="back"
+    @back="state.back"
   >
-    <template #rail>
-      <div v-if="current === 'hosts'" class="ps-4 pt-1 pb-2">
-        <GroupTree />
-      </div>
-    </template>
     <SettingsView v-if="isSettings(current)" :section="current" :label="label" />
     <VaultView v-else />
   </PageShell>

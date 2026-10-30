@@ -24,7 +24,7 @@ const actions = useVaultActions()
 
 const { draft, error, saving, commit, autosave } = useDraft({
   kind: 'host',
-  source: () => hostInput(props.hostId ? vault.host(props.hostId) : undefined, state.scope.value),
+  source: () => hostInput(props.hostId ? vault.host(props.hostId) : undefined),
   validate: requireAddress,
 })
 
@@ -68,7 +68,7 @@ function onKeydown(event: KeyboardEvent) {
       </div>
     </template>
     <VaultCard title="Serveur">
-      <HostAddressFields v-model="draft" :inherited="resolved" @commit="autosave" />
+      <HostAddressFields v-model="draft" :resolved="resolved" @commit="autosave" />
     </VaultCard>
     <VaultCard title="Authentification" description="Le compte utilisé pour ouvrir la session SSH.">
       <HostCredentials v-model="draft" :resolved="resolved" @commit="autosave" />

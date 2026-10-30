@@ -1,7 +1,7 @@
 import { clone } from '@/lib/clone'
 import type { Id } from '@/ipc/types'
 
-export type RecordKind = 'host' | 'group' | 'identity'
+export type RecordKind = 'host' | 'identity'
 
 export type SaveOutcome<T> =
   | { id: Id; submitted: T }

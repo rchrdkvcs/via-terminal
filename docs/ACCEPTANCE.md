@@ -44,7 +44,7 @@ Each scenario is run in the real application, not only through unit tests. The b
 
 ## Vault
 
-- Create a host with only an address. Add a group with a default user and port, and move the host into it: the placeholders show the inherited values and where they come from.
+- Create a host with only an address: the port placeholder shows 22 as the default. Choose an identity: its username appears as the effective user.
 - An identity shared by two hosts: changing its password affects both hosts' next connection.
 - Generate an Ed25519 key, copy its public key, and attach the key to a host.
 - Import an encrypted OpenSSH key, by pasting it and by choosing the file.

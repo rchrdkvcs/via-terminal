@@ -84,19 +84,15 @@ export type SessionPromptEvent = { sessionId: string, promptId: string, prompt: 
 
 export type VaultChangedEvent = { sessionId: string, hostId: string | null, };
 
-export type VaultView = { effective: { [key in string]: Effective }, revision: number, passwords: Array<string>, passphrases: Array<string>, secretsAvailable: boolean, groups: Array<Group>, hosts: Array<Host>, identities: Array<Identity>, keys: Array<Key>, knownHosts: Array<KnownHost>, };
+export type VaultView = { effective: { [key in string]: Effective }, revision: number, passwords: Array<string>, passphrases: Array<string>, secretsAvailable: boolean, hosts: Array<Host>, identities: Array<Identity>, keys: Array<Key>, knownHosts: Array<KnownHost>, };
 
-export type VaultSnapshot = { passwords: Array<string>, passphrases: Array<string>, secretsAvailable: boolean, groups: Array<Group>, hosts: Array<Host>, identities: Array<Identity>, keys: Array<Key>, knownHosts: Array<KnownHost>, };
+export type VaultSnapshot = { passwords: Array<string>, passphrases: Array<string>, secretsAvailable: boolean, hosts: Array<Host>, identities: Array<Identity>, keys: Array<Key>, knownHosts: Array<KnownHost>, };
 
-export type VaultData = { groups: Array<Group>, hosts: Array<Host>, identities: Array<Identity>, keys: Array<Key>, knownHosts: Array<KnownHost>, };
+export type VaultData = { hosts: Array<Host>, identities: Array<Identity>, keys: Array<Key>, knownHosts: Array<KnownHost>, };
 
-export type Group = { id: string, parentId: string | null, name: string, position: number, defaults: Defaults, };
+export type Host = { id: string, label: string, address: string, port: number | null, credential: HostCredential, tags: Array<string>, notes: string, createdAt: number, lastConnectedAt: number | null, };
 
-export type Defaults = { username: string | null, port: number | null, identityId: string | null, };
-
-export type Host = { id: string, groupId: string | null, label: string, address: string, port: number | null, credential: HostCredential, tags: Array<string>, notes: string, createdAt: number, lastConnectedAt: number | null, };
-
-export type HostCredential = { "kind": "inherit", username: string | null, key: string | null, } | { "kind": "identity", id: string, } | { "kind": "key", id: string, username: string | null, } | { "kind": "password", username: string | null, };
+export type HostCredential = { "kind": "identity", id: string, } | { "kind": "key", id: string, username: string | null, } | { "kind": "password", username: string | null, };
 
 export type Identity = { id: string, label: string, username: string, keyId: string | null, };
 
@@ -104,7 +100,7 @@ export type Key = { id: string, label: string, algorithm: string, fingerprint: s
 
 export type KnownHost = { id: string, address: string, port: number, algorithm: string, fingerprint: string, addedAt: number, };
 
-export type Source = { "kind": "host" } | { "kind": "identity", "id": string } | { "kind": "group", "id": string } | { "kind": "default" };
+export type Source = { "kind": "host" } | { "kind": "identity", "id": string } | { "kind": "default" };
 
 export type Sourced<T> = { value: T, from: Source, };
 
@@ -112,9 +108,7 @@ export type Effective = { username: Sourced<string> | null, port: Sourced<number
 
 export type SecretUpdate = { "action": "keep" } | { "action": "clear" } | { "action": "set", "value": string };
 
-export type HostInput = { id: string | null, groupId: string | null, label: string, address: string, port: number | null, credential: HostCredential, tags: Array<string>, notes: string, password: SecretUpdate, };
-
-export type GroupInput = { id: string | null, parentId: string | null, name: string, defaults: Defaults, };
+export type HostInput = { id: string | null, label: string, address: string, port: number | null, credential: HostCredential, tags: Array<string>, notes: string, password: SecretUpdate, };
 
 export type IdentityInput = { id: string | null, label: string, username: string, keyId: string | null, password: SecretUpdate, };
 

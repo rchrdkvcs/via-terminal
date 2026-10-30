@@ -1,6 +1,6 @@
 import type { HostInput, IdentityInput } from '@/ipc/types'
 
-export { groupInput, hostInput, identityInput } from '@/stores/vault-inputs'
+export { hostInput, identityInput } from '@/stores/vault-inputs'
 
 export function requireAddress(input: HostInput): string | null {
   return input.address.trim() ? null : 'Ajoutez une adresse : un nom de domaine ou une IP.'

@@ -2,7 +2,6 @@ import { invoke } from '@tauri-apps/api/core'
 import type {
   AppError,
   Bootstrap,
-  GroupInput,
   HostInput,
   Id,
   IdentityInput,
@@ -61,8 +60,6 @@ export const api = {
     saveHost: (input: HostInput) => call<Mutation>('host_save', { input }),
     deleteHost: (id: Id) => call<Mutation>('host_delete', { id }),
     duplicateHost: (id: Id) => call<Mutation>('host_duplicate', { id }),
-    saveGroup: (input: GroupInput) => call<Mutation>('group_save', { input }),
-    deleteGroup: (id: Id) => call<Mutation>('group_delete', { id }),
     saveIdentity: (input: IdentityInput) => call<Mutation>('identity_save', { input }),
     deleteIdentity: (id: Id) => call<Mutation>('identity_delete', { id }),
     importKey: (input: KeyImport) => call<Mutation>('key_import', { input }),

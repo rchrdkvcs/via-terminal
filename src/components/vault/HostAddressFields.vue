@@ -2,11 +2,11 @@
 import { Input } from '@/components/ui/input'
 import type { Effective, HostInput } from '@/ipc/types'
 import { useVault } from '@/stores/vault'
-import { hint } from './inherit'
+import { hint } from './source'
 import PortField from './PortField.vue'
 import VaultField from './VaultField.vue'
 
-defineProps<{ inherited: Effective }>()
+defineProps<{ resolved: Effective }>()
 const draft = defineModel<HostInput>({ required: true })
 const emit = defineEmits<{ commit: [] }>()
 const vault = useVault()
@@ -39,7 +39,7 @@ const field = 'h-8 text-[13px] md:text-[13px]'
     <PortField
       id="host-port"
       v-model="draft.port"
-      :placeholder="hint(vault.view, inherited.port)"
+      :placeholder="hint(vault.view, resolved.port)"
       @commit="emit('commit')"
     />
   </div>

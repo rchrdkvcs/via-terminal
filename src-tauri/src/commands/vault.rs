@@ -2,7 +2,7 @@ use super::App;
 use crate::{
     error::AppResult,
     vault::{
-        input::{GroupInput, HostInput, IdentityInput, KeyImport},
+        input::{HostInput, IdentityInput, KeyImport},
         model::Id,
         Vault, VaultView,
     },
@@ -46,18 +46,6 @@ pub fn host_delete(app: State<App>, id: Id) -> AppResult<Mutation> {
 pub fn host_duplicate(app: State<App>, id: Id) -> AppResult<Mutation> {
     let host = app.vault.duplicate_host(id)?;
     done(&app.vault, Some(host.id))
-}
-
-#[tauri::command]
-pub fn group_save(app: State<App>, input: GroupInput) -> AppResult<Mutation> {
-    let group = app.vault.save_group(input)?;
-    done(&app.vault, Some(group.id))
-}
-
-#[tauri::command]
-pub fn group_delete(app: State<App>, id: Id) -> AppResult<Mutation> {
-    app.vault.delete_group(id)?;
-    done(&app.vault, None)
 }
 
 #[tauri::command]

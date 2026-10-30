@@ -12,9 +12,10 @@ commands/           Tauri commands, thin adapters (app, vault, sessions, files, 
 error.rs            `AppError`, the code and message every command returns
 storage/            SQLite: named JSON documents and opaque blobs
 secrets/            ChaCha20-Poly1305 sealing; the key comes from the OS keychain
-vault/              hosts, groups, identities, keys, known hosts
-  credential.rs     host credential: legacy decoding, validation, resolution, secrets to try
-  resolve.rs        group inheritance of username, port, identity; a host's effective values
+vault/              hosts, identities, keys, known hosts
+  credential.rs     host credential: validation, resolution, secrets to try
+  legacy.rs         older records: bakes former group defaults into each host on load
+  resolve.rs        a host's effective username, port, identity and key, with their source
   connect.rs        host or typed address → connection plan
   connection_store.rs  the vault as the SSH client's store; persists a credential after authentication
 layout/             persisted spaces and pinned rows, structurally validated; an unreadable or
@@ -101,7 +102,7 @@ An opening attempt belongs to its tab until it succeeds or is invalidated by sto
 
 The terminal registry exposes tab-level search, selection and paste operations. Its xterm instances and addons remain internal; paste still uses xterm's bracketed-paste handling.
 
-**Vault editing.** `useDraft` validates a draft when it is saved, so an invalid version is never queued. `stores/vault-saves`, owned by the vault store (the only writer of hosts, groups and identities), saves each record one request at a time, keyed by kind and id and shared by every editor: the vault page remounts its editor on each selection, and a reopened editor queues behind the saves of the closed one. Consecutive requests from one editor coalesce into its latest draft; a failed or unanswered save does not drop the requests queued behind it, and nothing is retried unless the user asked for it. A creation is queued by its editor until it has an id; later saves of that record then queue behind it, so it is never created twice. An editor acknowledges only the version that was submitted, keeps edits made while saving dirty, clears a password only when that submitted password is still current, and shows the outcome of its latest request only. Creation drains later edits before returning the new id. Queued snapshots are saved after their editor closes, but their responses no longer change any editor. Renames from the sidebar or the group tree are patches applied to the record's latest queued version, deleting drops its waiting saves, and `vault.flush` is the single flush; replies carry the vault revision so an older one never replaces a newer view.
+**Vault editing.** `useDraft` validates a draft when it is saved, so an invalid version is never queued. `stores/vault-saves`, owned by the vault store (the only writer of hosts and identities), saves each record one request at a time, keyed by kind and id and shared by every editor: the vault page remounts its editor on each selection, and a reopened editor queues behind the saves of the closed one. Consecutive requests from one editor coalesce into its latest draft; a failed or unanswered save does not drop the requests queued behind it, and nothing is retried unless the user asked for it. A creation is queued by its editor until it has an id; later saves of that record then queue behind it, so it is never created twice. An editor acknowledges only the version that was submitted, keeps edits made while saving dirty, clears a password only when that submitted password is still current, and shows the outcome of its latest request only. Creation drains later edits before returning the new id. Queued snapshots are saved after their editor closes, but their responses no longer change any editor. Renames from the sidebar are patches applied to the record's latest queued version, deleting drops its waiting saves, and `vault.flush` is the single flush; replies carry the vault revision so an older one never replaces a newer view.
 
 **Shortcuts.** `lib/shortcuts.ts` is the only list of shortcuts. Outside macOS they use Ctrl+Shift, so the shell's own Ctrl shortcuts keep working. In text fields and the document editor only navigation and global actions apply (`appliesWhileEditing`); the terminal keeps every shortcut.
 

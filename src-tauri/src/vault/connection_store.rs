@@ -79,7 +79,6 @@ impl ConnectionStore for Vault {
             if plan.host_id.is_none() {
                 data.hosts.push(Host {
                     id: Uuid::new_v4(),
-                    group_id: None,
                     label: plan.label.clone(),
                     address: plan.address.clone(),
                     port: (plan.port != 22).then_some(plan.port),

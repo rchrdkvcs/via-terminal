@@ -2,21 +2,11 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '@/ipc/client'
 import { on } from '@/ipc/events'
-import type {
-  Group,
-  GroupInput,
-  Host,
-  HostInput,
-  Id,
-  IdentityInput,
-  Mutation,
-  VaultView,
-} from '@/ipc/types'
-import { groupInput, hostInput, identityInput } from './vault-inputs'
+import type { Host, HostInput, Id, IdentityInput, Mutation, VaultView } from '@/ipc/types'
+import { hostInput, identityInput } from './vault-inputs'
 import { createVaultSaves, type RecordKind, type SaveOutcome } from './vault-saves'
 
 const empty: VaultView = {
-  groups: [],
   hosts: [],
   identities: [],
   keys: [],
@@ -30,13 +20,11 @@ const empty: VaultView = {
 
 const savers = {
   host: (input: HostInput) => api.vault.saveHost(input),
-  group: (input: GroupInput) => api.vault.saveGroup(input),
   identity: (input: IdentityInput) => api.vault.saveIdentity(input),
 } as const
 
 const removers = {
   host: (id: Id) => api.vault.deleteHost(id),
-  group: (id: Id) => api.vault.deleteGroup(id),
   identity: (id: Id) => api.vault.deleteIdentity(id),
 } as const
 
@@ -48,20 +36,6 @@ export const useVault = defineStore('vault', () => {
 
   function host(id: Id): Host | undefined {
     return hostsById.value.get(id)
-  }
-
-  function group(id: Id | null): Group | undefined {
-    return id ? view.value.groups.find((candidate) => candidate.id === id) : undefined
-  }
-
-  function groupPath(groupId: Id | null): string[] {
-    const path: string[] = []
-    let cursor = group(groupId)
-    while (cursor && path.length <= view.value.groups.length) {
-      path.unshift(cursor.name)
-      cursor = group(cursor.parentId)
-    }
-    return path
   }
 
   function describe(id: Id): string {
@@ -104,10 +78,6 @@ export const useVault = defineStore('vault', () => {
       const found = host(id)
       return found && hostInput(found)
     }
-    if (kind === 'group') {
-      const found = group(id)
-      return found && groupInput(found)
-    }
     const found = view.value.identities.find((candidate) => candidate.id === id)
     return found && identityInput(found)
   }
@@ -117,7 +87,7 @@ export const useVault = defineStore('vault', () => {
     current: (kind, id) => current(kind, id) as never,
   })
 
-  /** Every host, group or identity write goes through the per-record save queue. */
+  /** Every host or identity write goes through the per-record save queue. */
   function save<T extends { id: Id | null }>(kind: RecordKind, owner: object, input: T) {
     return saves.queue(kind, owner, input)
   }
@@ -126,11 +96,6 @@ export const useVault = defineStore('vault', () => {
     const result = await outcome
     if (!result.id && 'cause' in result) throw result.cause
     return result.id
-  }
-
-  function createGroup(parentId: Id | null): Promise<Id | null> {
-    const defaults = { username: null, port: null, identityId: null }
-    return patched(save('group', {}, { id: null, parentId, name: 'Nouveau groupe', defaults }))
   }
 
   async function remove(kind: RecordKind, id: Id): Promise<Id | null> {
@@ -163,11 +128,6 @@ export const useVault = defineStore('vault', () => {
     return patched(saves.patch<HostInput>('host', id, (latest) => ({ ...latest, label })))
   }
 
-  async function renameGroup(id: Id, name: string): Promise<Id | null> {
-    if (!group(id)) return null
-    return patched(saves.patch<GroupInput>('group', id, (latest) => ({ ...latest, name })))
-  }
-
   async function refresh() {
     apply(await api.vault.get())
   }
@@ -181,16 +141,12 @@ export const useVault = defineStore('vault', () => {
   return {
     view,
     host,
-    group,
-    groupPath,
     describe,
     recentHosts,
     hasPassword,
     isUnnamed,
     save,
     rename,
-    renameGroup,
-    createGroup,
     remove,
     duplicateHost,
     mutate,

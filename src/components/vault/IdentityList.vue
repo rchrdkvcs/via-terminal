@@ -37,7 +37,7 @@ const keyLabel = (id: string | null) => vault.view.keys.find((key) => key.id ===
   <VaultListPane
     v-model:query="query"
     title="Identités"
-    description="Un utilisateur avec sa clé ou son mot de passe. Créez-la une fois, puis choisissez-la sur plusieurs hôtes ou groupes."
+    description="Un utilisateur avec sa clé ou son mot de passe. Créez-la une fois, puis choisissez-la sur plusieurs hôtes."
     search-label="Rechercher une identité"
     :ids="ids"
     @activate="state.selected.value = $event"
@@ -95,7 +95,7 @@ const keyLabel = (id: string | null) => vault.view.keys.find((key) => key.id ===
         :title="
           query.trim() ? `Aucune identité ne correspond à « ${query.trim()} »` : 'Aucune identité'
         "
-        description="Une identité regroupe un utilisateur et sa clé ou son mot de passe, pour les réutiliser sur plusieurs hôtes ou groupes."
+        description="Une identité regroupe un utilisateur et sa clé ou son mot de passe, pour les réutiliser sur plusieurs hôtes."
       >
         <Button v-if="!query.trim()" size="sm" variant="outline" @click="state.startCreating()">
           Créer une identité

@@ -13,7 +13,6 @@ impl Vault {
         input::validate_port(input.port)?;
         let credential = input.credential.clone().normalized();
         self.commit_with_secrets(|data, secrets| {
-            input::validate_group_ref(data, input.group_id)?;
             credential.validate(data)?;
             let existing = input
                 .id
@@ -27,7 +26,6 @@ impl Vault {
             let previous = existing.map(|index| data.hosts[index].clone());
             let host = Host {
                 id: previous.as_ref().map_or_else(Uuid::new_v4, |host| host.id),
-                group_id: input.group_id,
                 label: input::trimmed(Some(input.label.clone())).unwrap_or_else(|| address.clone()),
                 address: address.clone(),
                 port: input.port,

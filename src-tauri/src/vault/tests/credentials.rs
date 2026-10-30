@@ -27,7 +27,7 @@ fn a_record_stored_before_the_selector_loads_and_saves_in_the_new_shape() {
         .save(
             "vault",
             &serde_json::json!({ "hosts": [{
-                "id": id, "groupId": null, "label": "a", "address": "a", "keyId": null,
+                "id": id, "label": "a", "address": "a", "keyId": null,
                 "overrides": { "username": "root", "port": 2200, "identityId": null },
             }] }),
         )
@@ -40,48 +40,9 @@ fn a_record_stored_before_the_selector_loads_and_saves_in_the_new_shape() {
     let saved = serde_json::to_value(host).unwrap();
     assert_eq!(
         saved["credential"],
-        serde_json::json!({ "kind": "inherit", "username": "root", "key": null })
+        serde_json::json!({ "kind": "password", "username": "root" })
     );
     assert!(saved.get("ownCredentials").is_none() && saved.get("overrides").is_none());
-}
-
-#[test]
-fn an_explicit_host_credential_does_not_use_group_secrets() {
-    let vault = vault();
-    let key = vault.generate_key("Group key").unwrap();
-    let identity = identity(&vault, "group-user", Some(key.id), "group-password");
-    let group = vault
-        .save_group(GroupInput {
-            id: None,
-            parent_id: None,
-            name: "Group".into(),
-            defaults: Defaults {
-                username: None,
-                identity_id: Some(identity.id),
-                port: Some(2200),
-            },
-        })
-        .unwrap();
-    let saved = vault
-        .save_host(HostInput {
-            group_id: Some(group.id),
-            credential: HostCredential::Password {
-                username: Some(" own-user ".into()),
-            },
-            ..host("test")
-        })
-        .unwrap();
-    assert_eq!(
-        saved.credential,
-        HostCredential::Password {
-            username: Some("own-user".into())
-        }
-    );
-    let plan = vault.plan(saved.id).unwrap();
-    assert_eq!(plan.username.as_deref(), Some("own-user"));
-    assert_eq!(plan.port, 2200);
-    assert!(plan.key.is_none());
-    assert!(plan.password.is_none());
 }
 
 #[test]

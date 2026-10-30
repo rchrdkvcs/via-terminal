@@ -1,19 +1,16 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { api } from '@/ipc/client'
-import type { Group, GroupInput, Host, HostInput, Mutation, VaultView } from '@/ipc/types'
+import type { Host, HostInput, Mutation, VaultView } from '@/ipc/types'
 import { useDraft } from '@/components/vault/useDraft'
 import { flush } from '@/test/vaultSaves'
 import { useVault } from './vault'
-import { groupInput, hostInput } from './vault-inputs'
-
-const defaults = { username: null, port: null, identityId: null }
+import { hostInput } from './vault-inputs'
 
 function host(id: string, label: string): Host {
   const base = {
-    groupId: null,
     port: null,
-    credential: { kind: 'inherit', username: null, key: null } as const,
+    credential: { kind: 'password', username: null } as const,
   }
   const extra = { tags: [], notes: '' }
   return {
@@ -27,14 +24,9 @@ function host(id: string, label: string): Host {
   }
 }
 
-function group(id: string, name: string): Group {
-  return { id, parentId: null, name, position: 0, defaults: { ...defaults } }
-}
-
 /** Applies each write when its reply is released, like the native vault. */
 function backend() {
   let state: VaultView = {
-    groups: [group('g', 'Servers')],
     hosts: [host('a', 'Alpha'), host('b', 'Beta')],
     identities: [],
     keys: [],
@@ -64,16 +56,6 @@ function backend() {
       }, input.id),
     ),
   )
-  const saveGroup = vi.spyOn(api.vault, 'saveGroup').mockImplementation((input: GroupInput) =>
-    held(
-      commit((view) => {
-        const groups = view.groups.map((item) =>
-          item.id === input.id ? { ...item, ...input, id: item.id } : item,
-        )
-        return { ...view, groups }
-      }, input.id),
-    ),
-  )
   const deleteHost = vi
     .spyOn(api.vault, 'deleteHost')
     .mockImplementation((id) =>
@@ -87,7 +69,7 @@ function backend() {
     reply.resolve(reply.commit())
     await flush()
   }
-  return { state: () => state, replies, release, saveHost, saveGroup, deleteHost }
+  return { state: () => state, replies, release, saveHost, deleteHost }
 }
 
 let server: ReturnType<typeof backend>
@@ -121,21 +103,6 @@ describe('vault writes', () => {
     expect(editor.draft.value).toMatchObject({ label: 'Renamed', notes: 'second' })
     await editor.autosave()
     expect(server.saveHost).toHaveBeenCalledTimes(3)
-  })
-
-  it('keeps a group rename when its editor saves unsaved changes afterwards', async () => {
-    const vault = useVault()
-    const editor = useDraft({ kind: 'group', source: () => groupInput(vault.group('g')) })
-    editor.draft.value.defaults.port = 2222
-    const renaming = vault.renameGroup('g', 'Production')
-    await server.release()
-    await renaming
-    expect(editor.draft.value).toMatchObject({ name: 'Production', defaults: { port: 2222 } })
-
-    const saving = editor.autosave()
-    await server.release()
-    await saving
-    expect(vault.group('g')).toMatchObject({ name: 'Production', defaults: { port: 2222 } })
   })
 
   it('drops waiting saves of a deleted record and deletes after the one already sent', async () => {

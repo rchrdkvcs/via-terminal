@@ -1,5 +1,5 @@
 use super::{host, vault};
-use crate::vault::{input::*, model::*, HostCredential};
+use crate::vault::{input::*, HostCredential};
 
 #[test]
 fn a_host_only_needs_an_address() {
@@ -18,61 +18,6 @@ fn views_carry_a_revision_that_only_committed_changes_advance() {
     assert_eq!(vault.view().unwrap().revision, before);
     vault.save_host(host("a")).unwrap();
     assert_eq!(vault.view().unwrap().revision, before + 1);
-}
-
-#[test]
-fn hosts_inherit_from_groups_and_identities() {
-    let vault = vault();
-    let identity = vault
-        .save_identity(IdentityInput {
-            id: None,
-            label: String::new(),
-            username: "admin".into(),
-            key_id: None,
-            password: SecretUpdate::Set("pw".into()),
-        })
-        .unwrap();
-    let parent = vault
-        .save_group(GroupInput {
-            id: None,
-            parent_id: None,
-            name: "Client".into(),
-            defaults: Defaults {
-                port: Some(2222),
-                identity_id: Some(identity.id),
-                username: None,
-            },
-        })
-        .unwrap();
-    let child = vault
-        .save_group(GroupInput {
-            id: None,
-            parent_id: Some(parent.id),
-            name: "Prod".into(),
-            defaults: Defaults::default(),
-        })
-        .unwrap();
-    let saved = vault
-        .save_host(HostInput {
-            group_id: Some(child.id),
-            ..host("db")
-        })
-        .unwrap();
-    let plan = vault.plan(saved.id).unwrap();
-    assert_eq!(plan.port, 2222);
-    assert_eq!(plan.username.as_deref(), Some("admin"));
-    assert_eq!(plan.password.as_deref().map(|p| p.as_str()), Some("pw"));
-
-    let cycle = GroupInput {
-        id: Some(parent.id),
-        parent_id: Some(child.id),
-        name: "Client".into(),
-        defaults: Defaults::default(),
-    };
-    assert!(vault.save_group(cycle).is_err());
-
-    vault.delete_group(parent.id).unwrap();
-    assert_eq!(vault.plan(saved.id).unwrap().port, 22);
 }
 
 #[test]

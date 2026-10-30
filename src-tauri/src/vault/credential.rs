@@ -1,7 +1,7 @@
 use super::{
     input,
-    model::{secret_id, Defaults, Id, Identity, SecretKind, VaultData},
-    resolve::{Effective, Inherited, Source, Sourced},
+    model::{secret_id, Id, Identity, SecretKind, VaultData},
+    resolve::{Effective, Source, Sourced},
     Vault,
 };
 use crate::{
@@ -15,44 +15,18 @@ use zeroize::Zeroizing;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum HostCredential {
-    Inherit {
-        #[serde(default)]
-        username: Option<String>,
-        #[serde(default)]
-        key: Option<Id>,
-    },
-    Identity {
-        id: Id,
-    },
-    Key {
-        id: Id,
-        username: Option<String>,
-    },
-    Password {
-        username: Option<String>,
-    },
+    Identity { id: Id },
+    Key { id: Id, username: Option<String> },
+    Password { username: Option<String> },
 }
 
 impl Default for HostCredential {
     fn default() -> Self {
-        Self::Inherit {
-            username: None,
-            key: None,
-        }
+        Self::Password { username: None }
     }
 }
 
 impl HostCredential {
-    pub(super) fn from_legacy(own: bool, overrides: &Defaults, key_id: Option<Id>) -> Self {
-        let username = overrides.username.clone();
-        match (own, overrides.identity_id, key_id) {
-            (false, Some(id), _) => Self::Identity { id },
-            (false, None, key) => Self::Inherit { username, key },
-            (true, _, Some(id)) => Self::Key { id, username },
-            (true, _, None) => Self::Password { username },
-        }
-    }
-
     pub(super) fn chosen(choice: &CredentialChoice) -> AppResult<Self> {
         match choice {
             CredentialChoice::Identity { .. } => Ok(Self::authenticated(choice, "")),
@@ -77,10 +51,6 @@ impl HostCredential {
 
     pub(super) fn normalized(self) -> Self {
         match self {
-            Self::Inherit { username, key } => Self::Inherit {
-                username: input::trimmed(username),
-                key,
-            },
             Self::Key { id, username } => Self::Key {
                 id,
                 username: input::trimmed(username),
@@ -94,9 +64,7 @@ impl HostCredential {
 
     pub(super) fn username(&self) -> Option<&str> {
         match self {
-            Self::Inherit { username, .. }
-            | Self::Key { username, .. }
-            | Self::Password { username } => username.as_deref(),
+            Self::Key { username, .. } | Self::Password { username } => username.as_deref(),
             Self::Identity { .. } => None,
         }
     }
@@ -113,9 +81,7 @@ impl HostCredential {
             Self::Identity { id } if !data.identities.iter().any(|i| i.id == *id) => {
                 Err(AppError::not_found("identité"))
             }
-            Self::Key { id, .. } | Self::Inherit { key: Some(id), .. }
-                if !data.keys.iter().any(|key| key.id == *id) =>
-            {
+            Self::Key { id, .. } if !data.keys.iter().any(|key| key.id == *id) => {
                 Err(AppError::not_found("clé"))
             }
             _ => Ok(()),
@@ -131,18 +97,16 @@ impl HostCredential {
     }
 
     pub(super) fn key_removed(&mut self, key_id: Id) {
-        match self {
-            Self::Key { id, username } if *id == key_id => {
+        if let Self::Key { id, username } = self {
+            if *id == key_id {
                 *self = Self::Password {
                     username: username.take(),
                 };
             }
-            Self::Inherit { key, .. } if *key == Some(key_id) => *key = None,
-            _ => {}
         }
     }
 
-    pub(super) fn resolve(&self, data: &VaultData, inherited: Inherited) -> Effective {
+    pub(super) fn resolve(&self, data: &VaultData, port: Option<u16>) -> Effective {
         fn host<T>(value: T) -> Sourced<T> {
             Sourced {
                 value,
@@ -150,11 +114,6 @@ impl HostCredential {
             }
         }
         let (username, identity_id, key_id) = match self {
-            Self::Inherit { username, key } => (
-                username.clone().map(host).or(inherited.username),
-                inherited.identity_id,
-                key.map(host),
-            ),
             Self::Identity { id } => match data.identities.iter().find(|i| i.id == *id) {
                 Some(identity) => (
                     Some(Sourced {
@@ -179,7 +138,7 @@ impl HostCredential {
         });
         Effective {
             username,
-            port: inherited.port.unwrap_or(Sourced {
+            port: port.map(host).unwrap_or(Sourced {
                 value: 22,
                 from: Source::Default,
             }),
@@ -234,7 +193,7 @@ impl Vault {
         let credential = HostCredential::chosen(&choice)?;
         let (username, (key, password)) = self.read(|data| {
             credential.validate_references(data)?;
-            let effective = credential.resolve(data, Inherited::default());
+            let effective = credential.resolve(data, None);
             let connection = self.connection(data, None, &credential, &effective)?;
             Ok::<_, AppError>((effective.username.map(|s| s.value), connection))
         })?;

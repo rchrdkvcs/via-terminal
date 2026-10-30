@@ -4,10 +4,11 @@ mod credential;
 mod mutation;
 pub use connect::QuickTarget;
 pub use credential::HostCredential;
-mod groups;
 mod hosts;
+mod identities;
 pub mod input;
 mod keys;
+mod legacy;
 pub mod model;
 pub mod resolve;
 #[cfg(test)]
