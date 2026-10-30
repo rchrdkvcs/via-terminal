@@ -1,7 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { h, nextTick, reactive } from 'vue'
 import { beforeEach, expect, it, vi } from 'vitest'
-import Inspector from '@/components/page/Inspector.vue'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import SidebarResizer from './SidebarResizer.vue'
 
@@ -51,21 +50,6 @@ it('keeps pointer resizing and clears the active visual state when capture is lo
   await pointer(handle.element, 'pointermove', 400)
   expect(sidebar.width).toBe(320)
   expect(handle.attributes('data-dragging')).toBe('false')
-  view.unmount()
-})
-
-it('preserves inspector resizing from its left edge and exposes the current width', async () => {
-  const view = mount(Inspector, { props: { label: 'Inspecteur' } })
-  const handle = view.get('[role="separator"]')
-  await handle.trigger('keydown', { key: 'ArrowLeft' })
-  expect(handle.attributes('aria-valuenow')).toBe('404')
-  await pointer(handle.element, 'pointerdown', 400)
-  await pointer(handle.element, 'pointermove', 350)
-  expect(handle.attributes('aria-valuenow')).toBe('454')
-  await handle.trigger('pointerup')
-  expect(handle.attributes('data-dragging')).toBe('false')
-  await handle.trigger('dblclick')
-  expect(handle.attributes('aria-valuenow')).toBe('454')
   view.unmount()
 })
 

@@ -18,9 +18,7 @@ const remote = computed(() => {
   const tab = workbench.activeTab
   return tab && tab.target.kind !== 'local' && !tab.view ? tab : null
 })
-const filesShown = computed(
-  () => !!remote.value && ui.route === 'workbench' && files.state(remote.value.id).visible,
-)
+const filesShown = computed(() => !!remote.value && files.state(remote.value.id).visible)
 function toggleFiles() {
   if (!remote.value) return
   files.setVisible(remote.value.id, !filesShown.value)

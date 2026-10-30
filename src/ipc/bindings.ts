@@ -14,7 +14,19 @@ export type Settings = { theme: Theme, fontFamily: string, fontSize: number, lin
 /**
  * Check the public release endpoint once after startup.
  */
-checkForUpdates: boolean, };
+checkForUpdates: boolean, 
+/**
+ * macOS only: Option sends Meta (Esc prefix) instead of composing characters.
+ */
+optionAsMeta: boolean, 
+/**
+ * Extra pixels between terminal glyphs.
+ */
+letterSpacing: number, 
+/**
+ * Shortcut overrides by action id; absent actions keep their default combination.
+ */
+keybindings: { [key in string]: Array<string> }, };
 
 export type Theme = "light" | "dark" | "system";
 

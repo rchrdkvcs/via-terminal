@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { KeyRound, LockKeyhole, Pencil, Plus, Trash2 } from '@lucide/vue'
-import { computed, nextTick, ref } from 'vue'
+import { KeyRound, LockKeyhole, Pencil, Plus, Trash2, UserRound } from '@lucide/vue'
+import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import {
   ContextMenuItem,
@@ -31,38 +31,34 @@ const identities = computed(() => {
 })
 const ids = computed(() => identities.value.map((identity) => identity.id))
 const keyLabel = (id: string | null) => vault.view.keys.find((key) => key.id === id)?.label
-
-function focusEditor() {
-  void nextTick(() => document.getElementById('identity-label')?.focus())
-}
 </script>
 
 <template>
   <VaultListPane
     v-model:query="query"
     title="Identités"
+    description="Un utilisateur avec sa clé ou son mot de passe. Créez-la une fois, puis choisissez-la sur plusieurs hôtes ou groupes."
     search-label="Rechercher une identité"
     :ids="ids"
-    :selected="state.selected.value"
-    @select="state.selected.value = $event"
-    @activate="focusEditor"
+    @activate="state.selected.value = $event"
     @remove="actions.deleteIdentity"
   >
     <template #actions>
-      <Button size="sm" class="h-8" @click="state.startCreating()">
+      <Button @click="state.startCreating()">
         <Plus :stroke-width="1.5" />
         Nouvelle identité
       </Button>
     </template>
-    <template #default="{ tabbable }">
+    <template #default="{ tabbable, current }">
       <VaultRow
         v-for="identity in identities"
         :id="identity.id"
         :key="identity.id"
-        :selected="identity.id === state.selected.value"
+        :current="current(identity.id)"
         :tabbable="tabbable(identity.id)"
-        @select="state.selected.value = identity.id"
+        @open="state.selected.value = identity.id"
       >
+        <UserRound class="size-4 shrink-0 text-ink-muted" :stroke-width="1.5" aria-hidden="true" />
         <div class="min-w-0 flex-1">
           <div class="truncate font-medium">{{ identity.label }}</div>
           <div class="text-muted-foreground truncate text-xs">{{ identity.username }}</div>
@@ -82,7 +78,7 @@ function focusEditor() {
           aria-label="Mot de passe enregistré"
         />
         <template #menu>
-          <ContextMenuItem @select="focusEditor">
+          <ContextMenuItem @select="state.selected.value = identity.id">
             <Pencil :stroke-width="1.5" /> Modifier
             <ContextMenuShortcut>Entrée</ContextMenuShortcut>
           </ContextMenuItem>

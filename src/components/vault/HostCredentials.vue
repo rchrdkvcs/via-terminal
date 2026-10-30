@@ -49,6 +49,18 @@ function commitPersonal() {
   draft.value.credential = withUsername(draft.value.credential, username.value)
   emit('commit')
 }
+const explanation = computed(() => {
+  switch (option.value?.kind) {
+    case 'inherit':
+      return 'Reprend l’utilisateur et l’identité définis sur le groupe.'
+    case 'identity':
+      return 'L’identité fournit l’utilisateur et sa clé ou son mot de passe.'
+    case 'key':
+      return 'Se connecte avec cette clé du coffre et l’utilisateur ci-dessous.'
+    default:
+      return 'Un utilisateur et un mot de passe propres à cet hôte.'
+  }
+})
 const personal = computed(
   () =>
     !option.value ||
@@ -58,7 +70,7 @@ const personal = computed(
 </script>
 
 <template>
-  <VaultField label="Identité" for="host-credential">
+  <VaultField label="Se connecter avec" for="host-credential" :hint="explanation">
     <CredentialSelect id="host-credential" v-model="selection" :inherit="inheritance" />
   </VaultField>
   <UsernameField

@@ -1,4 +1,5 @@
 import { computed, inject, provide, reactive, ref, type InjectionKey } from 'vue'
+import { useHostName } from '@/composables/useHostName'
 import type { Id } from '@/ipc/types'
 import { useUi } from '@/stores/ui'
 import { useVault } from '@/stores/vault'
@@ -49,12 +50,51 @@ function createState() {
     }
   })
 
+  /** Leaves the opened item and returns to its list. */
+  function back() {
+    creating.value = false
+    ui.vaultFocus = { section: ui.vaultFocus.section, id: null }
+  }
+
+  const hostName = useHostName()
+  /** Name of the opened item, shown as the last breadcrumb. */
+  const detail = computed(() => {
+    const id = selected.value ?? ''
+    switch (inspecting.value) {
+      case 'host':
+        return hostName(id)
+      case 'new-host':
+        return 'Nouvel hôte'
+      case 'group':
+        return vault.group(id)?.name ?? 'Groupe'
+      case 'identity':
+        return vault.view.identities.find((item) => item.id === id)?.label ?? 'Identité'
+      case 'new-identity':
+        return 'Nouvelle identité'
+      case 'key':
+        return vault.view.keys.find((item) => item.id === id)?.label ?? 'Clé'
+      default:
+        return null
+    }
+  })
+
   function startCreating() {
     ui.vaultFocus = { section: ui.vaultFocus.section, id: null }
     creating.value = true
   }
 
-  return { section, selected, creating, scope, collapsed, renaming, inspecting, startCreating }
+  return {
+    section,
+    selected,
+    creating,
+    scope,
+    collapsed,
+    renaming,
+    inspecting,
+    detail,
+    back,
+    startCreating,
+  }
 }
 
 export type VaultState = ReturnType<typeof createState>
@@ -69,6 +109,6 @@ export function provideVaultState(): VaultState {
 
 export function useVaultState(): VaultState {
   const state = inject(key)
-  if (!state) throw new Error('useVaultState() needs <VaultPage> as an ancestor')
+  if (!state) throw new Error('useVaultState() needs <VaultView> as an ancestor')
   return state
 }

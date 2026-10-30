@@ -69,8 +69,16 @@ export function useBootstrap() {
   }
 
   watchEffect(() => {
-    const { fontFamily, fontSize, lineHeight, cursorStyle, cursorBlink, scrollback } =
-      settings.settings
+    const {
+      fontFamily,
+      fontSize,
+      lineHeight,
+      cursorStyle,
+      cursorBlink,
+      scrollback,
+      optionAsMeta,
+      letterSpacing,
+    } = settings.settings
     terminals.setPresentation({
       fontFamily,
       fontSize,
@@ -78,6 +86,8 @@ export function useBootstrap() {
       cursorStyle,
       cursorBlink,
       scrollback,
+      optionAsMeta,
+      letterSpacing,
       appearance: settings.appearance,
     })
   })

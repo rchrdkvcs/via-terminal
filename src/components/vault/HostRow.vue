@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Copy, CopyPlus, KeyRound, LockKeyhole, Plug, Server, Trash2 } from '@lucide/vue'
+import { Copy, CopyPlus, KeyRound, LockKeyhole, Pencil, Plug, Server, Trash2 } from '@lucide/vue'
 import { computed } from 'vue'
+import { Button } from '@/components/ui/button'
 import {
   ContextMenuItem,
   ContextMenuSeparator,
@@ -13,8 +14,8 @@ import { useVault } from '@/stores/vault'
 import { useVaultActions } from './useVaultActions'
 import VaultRow from './VaultRow.vue'
 
-const props = defineProps<{ host: Host; selected: boolean; tabbable: boolean }>()
-defineEmits<{ select: [] }>()
+const props = defineProps<{ host: Host; current: boolean; tabbable: boolean }>()
+defineEmits<{ open: [] }>()
 const vault = useVault()
 const hostName = useHostName()
 const actions = useVaultActions()
@@ -37,40 +38,47 @@ const shownTags = computed(() => props.host.tags.slice(0, 3))
 </script>
 
 <template>
-  <VaultRow :id="host.id" :selected="selected" :tabbable="tabbable" @select="$emit('select')">
-    <span
-      class="material-control grid size-8 shrink-0 place-items-center rounded-lg text-ink-muted"
-    >
-      <Server :size="15" :stroke-width="1.5" />
-    </span>
+  <VaultRow :id="host.id" :current="current" :tabbable="tabbable" @open="$emit('open')">
+    <Server class="size-4 shrink-0 text-ink-muted" :stroke-width="1.5" aria-hidden="true" />
     <div class="min-w-0 flex-1">
       <div class="truncate font-medium">{{ hostName(host.id) }}</div>
       <div class="truncate text-xs text-ink-muted">{{ vault.describe(host.id) }}</div>
     </div>
-    <div class="flex shrink-0 items-center gap-1">
+    <div
+      class="flex shrink-0 items-center gap-1 group-hover/row:hidden group-focus-visible/row:hidden group-data-[state=open]/row:hidden"
+    >
       <span
         v-for="tag in shownTags"
         :key="tag"
-        class="rounded-[5px] px-1.5 py-px text-[11px] leading-4 text-ink-muted shadow-[inset_0_0_0_1px_var(--hairline-strong)]"
+        class="rounded-[5px] bg-row-hover px-1.5 py-px text-xs text-ink-muted"
       >
         {{ tag }}
       </span>
-      <span v-if="host.tags.length > shownTags.length" class="text-[11px] text-ink-faint">
+      <span v-if="host.tags.length > shownTags.length" class="text-xs text-ink-muted">
         +{{ host.tags.length - shownTags.length }}
       </span>
       <span
         v-if="credential"
-        class="flex items-center gap-1 ps-1 text-[11px] text-ink-faint"
+        class="flex items-center gap-1 ps-1 text-xs text-ink-muted"
         :title="credential.title"
       >
-        <component :is="credential.icon" class="size-3" :stroke-width="1.5" aria-hidden="true" />
+        <component :is="credential.icon" class="size-3.5" :stroke-width="1.5" aria-hidden="true" />
         {{ credential.label }}
       </span>
     </div>
+    <template #actions>
+      <Button size="xs" tabindex="-1" @click.stop="actions.connect(host.id)">
+        <Plug :stroke-width="1.5" />
+        Connecter
+      </Button>
+    </template>
     <template #menu>
       <ContextMenuItem @select="actions.connect(host.id)">
         <Plug :stroke-width="1.5" /> Se connecter
         <ContextMenuShortcut>Entrée</ContextMenuShortcut>
+      </ContextMenuItem>
+      <ContextMenuItem @select="$emit('open')">
+        <Pencil :stroke-width="1.5" /> Modifier
       </ContextMenuItem>
       <ContextMenuItem @select="actions.duplicateHost(host.id)">
         <CopyPlus :stroke-width="1.5" /> Dupliquer

@@ -12,7 +12,7 @@ const descriptionId = `${id}-description`
 </script>
 
 <template>
-  <div class="flex items-center justify-between gap-6 py-3">
+  <div class="flex min-h-14 items-center justify-between gap-6 py-3">
     <div class="min-w-0 flex-1">
       <label
         :id="labelId"

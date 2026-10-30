@@ -23,22 +23,24 @@ const field = 'h-8 text-[13px] md:text-[13px]'
       @blur="emit('commit')"
     />
   </VaultField>
-  <VaultField label="Adresse" for="host-address">
-    <Input
-      id="host-address"
-      v-model="draft.address"
-      aria-required="true"
-      placeholder="srv.example.net ou 10.0.0.5"
-      autocapitalize="off"
-      spellcheck="false"
-      :class="field"
-      @blur="emit('commit')"
+  <div class="grid grid-cols-[minmax(0,1fr)_10rem] gap-3">
+    <VaultField label="Adresse" for="host-address">
+      <Input
+        id="host-address"
+        v-model="draft.address"
+        aria-required="true"
+        placeholder="srv.example.net ou 10.0.0.5"
+        autocapitalize="off"
+        spellcheck="false"
+        :class="field"
+        @blur="emit('commit')"
+      />
+    </VaultField>
+    <PortField
+      id="host-port"
+      v-model="draft.port"
+      :placeholder="hint(vault.view, inherited.port)"
+      @commit="emit('commit')"
     />
-  </VaultField>
-  <PortField
-    id="host-port"
-    v-model="draft.port"
-    :placeholder="hint(vault.view, inherited.port)"
-    @commit="emit('commit')"
-  />
+  </div>
 </template>

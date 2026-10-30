@@ -16,6 +16,7 @@ import { useDraft } from './useDraft'
 import { useGroupTree } from './useGroupTree'
 import UsernameField from './UsernameField.vue'
 import { useVaultOptions } from './useVaultOptions'
+import VaultCard from './VaultCard.vue'
 import VaultField from './VaultField.vue'
 
 const props = defineProps<{ groupId: Id }>()
@@ -56,41 +57,44 @@ function setIdentity(id: Id | null) {
         <Trash2 :stroke-width="1.5" />
       </IconAction>
     </template>
-    <VaultField label="Nom" for="group-name">
-      <Input
-        id="group-name"
-        v-model="draft.name"
-        class="h-8 text-[13px] md:text-[13px]"
-        @blur="autosave"
-      />
-    </VaultField>
-    <p class="text-muted-foreground text-xs leading-snug text-pretty">
-      Les hôtes de ce groupe et de ses sous-groupes reprennent ces valeurs, sauf s’ils en
-      définissent d’autres.
-    </p>
-    <div class="grid grid-cols-2 gap-2">
-      <UsernameField
-        v-if="!draft.defaults.identityId"
-        id="group-username"
-        v-model="draft.defaults.username"
-        :placeholder="hint(vault.view, resolved.username, 'Aucun')"
-        @commit="autosave"
-      />
-      <PortField
-        id="group-port"
-        v-model="draft.defaults.port"
-        :placeholder="hint(vault.view, resolved.port)"
-        @commit="autosave"
-      />
-    </div>
-    <VaultField label="Identité" for="group-identity">
-      <IdSelect
-        id="group-identity"
-        :model-value="draft.defaults.identityId"
-        :options="options.identities.value"
-        :none="identityNone"
-        @update:model-value="setIdentity"
-      />
-    </VaultField>
+    <VaultCard title="Groupe">
+      <VaultField label="Nom" for="group-name">
+        <Input
+          id="group-name"
+          v-model="draft.name"
+          class="h-8 text-[13px] md:text-[13px]"
+          @blur="autosave"
+        />
+      </VaultField>
+    </VaultCard>
+    <VaultCard
+      title="Valeurs par défaut"
+      description="Les hôtes de ce groupe et de ses sous-groupes reprennent ces valeurs, sauf s’ils en définissent d’autres."
+    >
+      <div class="grid grid-cols-2 gap-3">
+        <UsernameField
+          v-if="!draft.defaults.identityId"
+          id="group-username"
+          v-model="draft.defaults.username"
+          :placeholder="hint(vault.view, resolved.username, 'Aucun')"
+          @commit="autosave"
+        />
+        <PortField
+          id="group-port"
+          v-model="draft.defaults.port"
+          :placeholder="hint(vault.view, resolved.port)"
+          @commit="autosave"
+        />
+      </div>
+      <VaultField label="Identité" for="group-identity">
+        <IdSelect
+          id="group-identity"
+          :model-value="draft.defaults.identityId"
+          :options="options.identities.value"
+          :none="identityNone"
+          @update:model-value="setIdentity"
+        />
+      </VaultField>
+    </VaultCard>
   </InspectorLayout>
 </template>

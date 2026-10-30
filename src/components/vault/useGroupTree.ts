@@ -8,7 +8,15 @@ export function useGroupTree() {
   const state = useVaultState()
   const actions = useVaultActions()
 
+  /** Shows the hosts of a group, or of the whole vault. */
   function choose(id: Id | null) {
+    state.scope.value = id
+    state.selected.value = null
+    state.creating.value = false
+  }
+
+  /** Opens the defaults a group passes on to its hosts. */
+  function edit(id: Id) {
     state.scope.value = id
     state.selected.value = id
   }
@@ -22,7 +30,7 @@ export function useGroupTree() {
     const id = await actions.createGroup(parentId)
     if (!id) return
     if (parentId) state.collapsed.delete(parentId)
-    choose(id)
+    edit(id)
     state.renaming.value = id
   }
 
@@ -31,5 +39,5 @@ export function useGroupTree() {
     if (name) await actions.attempt(() => vault.renameGroup(id, name))
   }
 
-  return { choose, toggle, add, rename, remove: actions.deleteGroup }
+  return { choose, edit, toggle, add, rename, remove: actions.deleteGroup }
 }

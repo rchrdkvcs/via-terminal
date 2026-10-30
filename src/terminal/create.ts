@@ -31,6 +31,8 @@ export function applyPresentation(terminal: Terminal, presentation: Presentation
     cursorStyle: presentation.cursorStyle,
     cursorBlink: presentation.cursorBlink,
     scrollback: presentation.scrollback,
+    macOptionIsMeta: presentation.optionAsMeta,
+    letterSpacing: presentation.letterSpacing,
     theme: terminalTheme(presentation),
   })
 }
@@ -46,7 +48,6 @@ export function createInstance(presentation: Presentation): Instance {
   container.className = 'h-full w-full'
   const terminal = new Terminal({
     allowProposedApi: true,
-    macOptionIsMeta: true,
     minimumContrastRatio: 1,
     drawBoldTextInBrightColors: false,
   })

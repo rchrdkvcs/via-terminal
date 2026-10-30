@@ -14,6 +14,7 @@ import { useDraft } from './useDraft'
 import { useVaultActions } from './useVaultActions'
 import { useVaultOptions } from './useVaultOptions'
 import { useVaultState } from './useVaultState'
+import VaultCard from './VaultCard.vue'
 import VaultField from './VaultField.vue'
 
 const props = defineProps<{ identityId: Id | null }>()
@@ -75,45 +76,52 @@ const field = 'h-8 text-[13px] md:text-[13px]'
         <Trash2 :stroke-width="1.5" />
       </IconAction>
     </template>
-    <VaultField label="Libellé" for="identity-label">
-      <Input
-        id="identity-label"
-        v-model="draft.label"
-        :placeholder="draft.username || 'Admin production'"
-        :class="field"
-        @blur="autosave"
+    <VaultCard title="Compte">
+      <VaultField label="Libellé" for="identity-label">
+        <Input
+          id="identity-label"
+          v-model="draft.label"
+          :placeholder="draft.username || 'Admin production'"
+          :class="field"
+          @blur="autosave"
+        />
+      </VaultField>
+      <VaultField label="Utilisateur" for="identity-username">
+        <Input
+          id="identity-username"
+          v-model="draft.username"
+          aria-required="true"
+          placeholder="root"
+          autocapitalize="off"
+          spellcheck="false"
+          :class="field"
+          @blur="autosave"
+        />
+      </VaultField>
+    </VaultCard>
+    <VaultCard
+      title="Authentification"
+      description="Choisissez une clé du coffre, ou utilisez un mot de passe."
+    >
+      <VaultField label="Se connecter avec" for="identity-key">
+        <IdSelect
+          id="identity-key"
+          :model-value="draft.keyId"
+          :options="options.keys.value"
+          none="Mot de passe"
+          @update:model-value="setKey"
+        />
+      </VaultField>
+      <SecretField
+        v-if="!draft.keyId"
+        :id="`identity-password-${draft.id ?? 'new'}`"
+        :key="draft.id ?? 'new'"
+        v-model="draft.password"
+        :stored="draft.id ? vault.hasPassword(draft.id) : false"
+        :available="vault.view.secretsAvailable"
+        @commit="autosave"
       />
-    </VaultField>
-    <VaultField label="Utilisateur" for="identity-username">
-      <Input
-        id="identity-username"
-        v-model="draft.username"
-        aria-required="true"
-        placeholder="root"
-        autocapitalize="off"
-        spellcheck="false"
-        :class="field"
-        @blur="autosave"
-      />
-    </VaultField>
-    <VaultField label="Authentification" for="identity-key">
-      <IdSelect
-        id="identity-key"
-        :model-value="draft.keyId"
-        :options="options.keys.value"
-        none="Mot de passe"
-        @update:model-value="setKey"
-      />
-    </VaultField>
-    <SecretField
-      v-if="!draft.keyId"
-      :id="`identity-password-${draft.id ?? 'new'}`"
-      :key="draft.id ?? 'new'"
-      v-model="draft.password"
-      :stored="draft.id ? vault.hasPassword(draft.id) : false"
-      :available="vault.view.secretsAvailable"
-      @commit="autosave"
-    />
+    </VaultCard>
     <template v-if="!identity" #footer>
       <Button variant="ghost" size="sm" @click="state.creating.value = false">Annuler</Button>
       <Button size="sm" :disabled="saving" @click="create">Enregistrer</Button>

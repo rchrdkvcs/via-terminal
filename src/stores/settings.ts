@@ -19,6 +19,9 @@ const defaultSettings: Settings = {
   saveQuickConnect: true,
   confirmCloseRunning: false,
   checkForUpdates: true,
+  optionAsMeta: true,
+  letterSpacing: 0,
+  keybindings: {},
 }
 
 export const useSettings = defineStore('settings', () => {
@@ -65,6 +68,14 @@ export const useSettings = defineStore('settings', () => {
     update({ ...defaultSettings })
   }
 
+  /** Saves a shortcut override; `null` restores the default combination. */
+  function setKeybinding(id: string, combo: string[] | null) {
+    const keybindings = { ...settings.value.keybindings }
+    if (combo) keybindings[id] = combo
+    else delete keybindings[id]
+    update({ keybindings })
+  }
+
   return {
     settings,
     shells,
@@ -76,6 +87,7 @@ export const useSettings = defineStore('settings', () => {
     shellName,
     update,
     reset,
+    setKeybinding,
     flush: persistence.flush,
   }
 })

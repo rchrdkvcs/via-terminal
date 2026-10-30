@@ -13,6 +13,7 @@ import IconAction from './IconAction.vue'
 import { hostInput, requireAddress } from './inputs'
 import InspectorLayout from './InspectorLayout.vue'
 import { useDraft } from './useDraft'
+import VaultCard from './VaultCard.vue'
 import { useVaultActions } from './useVaultActions'
 import { useVaultState } from './useVaultState'
 
@@ -53,20 +54,28 @@ function onKeydown(event: KeyboardEvent) {
 <template>
   <InspectorLayout :title="title" :subtitle="subtitle" :error="error" @keydown="onKeydown">
     <template v-if="host" #actions>
-      <Button size="xs" class="me-1" @click="actions.connect(host.id)">
+      <Button size="sm" @click="actions.connect(host.id)">
         <Plug :stroke-width="1.5" />
         Connecter
       </Button>
-      <IconAction label="Dupliquer" @click="actions.duplicateHost(host.id)">
-        <Copy :stroke-width="1.5" />
-      </IconAction>
-      <IconAction label="Supprimer" @click="actions.deleteHost(host.id)">
-        <Trash2 :stroke-width="1.5" />
-      </IconAction>
+      <div class="ms-2 flex items-center gap-0.5 border-s border-hairline ps-2">
+        <IconAction label="Dupliquer" @click="actions.duplicateHost(host.id)">
+          <Copy :stroke-width="1.5" />
+        </IconAction>
+        <IconAction label="Supprimer" @click="actions.deleteHost(host.id)">
+          <Trash2 :stroke-width="1.5" />
+        </IconAction>
+      </div>
     </template>
-    <HostAddressFields v-model="draft" :inherited="resolved" @commit="autosave" />
-    <HostCredentials v-model="draft" :resolved="resolved" @commit="autosave" />
-    <HostDetails v-model="draft" @commit="autosave" />
+    <VaultCard title="Serveur">
+      <HostAddressFields v-model="draft" :inherited="resolved" @commit="autosave" />
+    </VaultCard>
+    <VaultCard title="Authentification" description="Le compte utilisé pour ouvrir la session SSH.">
+      <HostCredentials v-model="draft" :resolved="resolved" @commit="autosave" />
+    </VaultCard>
+    <VaultCard title="Organisation">
+      <HostDetails v-model="draft" @commit="autosave" />
+    </VaultCard>
     <template v-if="!host" #footer>
       <Button variant="ghost" size="sm" @click="state.creating.value = false">Annuler</Button>
       <Button variant="outline" size="sm" :disabled="saving" @click="create(false)"

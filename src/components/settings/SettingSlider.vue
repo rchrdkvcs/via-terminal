@@ -22,7 +22,7 @@ function onUpdate(values: number[] | undefined) {
 
 <template>
   <SliderRoot
-    class="relative flex w-36 touch-none items-center select-none"
+    class="relative flex w-40 touch-none items-center select-none"
     :min="min"
     :max="max"
     :step="step"
@@ -40,7 +40,7 @@ function onUpdate(values: number[] | undefined) {
       class="block size-4 rounded-full border border-primary bg-white shadow-sm ring-ring/50 transition-shadow outline-none hover:ring-4 focus-visible:ring-4 motion-reduce:transition-none"
     />
   </SliderRoot>
-  <output class="w-10 text-right text-[13px] text-muted-foreground tabular-nums">
+  <output class="w-12 text-right text-[13px] text-muted-foreground tabular-nums">
     {{ format(value) }}
   </output>
 </template>

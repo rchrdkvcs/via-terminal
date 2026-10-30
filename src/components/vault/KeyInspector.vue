@@ -10,6 +10,7 @@ import IconAction from './IconAction.vue'
 import InspectorLayout from './InspectorLayout.vue'
 import { useKeyActions } from './useKeyActions'
 import { useVaultActions } from './useVaultActions'
+import VaultCard from './VaultCard.vue'
 import VaultField from './VaultField.vue'
 
 const props = defineProps<{ keyId: Id }>()
@@ -50,43 +51,38 @@ function rename() {
         <Trash2 :stroke-width="1.5" />
       </IconAction>
     </template>
-    <VaultField label="Libellé" for="key-label">
-      <Input
-        id="key-label"
-        v-model="label"
-        class="h-8 text-[13px] md:text-[13px]"
-        @blur="rename"
-        @keydown.enter="rename"
-      />
-    </VaultField>
-    <VaultField label="Empreinte">
-      <p class="font-mono text-xs break-all select-text">{{ key.fingerprint }}</p>
-    </VaultField>
-    <VaultField label="Protection">
-      <p class="text-[13px]">{{ protection }}</p>
-    </VaultField>
-    <VaultField
-      label="Clé publique"
-      for="key-public"
-      hint="Ajoutez-la au fichier ~/.ssh/authorized_keys des serveurs qui doivent accepter cette clé."
+    <VaultCard title="Clé">
+      <VaultField label="Libellé" for="key-label">
+        <Input
+          id="key-label"
+          v-model="label"
+          class="h-8 text-[13px] md:text-[13px]"
+          @blur="rename"
+          @keydown.enter="rename"
+        />
+      </VaultField>
+      <VaultField label="Empreinte">
+        <p class="font-mono text-xs break-all select-text">{{ key.fingerprint }}</p>
+      </VaultField>
+      <VaultField label="Protection">
+        <p class="text-[13px]">{{ protection }}</p>
+      </VaultField>
+    </VaultCard>
+    <VaultCard
+      title="Clé publique"
+      description="Ajoutez-la au fichier ~/.ssh/authorized_keys des serveurs qui doivent accepter cette clé."
     >
-      <textarea
+      <template #actions>
+        <Button variant="ghost" size="sm" @click="keyActions.copyPublicKey(key)">
+          <Copy :stroke-width="1.5" />
+          Copier
+        </Button>
+      </template>
+      <pre
         id="key-public"
-        readonly
-        :value="key.publicKey"
-        rows="4"
-        class="material-field w-full resize-none rounded-md px-2.5 py-2 font-mono text-xs break-all outline-none"
-        @focus="($event.target as HTMLTextAreaElement).select()"
-      />
-    </VaultField>
-    <Button
-      variant="outline"
-      size="sm"
-      class="justify-self-start"
-      @click="keyActions.copyPublicKey(key)"
-    >
-      <Copy :stroke-width="1.5" />
-      Copier la clé publique
-    </Button>
+        aria-label="Clé publique"
+        class="material-field rounded-md px-2.5 py-2 font-mono text-xs break-all whitespace-pre-wrap select-all"
+        >{{ key.publicKey }}</pre>
+    </VaultCard>
   </InspectorLayout>
 </template>

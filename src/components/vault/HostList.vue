@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus } from '@lucide/vue'
+import { Plus, SlidersHorizontal } from '@lucide/vue'
 import { computed, ref, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
@@ -7,6 +7,7 @@ import { useVault } from '@/stores/vault'
 import HostRow from './HostRow.vue'
 import { matches } from './search'
 import { subtree } from './tree'
+import { useGroupTree } from './useGroupTree'
 import { useVaultActions } from './useVaultActions'
 import { useVaultState } from './useVaultState'
 import VaultEmpty from './VaultEmpty.vue'
@@ -16,6 +17,7 @@ const vault = useVault()
 const kbd = useShortcutLabel()
 const state = useVaultState()
 const actions = useVaultActions()
+const tree = useGroupTree()
 const query = ref('')
 
 const scopeGroup = computed(() => vault.group(state.scope.value))
@@ -48,6 +50,12 @@ watch(
   { immediate: true },
 )
 
+const description = computed(() =>
+  scopeGroup.value
+    ? 'Les hôtes de ce groupe reprennent son utilisateur, son port et son identité, sauf s’ils en choisissent d’autres.'
+    : 'Les serveurs SSH où vous vous connectez. Cliquez sur un hôte pour le modifier, Entrée pour vous y connecter.',
+)
+
 const empty = computed(() => {
   if (query.value.trim()) {
     return {
@@ -74,27 +82,30 @@ const empty = computed(() => {
   <VaultListPane
     v-model:query="query"
     :title="scopeGroup?.name ?? 'Tous les hôtes'"
+    :description="description"
     search-label="Rechercher un hôte"
     :ids="ids"
-    :selected="state.selected.value"
-    @select="state.selected.value = $event"
     @activate="actions.connect"
     @remove="actions.deleteHost"
   >
     <template #actions>
-      <Button size="sm" class="h-8" @click="state.startCreating()">
+      <Button v-if="scopeGroup" variant="outline" @click="tree.edit(scopeGroup.id)">
+        <SlidersHorizontal :stroke-width="1.5" />
+        Valeurs par défaut
+      </Button>
+      <Button @click="state.startCreating()">
         <Plus :stroke-width="1.5" />
         Nouvel hôte
       </Button>
     </template>
-    <template #default="{ tabbable }">
+    <template #default="{ tabbable, current }">
       <HostRow
         v-for="host in hosts"
         :key="host.id"
         :host="host"
-        :selected="host.id === state.selected.value"
+        :current="current(host.id)"
         :tabbable="tabbable(host.id)"
-        @select="state.selected.value = host.id"
+        @open="state.selected.value = host.id"
       />
     </template>
     <template #empty>
