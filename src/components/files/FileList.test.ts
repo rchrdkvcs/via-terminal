@@ -124,4 +124,13 @@ describe('FileList', () => {
     )
     expect(render({ entries: [] }).text()).toContain('Ce dossier est vide.')
   })
+  it('filters the listed entries by name, ignoring case and accents', async () => {
+    const view = render({ hidden: true, filter: 'RÉL' })
+    expect(view.findAll('[data-path]').map((row) => row.attributes('data-path'))).toEqual([
+      '/srv/releases',
+    ])
+    await view.setProps({ filter: 'nothing' })
+    expect(view.text()).toContain('Aucun élément ne correspond à « nothing ».')
+    view.unmount()
+  })
 })
