@@ -1,5 +1,6 @@
 export type {
   FailureReason,
+  FilesAutoOpen,
   LocalTarget,
   Prompt,
   PromptAnswer,

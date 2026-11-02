@@ -75,7 +75,7 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 
 ## Remote files
 
-SSH tabs offer an independent remote explorer through the top-right file-tree icon or the command bar. Resize it beside the terminal or detach it into its own explorer tab; each document opens in its own tab. Explorer and document tabs open their own connection. Create, move, delete and change permissions; transfer files and folders; view and explicitly save UTF-8 documents. Drafts remain in memory and closing asks before discarding them. Transfers report progress and support cancellation, retry and collision choices. Safe document replacement requires server support. See [REMOTE-FILES.md](REMOTE-FILES.md) for limits and acceptance scenarios.
+SSH tabs offer an independent remote explorer through the top-right file-tree icon or the command bar. A setting can open it automatically once per connection, beside the terminal or as an explorer tab added next to it (asleep until opened). Resize it beside the terminal or detach it into its own explorer tab; each document opens in its own tab. Explorer and document tabs open their own connection. Create, move, delete and change permissions; transfer files and folders; view and explicitly save UTF-8 documents. Drafts remain in memory and closing asks before discarding them. Transfers report progress and support cancellation, retry and collision choices. Safe document replacement requires server support. See [REMOTE-FILES.md](REMOTE-FILES.md) for limits and acceptance scenarios.
 
 ## Vault
 
@@ -91,7 +91,7 @@ A full page (sidebar stays) with:
 
 ## Settings
 
-A full page with General (default shell, behavior on close, quick-connect auto-save), Appearance (theme, font, size, cursor), Terminal (scrollback, line height, copy on select) and Shortcuts (read-only reference). SSH data never appears in settings.
+A full page with General (default shell, behavior on close, remote explorer auto-open, quick-connect auto-save), Appearance (theme, font, size, cursor), Terminal (scrollback, line height, copy on select) and Shortcuts (read-only reference). SSH data never appears in settings.
 
 ## Persistence
 
