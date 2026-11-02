@@ -15,6 +15,7 @@ function fakeInstance() {
     onData: vi.fn(),
     onResize: vi.fn(),
     onTitleChange: vi.fn(),
+    onBell: vi.fn(),
     onSelectionChange: vi.fn(),
     parser: { registerOscHandler: vi.fn() },
   }

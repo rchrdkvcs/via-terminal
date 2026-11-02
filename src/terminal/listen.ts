@@ -8,6 +8,8 @@ export interface Callbacks {
   onSelection(tabId: Id, text: string): void
 
   onCwd(tabId: Id, payload: string, osc: 7 | 9): void
+  /** The bell, or a desktop notification (OSC 9 text, OSC 777 notify). */
+  onBell(tabId: Id): void
 }
 
 export function listen(terminal: Terminal, tabId: Id, callbacks: () => Callbacks | null) {
@@ -17,9 +19,21 @@ export function listen(terminal: Terminal, tabId: Id, callbacks: () => Callbacks
   terminal.onSelectionChange(() => callbacks()?.onSelection(tabId, terminal.getSelection()))
   terminal.parser.registerOscHandler(7, (payload) => (callbacks()?.onCwd(tabId, payload, 7), true))
 
+  terminal.onBell(() => callbacks()?.onBell(tabId))
+
   terminal.parser.registerOscHandler(9, (payload) => {
-    if (!payload.startsWith('9;')) return false
-    callbacks()?.onCwd(tabId, payload, 9)
+    if (payload.startsWith('9;')) {
+      callbacks()?.onCwd(tabId, payload, 9)
+      return true
+    }
+    // Other ConEmu codes ("4;…" progress) are numbered; plain text is an iTerm2 notification.
+    if (/^\d+;/.test(payload)) return false
+    callbacks()?.onBell(tabId)
+    return true
+  })
+  terminal.parser.registerOscHandler(777, (payload) => {
+    if (!payload.startsWith('notify;')) return false
+    callbacks()?.onBell(tabId)
     return true
   })
 }

@@ -48,6 +48,7 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 - A host saved by quick connect is named after its address until named: naming its tab names the host, so the sidebar, the command bar and the vault show one name.
 - A temporary local shell that exits normally closes its tab. A failed launch or a dropped SSH connection keeps the tab with its output and offers Reconnect.
 - Ctrl+Shift+W closes the current tab; closing a pinned tab puts it to sleep, closing again removes it. Removing offers Undo.
+- A running tab shows what its program is doing on its icon: animated bars while it keeps printing on its own (or its title shows a spinner), a pulsing amber dot when it rings the bell, sends a notification, or finishes a long run while another tab is shown. Opening the tab clears the dot.
 - Renaming: use the row menu or F2. A manual name stops following the terminal title until reset.
 - Ctrl+Tab / Ctrl+Shift+Tab cycle tabs in sidebar order; Ctrl+1…9 switch spaces.
 

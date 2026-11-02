@@ -15,6 +15,7 @@ import { findTab } from '@/domain/space'
 import { decodeBase64 } from '@/lib/base64'
 import { SessionRouting } from '@/lib/session-routing'
 import { terminals } from '@/terminal/registry'
+import { useActivity } from './activity'
 import { useSpaces } from './spaces'
 
 export type TabState = SessionState | 'asleep'
@@ -49,6 +50,7 @@ const ENTER = String.fromCharCode(13)
 
 export const useSessions = defineStore('sessions', () => {
   const spaces = useSpaces()
+  const activity = useActivity()
   const runtimes = reactive<Record<Id, TabRuntime>>({})
   const routing = new SessionRouting()
   const openings = new Map<Id, symbol>()
@@ -118,10 +120,12 @@ export const useSessions = defineStore('sessions', () => {
   function release(tabId: Id) {
     stop(tabId)
     delete runtimes[tabId]
+    activity.release(tabId)
     terminals.release(tabId)
   }
 
   function input(tabId: Id, data: string) {
+    activity.input(tabId)
     const { sessionId, state } = runtime(tabId)
     if (data === ENTER && ENDED.includes(state)) {
       const space = spaces.spaceOf(tabId)
@@ -133,6 +137,7 @@ export const useSessions = defineStore('sessions', () => {
   }
 
   function resize(tabId: Id, cols: number, rows: number) {
+    activity.input(tabId)
     const sessionId = runtimes[tabId]?.sessionId
     if (sessionId) void api.session.resize(sessionId, { cols, rows }).catch(() => undefined)
   }
@@ -178,6 +183,7 @@ export const useSessions = defineStore('sessions', () => {
     })
     if (!LIVE.includes(event.state)) {
       current.prompt = null
+      activity.release(tabId)
       routing.finish(event.sessionId)
       endedListeners.forEach((listener) => listener(tabId, event))
     }
@@ -195,7 +201,10 @@ export const useSessions = defineStore('sessions', () => {
     ),
     on('terminal-output', ({ sessionId, dataBase64 }) => {
       const bytes = decodeBase64(dataBase64)
-      routing.route(sessionId, (tabId) => terminals.feed(tabId, bytes))
+      routing.route(sessionId, (tabId) => {
+        activity.output(tabId)
+        terminals.feed(tabId, bytes)
+      })
     }),
     on('session-prompt', ({ sessionId, promptId, prompt }) =>
       routing.route(sessionId, (tabId) => {

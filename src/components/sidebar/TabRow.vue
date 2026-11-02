@@ -5,6 +5,7 @@ import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu'
 import type { Tab } from '@/ipc/types'
 import { useTabLabel } from '@/composables/useTabLabel'
 import { useSidebarActions } from '@/composables/useSidebarActions'
+import { useActivity, workingTitle } from '@/stores/activity'
 import { useSessions } from '@/stores/sessions'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
@@ -16,6 +17,7 @@ import TabIcon from './TabIcon.vue'
 
 const props = defineProps<{ tab: Tab; compact?: boolean }>()
 const sessions = useSessions()
+const activities = useActivity()
 const ui = useUi()
 const workbench = useWorkbench()
 const closing = useClosing()
@@ -25,6 +27,12 @@ const names = useTabLabel()
 const state = computed(() => sessions.runtime(props.tab.id).state)
 const selected = computed(() => workbench.activeTab?.id === props.tab.id)
 const label = computed(() => names.label(props.tab))
+const activity = computed(() => {
+  const current = activities.of(props.tab.id)
+  return current === 'idle' && workingTitle(sessions.runtime(props.tab.id).autoTitle)
+    ? 'working'
+    : current
+})
 const asleep = computed(() => state.value === 'asleep' || state.value === 'exited')
 </script>
 
@@ -46,7 +54,7 @@ const asleep = computed(() => state.value === 'asleep' || state.value === 'exite
         @keydown.enter.prevent="workbench.activate(tab.id)"
         @keydown.f2.prevent="ui.renaming = tab.id"
       >
-        <TabIcon :target="tab.target" :view="tab.view" :state="state" />
+        <TabIcon :target="tab.target" :view="tab.view" :state="state" :activity="activity" />
         <InlineRename
           v-if="ui.renaming === tab.id"
           :value="label"
