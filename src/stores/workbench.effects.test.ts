@@ -18,7 +18,8 @@ describe('workbench reactions to sessions', () => {
     }
     ended('temporary', event)
     expect(findTab(spaces.active, 'temporary')).toBeUndefined()
-    expect(workbench.activeTab?.id).toBe('pinned')
+    // The pinned neighbor is asleep: the home page shows rather than switching to it.
+    expect(workbench.activeTab).toBeUndefined()
     ended('pinned', event)
     expect(findTab(spaces.active, 'pinned')).toBeDefined()
     expect(mocks.release).toHaveBeenCalledExactlyOnceWith('temporary')

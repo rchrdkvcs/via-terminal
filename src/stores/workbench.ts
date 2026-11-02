@@ -213,7 +213,8 @@ export const useWorkbench = defineStore('workbench', () => {
     const space = spaces.spaceOf(tabId)
     const row = space && rowOfTab(space, tabId)
     if (!space || !row) return
-    const next = successor(space, tabId)
+    // Only a running tab takes over; otherwise the home page shows.
+    const next = successor(space, tabId, sessions.isLive)
     const snapshot = clone(row)
     const place = placeFor(space, row.id, 'after')
     const pinned = locate(space, row.id)?.area === 'pinned'
@@ -221,7 +222,7 @@ export const useWorkbench = defineStore('workbench', () => {
       return
     if (focused[space.id] === tabId) {
       focused[space.id] = next
-      if (next && sessions.isLive(next)) focusTerminal(next)
+      if (next) focusTerminal(next)
     }
     release(tabId)
     if (!undoable || !pinned || row.kind !== 'tab' || !place) return {}
