@@ -35,7 +35,7 @@ const asleep = computed(() => state.value === 'asleep' || state.value === 'exite
         role="button"
         tabindex="0"
         :aria-current="selected ? 'page' : undefined"
-        :title="names.detail(tab)"
+        :title="names.tooltip(tab)"
         class="row group/tab relative flex min-w-0 items-center gap-2 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
         :class="[
           compact ? 'h-7 flex-1 px-1.5' : 'h-8 px-2',
