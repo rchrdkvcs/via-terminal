@@ -26,11 +26,16 @@ letterSpacing: number,
 /**
  * Shortcut overrides by action id; absent actions keep their default combination.
  */
-keybindings: { [key in string]: Array<string> }, };
+keybindings: { [key in string]: Array<string> }, filesAutoOpen: FilesAutoOpen, };
 
 export type Theme = "light" | "dark" | "system";
 
 export type CursorStyle = "block" | "underline" | "bar";
+
+/**
+ * Where the remote explorer of an SSH terminal opens by itself once connected.
+ */
+export type FilesAutoOpen = "panel" | "tab" | "off";
 
 export type Layout = { activeSpaceId: string | null, sidebar: Sidebar, spaces: Array<PersistedSpace>, };
 

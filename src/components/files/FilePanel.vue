@@ -2,11 +2,14 @@
 import { computed, ref, watch } from 'vue'
 import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { copyText } from '@/lib/clipboard'
+import { contains } from '@/domain/search'
 import FileNavigation from './FileNavigation.vue'
 import { useFiles } from '@/stores/files'
 import { useSessions } from '@/stores/sessions'
+import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
-import type { Tab } from '@/ipc/types'
+import type { Tab, TabView, Target } from '@/ipc/types'
+import { useClosing } from '@/composables/useClosing'
 import type { RemoteEntry } from '@/ipc/files'
 import { useFileOperations } from './useFileOperations'
 import { useFileTransfers } from './useFileTransfers'
@@ -16,6 +19,7 @@ import FileToolbar from './FileToolbar.vue'
 import TransferList from './TransferList.vue'
 import FileStatus from './FileStatus.vue'
 import FileDropZone from './FileDropZone.vue'
+import FileFilter from './FileFilter.vue'
 /** Beside the terminal, unless the tab itself shows the explorer. */
 const props = defineProps<{ tab: Tab }>()
 const files = useFiles(),
@@ -25,7 +29,9 @@ const panel = computed(() => files.state(props.tab.id))
 const session = computed(() => files.session(props.tab.id))
 const docked = computed(() => props.tab.view?.kind !== 'files')
 const selected = ref<string[]>([]),
-  hidden = ref(true)
+  hidden = ref(true),
+  filter = ref(''),
+  filtering = ref(false)
 const context = { tabId: () => props.tab.id }
 const operations = useFileOperations(context),
   transfers = useFileTransfers(context)
@@ -47,8 +53,40 @@ watch(
 )
 watch(
   () => panel.value.directory,
-  () => (selected.value = []),
+  () => {
+    selected.value = []
+    filter.value = ''
+    filtering.value = false
+  },
 )
+const filtered = computed(() => {
+  const shown = panel.value.entries.filter((entry) => hidden.value || !entry.name.startsWith('.'))
+  const query = filter.value.trim()
+  return {
+    total: shown.length,
+    count: query ? shown.filter((entry) => contains(query, entry.name)).length : shown.length,
+  }
+})
+const ui = useUi()
+watch(
+  () => ui.filterFiles,
+  (tabId) => {
+    if (tabId !== props.tab.id) return
+    filtering.value = true
+    ui.filterFiles = null
+  },
+  { immediate: true },
+)
+function toggleFilter() {
+  filtering.value = !filtering.value
+  if (!filtering.value) filter.value = ''
+}
+/** Cmd/Ctrl+F inside the explorer filters the directory instead of searching the terminal. */
+function onKeydown(event: KeyboardEvent) {
+  if (event.key.toLowerCase() !== 'f' || !(event.metaKey || event.ctrlKey) || event.shiftKey) return
+  event.preventDefault()
+  filtering.value = true
+}
 function navigate(directory: string) {
   selected.value = []
   if (session.value) void files.navigate(props.tab.id, directory)
@@ -60,6 +98,13 @@ function open(entry: RemoteEntry) {
 function copyPaths() {
   const paths = selection.value.map((entry) => entry.path)
   void copyText(paths.join('\n'), paths.length > 1 ? 'Chemins copiés' : 'Chemin copié')
+}
+const closing = useClosing()
+/** Another account of the same server: in this explorer tab, or in a new one beside the terminal. */
+function switchUser(target: Target) {
+  const view: TabView = { kind: 'files', path: null }
+  if (docked.value) workbench.openView(props.tab, view, { target })
+  else void closing.replaceTab(props.tab.id, target, view)
 }
 function detach() {
   const path = panel.value.directory
@@ -73,20 +118,38 @@ function detach() {
     class="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
     :class="docked ? 'bg-rail' : 'bg-surface'"
     aria-label="Explorateur distant"
+    data-files-explorer
     @drop="transfers.drop"
+    @keydown="onKeydown"
   >
-    <FileNavigation :panel="panel" :connected="!!session" @navigate="navigate">
+    <FileNavigation
+      :panel="panel"
+      :connected="!!session"
+      :target="tab.target"
+      :docked="docked"
+      @navigate="navigate"
+      @switch-user="switchUser"
+    >
       <FileToolbar
         :enabled="!!session && !panel.busy"
         :hidden="hidden"
         :docked="docked"
+        :filtering="filtering"
         @create="operations.create"
         @upload="transfers.upload"
         @hidden="hidden = !hidden"
+        @search="toggleFilter"
         @detach="detach"
         @hide="files.hide(tab.id)"
       />
     </FileNavigation>
+    <FileFilter
+      v-model="filter"
+      :open="filtering"
+      :count="filtered.count"
+      :total="filtered.total"
+      @close="filtering = false"
+    />
     <FileStatus
       :state="sessions.runtime(tab.id).state"
       :error="panel.error"
@@ -106,6 +169,7 @@ function detach() {
             :hidden="hidden"
             :connected="!!session"
             :failed="!!panel.error"
+            :filter="filter"
             @select-all="selected = $event"
             @open="open"
             @rename="operations.change(selection[0], 'move')"

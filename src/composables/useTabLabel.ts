@@ -1,5 +1,6 @@
 import type { Tab } from '@/ipc/types'
 import { formatQuickTarget } from '@/domain/quick-connect'
+import { simplifyTitle } from '@/domain/tab-title'
 import { useSessions } from '@/stores/sessions'
 import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
@@ -21,14 +22,21 @@ export function useTabLabel() {
     return settings.shellName(target.shell, space?.defaultShell ?? null)
   }
 
-  function usefulTitle(title: string | null): string | null {
-    if (!title || /\.exe$/i.test(title) || /^(\/usr)?\/bin\/\w+$/.test(title)) return null
-    return title
-  }
-
   function label(tab: Tab): string {
     if (tab.view) return tab.title ?? viewName(tab) ?? targetName(tab)
-    return tab.title ?? usefulTitle(sessions.runtime(tab.id).autoTitle) ?? targetName(tab)
+    if (tab.title) return tab.title
+    const short = simplifyTitle(sessions.runtime(tab.id).autoTitle)
+    if (!short) return targetName(tab)
+    // A remote directory alone would hide which server the tab is on.
+    return short.directory && tab.target.kind !== 'local'
+      ? `${targetName(tab)} · ${short.text}`
+      : short.text
+  }
+
+  /** The full terminal title above the target, for the row's tooltip. */
+  function tooltip(tab: Tab): string {
+    const raw = tab.view || tab.title ? null : sessions.runtime(tab.id).autoTitle
+    return raw && raw !== label(tab) ? `${raw}\n${detail(tab)}` : detail(tab)
   }
 
   function viewName(tab: Tab): string | null {
@@ -45,5 +53,5 @@ export function useTabLabel() {
     return target.cwd ?? targetName(tab)
   }
 
-  return { label, detail, targetName }
+  return { label, detail, tooltip, targetName }
 }

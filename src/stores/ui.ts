@@ -33,6 +33,8 @@ export const useUi = defineStore('ui', () => {
     id: null,
   })
   const searching = ref(false)
+  /** The explorer tab asked to open its directory filter. */
+  const filterFiles = ref<Id | null>(null)
   const settingsSection = ref<SettingsSection>('general')
   /** True while the shortcut editor waits for a key press, so it is not run as a shortcut. */
   const recordingShortcut = ref(false)
@@ -65,6 +67,7 @@ export const useUi = defineStore('ui', () => {
     confirmation,
     vaultFocus,
     searching,
+    filterFiles,
     settingsSection,
     recordingShortcut,
     openCommand,

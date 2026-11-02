@@ -1,10 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { ArrowUp, RefreshCw } from '@lucide/vue'
 import type { FileState } from '@/stores/files'
 import { Button } from '@/components/ui/button'
+import type { Target } from '@/ipc/types'
 import FilePath from './FilePath.vue'
-defineProps<{ panel: FileState; connected: boolean }>()
-const emit = defineEmits<{ navigate: [path: string] }>()
+import FileUser from './FileUser.vue'
+const props = defineProps<{
+  panel: FileState
+  connected: boolean
+  target?: Target
+  docked?: boolean
+}>()
+const emit = defineEmits<{ navigate: [path: string]; switchUser: [target: Target] }>()
+const directories = computed(() =>
+  props.panel.entries
+    .filter((entry) => entry.kind === 'directory' || entry.targetKind === 'directory')
+    .map((entry) => entry.path),
+)
 const parent = (directory: string) => directory.replace(/\/[^/]+\/?$/, '') || '/'
 </script>
 <template>
@@ -12,6 +25,12 @@ const parent = (directory: string) => directory.replace(/\/[^/]+\/?$/, '') || '/
     class="@container flex shrink-0 flex-wrap items-center gap-1 border-b border-hairline p-2"
     aria-label="Navigation et opérations sur les fichiers"
   >
+    <FileUser
+      v-if="target && target.kind !== 'local'"
+      :target="target"
+      :docked="docked ?? true"
+      @switch="emit('switchUser', $event)"
+    />
     <div
       class="material-field flex min-w-0 flex-1 basis-full items-center gap-0.5 rounded-md px-0.5 @[16rem]:basis-0"
     >
@@ -29,6 +48,7 @@ const parent = (directory: string) => directory.replace(/\/[^/]+\/?$/, '') || '/
       <FilePath
         :directory="panel.directory"
         :connected="connected"
+        :directories="directories"
         @navigate="emit('navigate', $event)"
       />
       <Button

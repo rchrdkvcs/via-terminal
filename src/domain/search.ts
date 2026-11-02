@@ -5,6 +5,11 @@ function normalize(value: string): string {
     .toLocaleLowerCase()
 }
 
+/** Whether `text` contains `query`, ignoring case and accents. */
+export function contains(query: string, text: string): boolean {
+  return normalize(text).includes(normalize(query.trim()))
+}
+
 export function scoreText(query: string, text: string): number {
   const needle = normalize(query).replace(/\s+/g, '')
   const haystack = normalize(text)

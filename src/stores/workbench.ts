@@ -99,7 +99,8 @@ export const useWorkbench = defineStore('workbench', () => {
     return existing.id
   }
 
-  function replace(tabId: Id, target: Target): Id | undefined {
+  /** Connects the tab to `target` instead, as a terminal unless `view` keeps an explorer. */
+  function replace(tabId: Id, target: Target, view?: TabView): Id | undefined {
     const space = spaces.spaceOf(tabId)
     if (
       !space ||
@@ -107,7 +108,7 @@ export const useWorkbench = defineStore('workbench', () => {
         {
           type: 'updateTab',
           tabId,
-          patch: { target, title: null, remoteCwd: null, view: undefined },
+          patch: { target, title: null, remoteCwd: null, view },
         },
         space.id,
       )
@@ -121,11 +122,20 @@ export const useWorkbench = defineStore('workbench', () => {
   /**
    * Shows a remote explorer or document of `source`'s target in its own tab, right after
    * `source` when that one is temporary. A document already open in the space is reused.
+   * With `activate: false` the tab is only added, asleep, and `source` keeps the focus;
+   * `target` connects it to another account of the same server.
    */
-  function openView(source: Tab, view: TabView): Id | undefined {
+  function openView(
+    source: Tab,
+    view: TabView,
+    {
+      activate: focus = true,
+      target = source.target,
+    }: { activate?: boolean; target?: Target } = {},
+  ): Id | undefined {
     const space = spaces.spaceOf(source.id)
-    if (!space || source.target.kind === 'local') return
-    const same = JSON.stringify(source.target)
+    if (!space || target.kind === 'local') return
+    const same = JSON.stringify(target)
     const existing =
       view.kind === 'document' &&
       tabs(space).find(
@@ -146,11 +156,11 @@ export const useWorkbench = defineStore('workbench', () => {
     const row = newTabRow({
       id: crypto.randomUUID(),
       title: null,
-      target: clone(source.target),
+      target: clone(target),
       view,
     })
     if (!spaces.dispatch({ type: 'open', row, to }, space.id)) return
-    activate(row.id)
+    if (focus) activate(row.id)
     return row.id
   }
 
@@ -210,20 +220,31 @@ export const useWorkbench = defineStore('workbench', () => {
     return true
   }
 
+  /** Only a running tab takes over from a closed one; otherwise the home page shows. */
+  function nextLive(space: Space, tabId: Id): Id | undefined {
+    return successor(space, tabId, sessions.isLive)
+  }
+
+  function focus(space: Space, tabId: Id | undefined) {
+    focused[space.id] = tabId
+    if (tabId) focusTerminal(tabId)
+  }
+
+  function leave(space: Space, tabId: Id) {
+    focus(space, nextLive(space, tabId))
+  }
+
   function removeTab(tabId: Id, undoable = false): Closed | undefined {
     const space = spaces.spaceOf(tabId)
     const row = space && rowOfTab(space, tabId)
     if (!space || !row) return
-    const next = successor(space, tabId)
+    const next = nextLive(space, tabId)
     const snapshot = clone(row)
     const place = placeFor(space, row.id, 'after')
     const pinned = locate(space, row.id)?.area === 'pinned'
     if (!spaces.dispatch({ type: 'remove', id: row.kind === 'split' ? tabId : row.id }, space.id))
       return
-    if (focused[space.id] === tabId) {
-      focused[space.id] = next
-      if (next && sessions.isLive(next)) focusTerminal(next)
-    }
+    if (focused[space.id] === tabId) focus(space, next)
     release(tabId)
     if (!undoable || !pinned || row.kind !== 'tab' || !place) return {}
     let restored = false
@@ -242,6 +263,8 @@ export const useWorkbench = defineStore('workbench', () => {
     if (!space || !row) return
     if (locate(space, row.id)?.area === 'pinned' && sessions.isLive(tabId)) {
       stop(tabId)
+      // The pinned tab stays, asleep; the view leaves it like any other close.
+      if (focused[space.id] === tabId) leave(space, tabId)
       return {}
     }
     return removeTab(tabId, true)

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { FolderTree, KeyRound, PanelLeft, Settings } from '@lucide/vue'
+import { FolderTree, PanelLeft, Settings } from '@lucide/vue'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
 import { useFiles } from '@/stores/files'
@@ -34,7 +34,6 @@ const toggle = (route: Route) => (ui.route = ui.route === route ? 'workbench' : 
 const button =
   'press grid size-7 shrink-0 place-items-center rounded-md text-ink-muted outline-none transition-[background-color,color,box-shadow] duration-100 hover:bg-row-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 aria-[current=true]:bg-control aria-[current=true]:text-foreground aria-[current=true]:shadow-[var(--shadow-control)]'
 const tools = [
-  { route: 'vault' as Route, label: 'Coffre', shortcut: 'vault' as const, icon: KeyRound },
   { route: 'settings' as Route, label: 'Réglages', shortcut: 'settings' as const, icon: Settings },
 ]
 </script>

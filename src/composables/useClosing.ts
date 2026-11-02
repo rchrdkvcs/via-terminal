@@ -1,4 +1,4 @@
-import type { Id, Target } from '@/ipc/types'
+import type { Id, TabView, Target } from '@/ipc/types'
 import { findTab, tabs } from '@/domain/space'
 import { notify } from '@/lib/notify'
 import { useFiles } from '@/stores/files'
@@ -51,9 +51,9 @@ export function useClosing() {
     if (undo) notify.info(`« ${name} » retiré des épinglés`, { label: 'Annuler', run: undo })
   }
 
-  async function replaceTab(tabId: Id, target: Target) {
+  async function replaceTab(tabId: Id, target: Target, view?: TabView) {
     const decision = await protection.protect([tabId])
-    if (decision) await protection.release(decision, () => !!workbench.replace(tabId, target))
+    if (decision) await protection.release(decision, () => !!workbench.replace(tabId, target, view))
   }
 
   async function removeSpace(spaceId: Id) {

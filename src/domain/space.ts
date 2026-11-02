@@ -85,12 +85,24 @@ export function fromPersisted(space: PersistedSpace): Space {
   return { ...space, temporary: [] }
 }
 
-export function successor(space: Space, tabId: Id): Id | undefined {
+/**
+ * The tab to focus once `tabId` goes away: a split sibling, then the nearest row after it,
+ * then the nearest before it. Only tabs that pass `accept` qualify.
+ */
+export function successor(
+  space: Space,
+  tabId: Id,
+  accept: (tabId: Id) => boolean = () => true,
+): Id | undefined {
   const row = rowOfTab(space, tabId)
-  const sibling = row && tabsOf(row).find((tab) => tab.id !== tabId)
+  const sibling = row && tabsOf(row).find((tab) => tab.id !== tabId && accept(tab.id))
   if (sibling) return sibling.id
   const all = rows(space)
   const index = all.findIndex((candidate) => candidate.id === row?.id)
-  const neighbor = all[index + 1] ?? all[index - 1]
-  return neighbor && tabsOf(neighbor)[0].id
+  const order = [...all.slice(index + 1), ...all.slice(0, Math.max(index, 0)).reverse()]
+  for (const neighbor of order) {
+    const found = tabsOf(neighbor).find((tab) => accept(tab.id))
+    if (found) return found.id
+  }
+  return undefined
 }

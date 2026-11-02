@@ -28,14 +28,14 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 
 - **Sidebar**, from top to bottom: the sidebar toggle, the space name and its pinned area (pinned tabs, split views and folders), a divider, New tab, the temporary tabs, and the space switcher: spaces centered, New space on the right.
 - **Content**: the active row, shown as a single terminal or a split view, on a rounded surface. No tab strip.
-- The sidebar can be hidden and shown again with Ctrl+Shift+B or its button. A thin title bar above the content holds the address pill of the current tab in the middle, and the vault, settings and window controls top right. It stays when the sidebar is hidden.
+- The sidebar can be hidden and shown again with Ctrl+Shift+B or its button. A thin title bar above the content holds the address pill of the current tab in the middle, and the settings and window controls top right; the vault opens from the command bar or its shortcut. It stays when the sidebar is hidden.
 
 ## Opening things
 
 - Shortcuts use Ctrl+Shift on Windows and Linux, so the shell keeps Ctrl+W, Ctrl+D, Ctrl+L and the other line-editing keys, and ⌘ on macOS.
-- **Ctrl+Shift+T** opens the command bar. It lists local shells, recent hosts, then every host matching what you type (label, address, user, tags). Enter opens the selection as a new temporary tab; a recent host already open in the space goes to its tab instead.
+- **Ctrl+Shift+T** (or clicking the address pill) opens the command bar. It lists local shells, recent hosts, then every host matching what you type (label, address, user, tags). Enter opens the selection as a new temporary tab; a recent host already open in the space goes to its tab instead.
 - Typing `user@host`, `host:2222` or `ssh user@host -p 2222` offers **Connect to …**. When authentication succeeds, the host is saved in the vault automatically.
-- **Ctrl+Shift+L** (or clicking the address pill) opens the command bar for the current tab: Enter replaces what the tab connects to.
+- **Ctrl+Shift+L** (or **Changer la cible…** in a row’s menu) opens the command bar for the current tab: Enter replaces what the tab connects to.
 - **Ctrl+Shift+P** opens the same bar with actions first: new space, open vault, settings, split, pin, rename, close.
 - From the vault, Enter or **Connect** opens a host in a new tab of the current space.
 
@@ -47,7 +47,8 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 - A pinned tab remembers its target and its name. A local tab also remembers the folder its shell was last in, and reopens there (Git Bash, bash, zsh, PowerShell and cmd report it; other shells reopen in the home folder).
 - A host saved by quick connect is named after its address until named: naming its tab names the host, so the sidebar, the command bar and the vault show one name.
 - A temporary local shell that exits normally closes its tab. A failed launch or a dropped SSH connection keeps the tab with its output and offers Reconnect.
-- Ctrl+Shift+W closes the current tab; closing a pinned tab puts it to sleep, closing again removes it. Removing offers Undo.
+- Ctrl+Shift+W closes the current tab; closing a pinned tab puts it to sleep, closing again removes it. Removing offers Undo. Either way, focus then moves to the nearest tab with a running session; when none runs, the home page shows instead of waking an asleep tab.
+- Without a manual name, a tab shows a short form of the terminal title: status glyphs, the `user@host:` prompt prefix and shell suffixes are dropped, and paths keep their last segment (an SSH tab keeps its host in front). The full title stays in the row tooltip.
 - A running tab shows what its program is doing on its icon: animated bars while it keeps printing on its own (or its title shows a spinner), a pulsing amber dot when it rings the bell, sends a notification, or finishes a long run while another tab is shown. Opening the tab clears the dot.
 - Renaming: use the row menu or F2. A manual name stops following the terminal title until reset.
 - Ctrl+Tab / Ctrl+Shift+Tab cycle tabs in sidebar order; Ctrl+1…9 switch spaces.
@@ -76,7 +77,7 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 
 ## Remote files
 
-SSH tabs offer an independent remote explorer through the top-right file-tree icon or the command bar. Resize it beside the terminal or detach it into its own explorer tab; each document opens in its own tab. Explorer and document tabs open their own connection. Create, move, delete and change permissions; transfer files and folders; view and explicitly save UTF-8 documents. Drafts remain in memory and closing asks before discarding them. Transfers report progress and support cancellation, retry and collision choices. Safe document replacement requires server support. See [REMOTE-FILES.md](REMOTE-FILES.md) for limits and acceptance scenarios.
+SSH tabs offer an independent remote explorer through the top-right file-tree icon or the command bar. A setting can open it automatically once per connection, beside the terminal or as an explorer tab added next to it (asleep until opened). Resize it beside the terminal or detach it into its own explorer tab; each document opens in its own tab. Explorer and document tabs open their own connection. Create, move, delete and change permissions; transfer files and folders; view and explicitly save UTF-8 documents. Drafts remain in memory and closing asks before discarding them. Transfers report progress and support cancellation, retry and collision choices. Safe document replacement requires server support. See [REMOTE-FILES.md](REMOTE-FILES.md) for limits and acceptance scenarios.
 
 ## Vault
 
@@ -92,7 +93,7 @@ A full page (sidebar stays) with:
 
 ## Settings
 
-A full page with General (default shell, behavior on close, quick-connect auto-save), Appearance (theme, font, size, cursor), Terminal (scrollback, line height, copy on select) and Shortcuts (read-only reference). SSH data never appears in settings.
+A full page with General (default shell, behavior on close, remote explorer auto-open, quick-connect auto-save), Appearance (theme, font, size, cursor), Terminal (scrollback, line height, copy on select) and Shortcuts (read-only reference). SSH data never appears in settings.
 
 ## Persistence
 
