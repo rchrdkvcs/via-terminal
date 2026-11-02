@@ -102,6 +102,16 @@ export const useFiles = defineStore('files', () => {
       if (latest()) panel.busy = false
     }
   }
+  /**
+   * Lists `path` without moving the explorer there, for the breadcrumb menus; `null` once the
+   * tab has no session or changed session before the reply.
+   */
+  async function browse(tabId: string, path: string): Promise<RemoteEntry[] | null> {
+    const link = connection(tabId)
+    if (!link) return null
+    const reply = await filesApi.request(link.sessionId, { operation: 'list', path })
+    return link.current() ? reply.entries : null
+  }
   /** The tab closed or changed target: forgets everything, including staged drops. */
   function release(tabId: string) {
     if (!panels[tabId]) return
@@ -123,6 +133,7 @@ export const useFiles = defineStore('files', () => {
       if (panels[tabId]) panels[tabId].visible = false
     },
     navigate,
+    browse,
     release,
     reportError: (tabId: string, error: string) => {
       if (panels[tabId]) panels[tabId].error = error
