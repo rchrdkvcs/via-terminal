@@ -3,15 +3,32 @@ import { findTab, rows, tabs } from '@/domain/space'
 import { mocks, row, setup, split } from './workbench.fixture'
 
 describe('workbench closing and space removal', () => {
-  it('puts a live pinned tab to sleep without removing it or changing focus', () => {
+  it('puts a live pinned tab to sleep without removing it and shows the home page', () => {
     const { spaces, workbench } = setup([row('pinned')])
     workbench.activate('pinned', { wake: false })
     mocks.live.add('pinned')
     expect(workbench.closeTab('pinned')).toEqual({})
     expect(findTab(spaces.active, 'pinned')).toBeDefined()
-    expect(workbench.activeTab?.id).toBe('pinned')
+    expect(workbench.activeTab).toBeUndefined()
     expect(mocks.stop).toHaveBeenCalledExactlyOnceWith('pinned')
     expect(mocks.release).not.toHaveBeenCalled()
+  })
+
+  it('moves from a live pinned tab it puts to sleep to a running neighbor', () => {
+    const { workbench } = setup([row('pinned'), row('other')])
+    workbench.activate('pinned', { wake: false })
+    mocks.live.add('pinned')
+    mocks.live.add('other')
+    workbench.closeTab('pinned')
+    expect(workbench.activeTab?.id).toBe('other')
+  })
+
+  it('keeps focus elsewhere when the live pinned tab closed is not the focused one', () => {
+    const { workbench } = setup([row('pinned'), row('other')])
+    workbench.activate('other', { wake: false })
+    mocks.live.add('pinned')
+    workbench.closeTab('pinned')
+    expect(workbench.activeTab?.id).toBe('other')
   })
 
   it('removes an asleep pinned tab and restores it with undo without waking it', () => {

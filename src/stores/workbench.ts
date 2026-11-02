@@ -214,21 +214,31 @@ export const useWorkbench = defineStore('workbench', () => {
     return true
   }
 
+  /** Only a running tab takes over from a closed one; otherwise the home page shows. */
+  function nextLive(space: Space, tabId: Id): Id | undefined {
+    return successor(space, tabId, sessions.isLive)
+  }
+
+  function focus(space: Space, tabId: Id | undefined) {
+    focused[space.id] = tabId
+    if (tabId) focusTerminal(tabId)
+  }
+
+  function leave(space: Space, tabId: Id) {
+    focus(space, nextLive(space, tabId))
+  }
+
   function removeTab(tabId: Id, undoable = false): Closed | undefined {
     const space = spaces.spaceOf(tabId)
     const row = space && rowOfTab(space, tabId)
     if (!space || !row) return
-    // Only a running tab takes over; otherwise the home page shows.
-    const next = successor(space, tabId, sessions.isLive)
+    const next = nextLive(space, tabId)
     const snapshot = clone(row)
     const place = placeFor(space, row.id, 'after')
     const pinned = locate(space, row.id)?.area === 'pinned'
     if (!spaces.dispatch({ type: 'remove', id: row.kind === 'split' ? tabId : row.id }, space.id))
       return
-    if (focused[space.id] === tabId) {
-      focused[space.id] = next
-      if (next) focusTerminal(next)
-    }
+    if (focused[space.id] === tabId) focus(space, next)
     release(tabId)
     if (!undoable || !pinned || row.kind !== 'tab' || !place) return {}
     let restored = false
@@ -247,6 +257,8 @@ export const useWorkbench = defineStore('workbench', () => {
     if (!space || !row) return
     if (locate(space, row.id)?.area === 'pinned' && sessions.isLive(tabId)) {
       stop(tabId)
+      // The pinned tab stays, asleep; the view leaves it like any other close.
+      if (focused[space.id] === tabId) leave(space, tabId)
       return {}
     }
     return removeTab(tabId, true)
