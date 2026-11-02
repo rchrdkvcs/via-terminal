@@ -8,7 +8,8 @@ import { useFiles } from '@/stores/files'
 import { useSessions } from '@/stores/sessions'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
-import type { Tab } from '@/ipc/types'
+import type { Tab, TabView, Target } from '@/ipc/types'
+import { useClosing } from '@/composables/useClosing'
 import type { RemoteEntry } from '@/ipc/files'
 import { useFileOperations } from './useFileOperations'
 import { useFileTransfers } from './useFileTransfers'
@@ -98,6 +99,13 @@ function copyPaths() {
   const paths = selection.value.map((entry) => entry.path)
   void copyText(paths.join('\n'), paths.length > 1 ? 'Chemins copiés' : 'Chemin copié')
 }
+const closing = useClosing()
+/** Another account of the same server: in this explorer tab, or in a new one beside the terminal. */
+function switchUser(target: Target) {
+  const view: TabView = { kind: 'files', path: null }
+  if (docked.value) workbench.openView(props.tab, view, { target })
+  else void closing.replaceTab(props.tab.id, target, view)
+}
 function detach() {
   const path = panel.value.directory
   workbench.openView(props.tab, { kind: 'files', path: path.startsWith('/') ? path : null })
@@ -114,7 +122,14 @@ function detach() {
     @drop="transfers.drop"
     @keydown="onKeydown"
   >
-    <FileNavigation :panel="panel" :connected="!!session" @navigate="navigate">
+    <FileNavigation
+      :panel="panel"
+      :connected="!!session"
+      :target="tab.target"
+      :docked="docked"
+      @navigate="navigate"
+      @switch-user="switchUser"
+    >
       <FileToolbar
         :enabled="!!session && !panel.busy"
         :hidden="hidden"
