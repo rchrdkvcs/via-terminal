@@ -127,6 +127,8 @@ function detach() {
       :connected="!!session"
       :target="tab.target"
       :docked="docked"
+      :hidden="hidden"
+      :browse="(path: string) => files.browse(tab.id, path)"
       @navigate="navigate"
       @switch-user="switchUser"
     >

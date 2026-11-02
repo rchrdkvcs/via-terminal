@@ -1,23 +1,22 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { ArrowUp, RefreshCw } from '@lucide/vue'
+import { ArrowLeft, RefreshCw } from '@lucide/vue'
 import type { FileState } from '@/stores/files'
 import { Button } from '@/components/ui/button'
+import type { RemoteEntry } from '@/ipc/files'
 import type { Target } from '@/ipc/types'
 import FilePath from './FilePath.vue'
 import FileUser from './FileUser.vue'
-const props = defineProps<{
+defineProps<{
   panel: FileState
   connected: boolean
   target?: Target
   docked?: boolean
+  /** Whether dot folders are listed. */
+  hidden?: boolean
+  /** Lists another directory without navigating to it. */
+  browse?: (path: string) => Promise<readonly RemoteEntry[] | null>
 }>()
 const emit = defineEmits<{ navigate: [path: string]; switchUser: [target: Target] }>()
-const directories = computed(() =>
-  props.panel.entries
-    .filter((entry) => entry.kind === 'directory' || entry.targetKind === 'directory')
-    .map((entry) => entry.path),
-)
 const parent = (directory: string) => directory.replace(/\/[^/]+\/?$/, '') || '/'
 </script>
 <template>
@@ -43,12 +42,14 @@ const parent = (directory: string) => directory.replace(/\/[^/]+\/?$/, '') || '/
         :disabled="!connected || panel.directory === '/'"
         @click="emit('navigate', parent(panel.directory))"
       >
-        <ArrowUp :stroke-width="1.5" />
+        <ArrowLeft :stroke-width="1.5" />
       </Button>
       <FilePath
         :directory="panel.directory"
         :connected="connected"
-        :directories="directories"
+        :entries="panel.entries"
+        :hidden="hidden"
+        :browse="browse"
         @navigate="emit('navigate', $event)"
       />
       <Button

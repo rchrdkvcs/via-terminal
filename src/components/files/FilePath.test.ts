@@ -1,11 +1,26 @@
-import { mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { DOMWrapper, flushPromises, mount } from '@vue/test-utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { RemoteEntry } from '@/ipc/files'
 import FilePath from './FilePath.vue'
 const views: ReturnType<typeof mount>[] = []
-function render(directory = '/srv/releases/current', connected = true) {
-  const view = mount(FilePath, { props: { directory, connected }, attachTo: document.body })
+function render(
+  directory = '/srv/releases/current',
+  connected = true,
+  props: Partial<InstanceType<typeof FilePath>['$props']> = {},
+) {
+  const view = mount(FilePath, {
+    props: { directory, connected, ...props },
+    attachTo: document.body,
+  })
   views.push(view)
   return view
+}
+const folder = (path: string, kind: RemoteEntry['kind'] = 'directory') =>
+  ({ name: path.split('/').pop(), path, kind, targetKind: null }) as RemoteEntry
+async function openMenu(trigger: Pick<DOMWrapper<Element>, 'trigger'>) {
+  await trigger.trigger('keydown', { key: 'Enter' })
+  await flushPromises()
+  return new DOMWrapper(document.body).get('[role="menu"]')
 }
 const pencil = (view: ReturnType<typeof render>) =>
   view.get('[aria-label="Modifier le chemin distant"]')
@@ -13,23 +28,60 @@ const crumb = (view: ReturnType<typeof render>, label: string) =>
   view.findAll('nav button').find((button) => button.text() === label)!
 afterEach(() => views.splice(0).forEach((view) => view.unmount()))
 describe('FilePath', () => {
-  it('navigates up the tree from a crumb, not from the current one', async () => {
-    const view = render()
+  it('lists the folders of a crumb with the path’s next one selected', async () => {
+    const browse = vi.fn(async () => [
+      folder('/srv/data'),
+      folder('/srv/notes', 'file'),
+      folder('/srv/releases'),
+    ])
+    const view = render('/srv/releases/current', true, { browse })
     expect(view.findAll('nav button').map((button) => button.text())).toEqual([
       '/',
       'srv',
       'releases',
       'current',
     ])
-    await crumb(view, 'srv').trigger('click')
-    await crumb(view, 'current').trigger('click')
-    expect(view.emitted('navigate')).toEqual([['/srv']])
     expect(crumb(view, 'current').attributes('aria-current')).toBe('location')
+    const menu = await openMenu(crumb(view, 'srv'))
+    expect(browse).toHaveBeenCalledWith('/srv')
+    const items = menu.findAll('[role="menuitem"]')
+    expect(items.map((item) => item.text())).toEqual(['Ouvrir srv', 'data', 'releases'])
+    expect(items[2].attributes('aria-current')).toBe('location')
+    expect(items[1].attributes('aria-current')).toBeUndefined()
+    await items[1].trigger('click')
+    expect(view.emitted('navigate')).toEqual([['/srv/data']])
+    await (await openMenu(crumb(view, 'srv'))).findAll('[role="menuitem"]')[0].trigger('click')
+    expect(view.emitted('navigate')).toEqual([['/srv/data'], ['/srv']])
   })
-  it('collapses a deep path and expands it for editing', async () => {
+  it('lists the current folder from its own listing, without dot folders when hidden', async () => {
+    const browse = vi.fn()
+    const view = render('/etc/', true, {
+      browse,
+      hidden: false,
+      entries: [folder('/etc/nginx'), folder('/etc/.git'), folder('/etc/hosts', 'file')],
+    })
+    const items = (await openMenu(crumb(view, 'etc'))).findAll('[role="menuitem"]')
+    expect(items.map((item) => item.text())).toEqual(['nginx'])
+    expect(browse).not.toHaveBeenCalled()
+  })
+  it('reports a failed listing inside the menu', async () => {
+    const view = render('/etc', true, {
+      browse: async () => {
+        throw { code: 'sftp', message: 'Permission refusée' }
+      },
+    })
+    const menu = await openMenu(crumb(view, '/'))
+    expect(menu.get('[role="alert"]').text()).toContain('Permission refusée')
+  })
+  it('collapses a deep path into a menu of the hidden folders', async () => {
     const view = render('/a/b/c/d/e')
     expect(view.findAll('nav button').map((button) => button.text())).toEqual(['/', '…', 'd', 'e'])
-    await view.get('[aria-label="Afficher le chemin complet"]').trigger('click')
+    const menu = await openMenu(view.get('[aria-label="Dossiers masqués du chemin"]'))
+    const items = menu.findAll('[role="menuitem"]')
+    expect(items.map((item) => item.text())).toEqual(['/a', '/a/b', '/a/b/c'])
+    await items[1].trigger('click')
+    expect(view.emitted('navigate')).toEqual([['/a/b']])
+    await view.get('[aria-label="Modifier le chemin distant"]').trigger('click')
     expect(view.get<HTMLInputElement>('input').element.value).toBe('/a/b/c/d/e')
   })
   it('selects the full path for editing and returns focus after navigation', async () => {
@@ -45,7 +97,11 @@ describe('FilePath', () => {
   })
   it('offers the listed subdirectories as completions', async () => {
     const view = mount(FilePath, {
-      props: { directory: '/srv', connected: true, directories: ['/srv/a', '/srv/b'] },
+      props: {
+        directory: '/srv',
+        connected: true,
+        entries: [folder('/srv/a'), folder('/srv/f', 'file'), folder('/srv/b')],
+      },
       attachTo: document.body,
     })
     views.push(view)
