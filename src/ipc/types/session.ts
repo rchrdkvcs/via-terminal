@@ -1,6 +1,7 @@
 export type {
+  DocumentOpening,
+  ExplorerOpening,
   FailureReason,
-  FilesAutoOpen,
   LocalTarget,
   Prompt,
   PromptAnswer,

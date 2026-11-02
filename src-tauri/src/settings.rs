@@ -31,17 +31,32 @@ pub enum CursorStyle {
     Bar,
 }
 
-/// Where the remote explorer of an SSH terminal opens by itself once connected.
+/// Where the remote explorer of an SSH terminal opens when asked for.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
-pub enum FilesAutoOpen {
-    /// Beside the terminal.
-    Panel,
-    /// In its own explorer tab.
+pub enum ExplorerOpening {
+    /// In its own explorer tab, which takes the focus.
     Tab,
+    /// In a dialog over the workbench, gone once closed.
+    Dialog,
+    /// Beside the terminal.
     #[default]
     #[serde(other)]
-    Off,
+    Panel,
+}
+
+/// Where a remote document opens from a remote explorer.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+pub enum DocumentOpening {
+    /// In place of the docked or dialog explorer, or beside an explorer tab.
+    Panel,
+    /// In a dialog over the workbench, gone once closed.
+    Dialog,
+    /// In its own document tab.
+    #[default]
+    #[serde(other)]
+    Tab,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -71,7 +86,8 @@ pub struct Settings {
     pub letter_spacing: f32,
     /// Shortcut overrides by action id; absent actions keep their default combination.
     pub keybindings: BTreeMap<String, Vec<String>>,
-    pub files_auto_open: FilesAutoOpen,
+    pub explorer_opening: ExplorerOpening,
+    pub document_opening: DocumentOpening,
 }
 
 const MAX_KEYBINDINGS: usize = 64;
@@ -96,7 +112,8 @@ impl Default for Settings {
             option_as_meta: true,
             letter_spacing: 0.0,
             keybindings: BTreeMap::new(),
-            files_auto_open: FilesAutoOpen::Off,
+            explorer_opening: ExplorerOpening::Panel,
+            document_opening: DocumentOpening::Tab,
         }
     }
 }
@@ -157,7 +174,9 @@ impl SettingsStore {
 
 #[cfg(test)]
 mod tests {
-    use super::{CursorStyle, FilesAutoOpen, Settings, SettingsStore, Theme, DOCUMENT};
+    use super::{
+        CursorStyle, DocumentOpening, ExplorerOpening, Settings, SettingsStore, Theme, DOCUMENT,
+    };
     use crate::storage::Storage;
     use std::{collections::BTreeMap, sync::Arc};
 
@@ -171,7 +190,8 @@ mod tests {
             confirm_close_running: true,
             option_as_meta: false,
             keybindings: BTreeMap::from([("closeTab".into(), vec!["Cmd".into(), "W".into()])]),
-            files_auto_open: FilesAutoOpen::Tab,
+            explorer_opening: ExplorerOpening::Dialog,
+            document_opening: DocumentOpening::Panel,
             ..Settings::default()
         }
     }
@@ -261,17 +281,24 @@ mod tests {
     #[test]
     fn unknown_appearance_values_fall_back_to_defaults() {
         let settings: Settings = serde_json::from_str(
-            r#"{"theme":"sepia","cursorStyle":"beam","filesAutoOpen":"window","fontSize":16}"#,
+            r#"{"theme":"sepia","cursorStyle":"beam","explorerOpening":"window","documentOpening":"off","fontSize":16}"#,
         )
         .unwrap();
         assert_eq!(
             (
                 settings.theme,
                 settings.cursor_style,
-                settings.files_auto_open,
+                settings.explorer_opening,
+                settings.document_opening,
                 settings.font_size
             ),
-            (Theme::System, CursorStyle::Bar, FilesAutoOpen::Off, 16)
+            (
+                Theme::System,
+                CursorStyle::Bar,
+                ExplorerOpening::Panel,
+                DocumentOpening::Tab,
+                16
+            )
         );
         let dark: Settings = serde_json::from_str(r#"{"theme":"dark"}"#).unwrap();
         assert_eq!(

@@ -23,29 +23,35 @@ export function useFileProtection() {
     const saved = await files.saveDocument(tabId)
     return saved && !isDirty(document)
   }
+  /** Asks about the tab's draft: saved, discarded (`discard`), or kept open (`cancel`). */
+  async function settle(tabId: string): Promise<'clean' | 'discard' | 'cancel'> {
+    if (files.document(tabId)?.saving) return 'cancel'
+    const document = unsaved(tabId)
+    if (!document) return 'clean'
+    // Save is offered only through the document's own endpoint and account.
+    const ownership = files.ownership(tabId)
+    const savable = ownership === 'same'
+    const answer = await dialogs.ask({
+      title: 'Modifications non enregistrées',
+      description: savable
+        ? document.path
+        : `${document.path}\n${ownership === 'other' ? OWNER_CHANGED : RECONNECT}`,
+      actions: [
+        ...(savable ? [{ label: 'Enregistrer et fermer', value: 'save' as const }] : []),
+        { label: 'Abandonner les modifications', value: 'discard' as const, destructive: true },
+      ],
+    })
+    if (answer.choice === 'cancel') return 'cancel'
+    if (answer.choice === 'discard') return 'discard'
+    return (await save(tabId, document)) ? 'clean' : 'cancel'
+  }
   async function decide(tabIds: string[]): Promise<Abandonment | null> {
     const documents: Abandonment['documents'][number][] = []
     for (const tabId of tabIds) {
-      if (files.document(tabId)?.saving) return null
       const document = unsaved(tabId)
-      if (!document) continue
-      // Save is offered only through the document's own endpoint and account.
-      const ownership = files.ownership(tabId)
-      const savable = ownership === 'same'
-      const answer = await dialogs.ask({
-        title: 'Modifications non enregistrées',
-        description: savable
-          ? document.path
-          : `${document.path}\n${ownership === 'other' ? OWNER_CHANGED : RECONNECT}`,
-        actions: [
-          ...(savable ? [{ label: 'Enregistrer et fermer', value: 'save' as const }] : []),
-          { label: 'Abandonner les modifications', value: 'discard' as const, destructive: true },
-        ],
-      })
-      if (answer.choice === 'cancel') return null
-      if (answer.choice === 'save') {
-        if (!(await save(tabId, document))) return null
-      } else
+      const choice = await settle(tabId)
+      if (choice === 'cancel') return null
+      if (choice === 'discard' && document)
         documents.push({
           tabId,
           id: document.id,
@@ -88,5 +94,19 @@ export function useFileProtection() {
     while (agreed && !current(agreed)) agreed = await decide(agreed.tabIds)
     return !!agreed && close()
   }
-  return { protect: decide, current, release }
+  /**
+   * Closes the document a dialog or a docked explorer shows, once its draft is saved or
+   * abandoned. False when the user kept it open.
+   */
+  async function closeDocument(tabId: string): Promise<boolean> {
+    const content = unsaved(tabId)?.content
+    const choice = await settle(tabId)
+    if (choice === 'cancel') return false
+    // Typing went on while the question was open: what was agreed no longer covers it.
+    const draft = unsaved(tabId)
+    if (draft && draft.content !== content) return closeDocument(tabId)
+    files.closeDocument(tabId)
+    return true
+  }
+  return { protect: decide, current, release, closeDocument }
 }

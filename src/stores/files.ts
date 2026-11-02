@@ -16,6 +16,8 @@ export interface FileState {
   entries: RemoteEntry[]
   busy: boolean
   error: string | null
+  /** The document shown in place of the docked or dialog explorer's list. */
+  opened: string | null
 }
 /**
  * A tab's ready session when a request began. Its replies apply only while `current()`:
@@ -32,6 +34,7 @@ const empty = (): FileState => ({
   entries: [],
   busy: false,
   error: null,
+  opened: null,
 })
 const ABSENT: Readonly<FileState> = Object.freeze(empty())
 export const useFiles = defineStore('files', () => {
@@ -121,6 +124,16 @@ export const useFiles = defineStore('files', () => {
     },
     hide: (tabId: string) => {
       if (panels[tabId]) panels[tabId].visible = false
+    },
+    /** Shows `path` in place of the explorer's list; another document must be closed first. */
+    showDocument: (tabId: string, path: string) => {
+      const panel = ensure(tabId)
+      if (!documents.actions.document(tabId)) panel.opened = path
+    },
+    /** Forgets the tab's document, drafts included, and gives the explorer its list back. */
+    closeDocument: (tabId: string) => {
+      documents.forget(tabId)
+      if (panels[tabId]) panels[tabId].opened = null
     },
     navigate,
     release,

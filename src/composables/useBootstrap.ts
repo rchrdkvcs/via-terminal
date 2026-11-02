@@ -4,7 +4,6 @@ import type { Bootstrap } from '@/ipc/types'
 import { terminals } from '@/terminal/registry'
 import { useFileRuntime } from './useFileRuntime'
 import { useFileExit } from './useFileExit'
-import { useFilesAutoOpen } from './useFilesAutoOpen'
 import { useFiles } from '@/stores/files'
 import { useCwdMemory } from './useCwdMemory'
 import { adoptTabNames } from './useNameAdoption'
@@ -36,7 +35,6 @@ function previewBootstrap(): Bootstrap {
 export function useBootstrap() {
   useFileRuntime()
   useFileExit()
-  useFilesAutoOpen()
   const ready = ref(false)
   const failure = ref<string | null>(null)
   const settings = useSettings()

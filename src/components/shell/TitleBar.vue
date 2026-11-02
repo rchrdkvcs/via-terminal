@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { FolderTree, PanelLeft, Settings } from '@lucide/vue'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
-import { useFiles } from '@/stores/files'
+import { useFileOpening } from '@/composables/useFileOpening'
 import { useWorkbench } from '@/stores/workbench'
 import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
@@ -12,19 +12,19 @@ import AddressPill from './AddressPill.vue'
 import WindowControls from './WindowControls.vue'
 import UpdateButton from './UpdateButton.vue'
 
-const files = useFiles()
+const opening = useFileOpening()
 const workbench = useWorkbench()
 const remote = computed(() => {
   const tab = workbench.activeTab
   return tab && tab.target.kind !== 'local' && !tab.view ? tab : null
 })
-const filesShown = computed(() => !!remote.value && files.state(remote.value.id).visible)
-function toggleFiles() {
-  if (!remote.value) return
-  files.setVisible(remote.value.id, !filesShown.value)
-  ui.route = 'workbench'
-}
 const settings = useSettings()
+const filesShown = computed(() => !!remote.value && opening.explorerShown(remote.value))
+/** Only a docked explorer toggles; a tab or a dialog opens each time. */
+const filesToggles = computed(() => settings.settings.explorerOpening === 'panel')
+function toggleFiles() {
+  if (remote.value) opening.toggleExplorer(remote.value)
+}
 const spaces = useSpaces()
 const ui = useUi()
 const kbd = useShortcutLabel()
@@ -70,7 +70,8 @@ const tools = [
             ]"
             aria-label="Explorateur distant"
             :aria-disabled="!remote || undefined"
-            :aria-expanded="remote ? filesShown : undefined"
+            :aria-expanded="remote && filesToggles ? filesShown : undefined"
+            :aria-haspopup="settings.settings.explorerOpening === 'dialog' ? 'dialog' : undefined"
             @click="toggleFiles"
           >
             <FolderTree :size="15" :stroke-width="1.5" />

@@ -11,6 +11,11 @@ export type CommandMode =
   | { kind: 'actions' }
   | { kind: 'split'; tabId: Id }
 
+/** A remote explorer or document shown over the workbench, through the tab whose connection it uses. */
+export type FilesDialog =
+  | { kind: 'files'; tabId: Id }
+  | { kind: 'document'; tabId: Id; path: string }
+
 export interface Confirmation {
   title: string
   description: string
@@ -35,6 +40,7 @@ export const useUi = defineStore('ui', () => {
   const searching = ref(false)
   /** The explorer tab asked to open its directory filter. */
   const filterFiles = ref<Id | null>(null)
+  const filesDialog = ref<FilesDialog | null>(null)
   const settingsSection = ref<SettingsSection>('general')
   /** True while the shortcut editor waits for a key press, so it is not run as a shortcut. */
   const recordingShortcut = ref(false)
@@ -68,6 +74,7 @@ export const useUi = defineStore('ui', () => {
     vaultFocus,
     searching,
     filterFiles,
+    filesDialog,
     settingsSection,
     recordingShortcut,
     openCommand,

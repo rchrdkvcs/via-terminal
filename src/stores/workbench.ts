@@ -123,7 +123,8 @@ export const useWorkbench = defineStore('workbench', () => {
    * Shows a remote explorer or document of `source`'s target in its own tab, right after
    * `source` when that one is temporary. A document already open in the space is reused.
    * With `activate: false` the tab is only added, asleep, and `source` keeps the focus;
-   * `target` connects it to another account of the same server.
+   * `target` connects it to another account of the same server; `beside` splits a new tab
+   * with `source` on that edge, when the split view has room.
    */
   function openView(
     source: Tab,
@@ -131,7 +132,8 @@ export const useWorkbench = defineStore('workbench', () => {
     {
       activate: focus = true,
       target = source.target,
-    }: { activate?: boolean; target?: Target } = {},
+      beside,
+    }: { activate?: boolean; target?: Target; beside?: Edge } = {},
   ): Id | undefined {
     const space = spaces.spaceOf(source.id)
     if (!space || target.kind === 'local') return
@@ -159,7 +161,17 @@ export const useWorkbench = defineStore('workbench', () => {
       target: clone(target),
       view,
     })
-    if (!spaces.dispatch({ type: 'open', row, to }, space.id)) return
+    const opened =
+      (beside &&
+        spaces.dispatch(
+          [
+            { type: 'open', row, to },
+            { type: 'split', source: row.id, target: anchor?.id ?? source.id, edge: beside },
+          ],
+          space.id,
+        )) ||
+      spaces.dispatch({ type: 'open', row, to }, space.id)
+    if (!opened) return
     if (focus) activate(row.id)
     return row.id
   }
