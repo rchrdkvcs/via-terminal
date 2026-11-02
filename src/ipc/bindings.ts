@@ -26,16 +26,21 @@ letterSpacing: number,
 /**
  * Shortcut overrides by action id; absent actions keep their default combination.
  */
-keybindings: { [key in string]: Array<string> }, filesAutoOpen: FilesAutoOpen, };
+keybindings: { [key in string]: Array<string> }, explorerOpening: ExplorerOpening, documentOpening: DocumentOpening, };
 
 export type Theme = "light" | "dark" | "system";
 
 export type CursorStyle = "block" | "underline" | "bar";
 
 /**
- * Where the remote explorer of an SSH terminal opens by itself once connected.
+ * Where the remote explorer of an SSH terminal opens when asked for.
  */
-export type FilesAutoOpen = "panel" | "tab" | "off";
+export type ExplorerOpening = "tab" | "dialog" | "panel";
+
+/**
+ * Where a remote document opens from a remote explorer.
+ */
+export type DocumentOpening = "panel" | "dialog" | "tab";
 
 export type Layout = { activeSpaceId: string | null, sidebar: Sidebar, spaces: Array<PersistedSpace>, };
 

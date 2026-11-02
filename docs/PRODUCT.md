@@ -77,7 +77,7 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 
 ## Remote files
 
-SSH tabs offer an independent remote explorer through the top-right file-tree icon or the command bar. A setting can open it automatically once per connection, beside the terminal or as an explorer tab added next to it (asleep until opened). Resize it beside the terminal or detach it into its own explorer tab; each document opens in its own tab. Explorer and document tabs open their own connection. Create, move, delete and change permissions; transfer files and folders; view and explicitly save UTF-8 documents. Drafts remain in memory and closing asks before discarding them. Transfers report progress and support cancellation, retry and collision choices. Safe document replacement requires server support. See [REMOTE-FILES.md](REMOTE-FILES.md) for limits and acceptance scenarios.
+SSH tabs offer an independent remote explorer through the top-right file-tree icon or the command bar. Settings choose where it opens on demand: docked beside the terminal (toggled), in an explorer tab that takes the focus, or in a temporary dialog. Documents open the same way: in panel mode in place of the docked or dialog list with a way back, or split to the right of an explorer tab; otherwise in their own tab or a temporary dialog. Resize the docked explorer or detach it into its own explorer tab. Explorer and document tabs open their own connection. Create, move, delete and change permissions; transfer files and folders; view and explicitly save UTF-8 documents. Drafts remain in memory and closing asks before discarding them. Transfers report progress and support cancellation, retry and collision choices. Safe document replacement requires server support. See [REMOTE-FILES.md](REMOTE-FILES.md) for limits and acceptance scenarios.
 
 ## Vault
 
@@ -93,7 +93,7 @@ A full page (sidebar stays) with:
 
 ## Settings
 
-A full page with General (default shell, behavior on close, remote explorer auto-open, quick-connect auto-save), Appearance (theme, font, size, cursor), Terminal (scrollback, line height, copy on select) and Shortcuts (read-only reference). SSH data never appears in settings.
+A full page with General (default shell, behavior on close, where remote explorers and documents open, quick-connect auto-save), Appearance (theme, font, size, cursor), Terminal (scrollback, line height, copy on select) and Shortcuts (read-only reference). SSH data never appears in settings.
 
 ## Persistence
 

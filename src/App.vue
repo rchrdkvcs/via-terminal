@@ -21,6 +21,7 @@ import { useUi } from '@/stores/ui'
 const PreferencesDialog = defineAsyncComponent(
   () => import('@/components/page/PreferencesDialog.vue'),
 )
+const ExplorerDialog = defineAsyncComponent(() => import('@/components/files/ExplorerDialog.vue'))
 
 const { ready, failure } = useBootstrap()
 useShortcuts()
@@ -47,6 +48,7 @@ const ui = useUi()
           </div>
         </div>
         <PreferencesDialog v-if="ui.route !== 'workbench'" />
+        <ExplorerDialog v-if="ui.filesDialog" />
         <CommandBar />
         <SpaceDialog />
         <ConfirmDialog />

@@ -22,7 +22,8 @@ const defaultSettings: Settings = {
   optionAsMeta: true,
   letterSpacing: 0,
   keybindings: {},
-  filesAutoOpen: 'off',
+  explorerOpening: 'panel',
+  documentOpening: 'tab',
 }
 
 export const useSettings = defineStore('settings', () => {

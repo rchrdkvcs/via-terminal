@@ -15,7 +15,7 @@ import { isPinned, rowOfTab } from '@/domain/space'
 import { useSidebarActions } from '@/composables/useSidebarActions'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
 import { useClosing } from '@/composables/useClosing'
-import { useFiles } from '@/stores/files'
+import { useFileOpening } from '@/composables/useFileOpening'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
@@ -78,10 +78,7 @@ export function useCommandActions() {
         section,
         label: 'Ouvrir l’explorateur distant',
         icon: FolderTree,
-        run: () => {
-          ui.route = 'workbench'
-          useFiles().setVisible(tab.id, true)
-        },
+        run: () => useFileOpening().openExplorer(tab),
       })
     if (tab && row) {
       const pinned = isPinned(spaces.active, row.id)

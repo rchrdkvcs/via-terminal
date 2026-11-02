@@ -9,6 +9,7 @@ const panel: FileState = {
   entries: [],
   busy: false,
   error: null,
+  opened: null,
 }
 describe('FileNavigation', () => {
   it('navigates to the parent and refreshes the current directory without a title row', async () => {

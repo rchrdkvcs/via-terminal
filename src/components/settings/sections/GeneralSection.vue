@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useSettings } from '@/stores/settings'
-import type { FilesAutoOpen } from '@/ipc/types'
+import type { DocumentOpening, ExplorerOpening } from '@/ipc/types'
 import SettingChoice from '../SettingChoice.vue'
 import SettingGroup from '../SettingGroup.vue'
 import SettingRow from '../SettingRow.vue'
@@ -19,10 +19,15 @@ const store = useSettings()
 
 const SYSTEM = '__system__'
 
-const filesModes: { value: FilesAutoOpen; label: string }[] = [
-  { value: 'off', label: 'Non' },
-  { value: 'panel', label: 'Panneau latéral' },
+const explorerModes: { value: ExplorerOpening; label: string }[] = [
+  { value: 'panel', label: 'Panneau' },
   { value: 'tab', label: 'Onglet' },
+  { value: 'dialog', label: 'Modale' },
+]
+const documentModes: { value: DocumentOpening; label: string }[] = [
+  { value: 'panel', label: 'Panneau' },
+  { value: 'tab', label: 'Onglet' },
+  { value: 'dialog', label: 'Modale' },
 ]
 
 const systemLabel = computed(() => `Shell du système (${store.shellName(store.systemShell)})`)
@@ -78,14 +83,26 @@ function onShell(value: unknown) {
     <SettingGroup title="Explorateur distant">
       <SettingRow
         v-slot="{ labelId }"
-        label="Ouvrir automatiquement"
-        description="À la connexion d'un terminal SSH, affiche ses fichiers à côté ou ajoute un onglet explorateur."
+        label="Ouvrir l’explorateur"
+        description="Au clic sur l’explorateur d’un terminal SSH : à côté du terminal, dans un nouvel onglet affiché aussitôt, ou dans une modale temporaire."
       >
         <SettingChoice
-          :options="filesModes"
+          :options="explorerModes"
           :labelledby="labelId"
-          :model-value="store.settings.filesAutoOpen"
-          @update:model-value="(filesAutoOpen) => store.update({ filesAutoOpen })"
+          :model-value="store.settings.explorerOpening"
+          @update:model-value="(explorerOpening) => store.update({ explorerOpening })"
+        />
+      </SettingRow>
+      <SettingRow
+        v-slot="{ labelId }"
+        label="Ouvrir les fichiers"
+        description="Panneau : à la place de la liste, avec un retour, ou à droite d’un onglet explorateur. Sinon dans un nouvel onglet ou une modale temporaire."
+      >
+        <SettingChoice
+          :options="documentModes"
+          :labelledby="labelId"
+          :model-value="store.settings.documentOpening"
+          @update:model-value="(documentOpening) => store.update({ documentOpening })"
         />
       </SettingRow>
     </SettingGroup>

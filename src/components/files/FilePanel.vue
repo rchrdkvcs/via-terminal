@@ -10,6 +10,8 @@ import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
 import type { Tab, TabView, Target } from '@/ipc/types'
 import { useClosing } from '@/composables/useClosing'
+import { useFileOpening, type ExplorerPlace } from '@/composables/useFileOpening'
+import { useFileProtection } from '@/composables/useFileProtection'
 import type { RemoteEntry } from '@/ipc/files'
 import { useFileOperations } from './useFileOperations'
 import { useFileTransfers } from './useFileTransfers'
@@ -20,14 +22,23 @@ import TransferList from './TransferList.vue'
 import FileStatus from './FileStatus.vue'
 import FileDropZone from './FileDropZone.vue'
 import FileFilter from './FileFilter.vue'
-/** Beside the terminal, unless the tab itself shows the explorer. */
-const props = defineProps<{ tab: Tab }>()
+import FileDocument from './FileDocument.vue'
+/** Beside the terminal or in a dialog over it, unless the tab itself shows the explorer. */
+const props = defineProps<{ tab: Tab; dialog?: boolean }>()
+const emit = defineEmits<{ close: [] }>()
 const files = useFiles(),
   sessions = useSessions(),
   workbench = useWorkbench()
 const panel = computed(() => files.state(props.tab.id))
 const session = computed(() => files.session(props.tab.id))
 const docked = computed(() => props.tab.view?.kind !== 'files')
+const place = computed<ExplorerPlace>(() =>
+  props.dialog ? 'dialog' : docked.value ? 'docked' : 'tab',
+)
+/** The document shown in place of the list, never in an explorer tab. */
+const opened = computed(() => (place.value === 'tab' ? null : panel.value.opened))
+const opening = useFileOpening(),
+  protection = useFileProtection()
 const selected = ref<string[]>([]),
   hidden = ref(true),
   filter = ref(''),
@@ -93,7 +104,7 @@ function navigate(directory: string) {
 }
 function open(entry: RemoteEntry) {
   if (entry.kind === 'directory' || entry.targetKind === 'directory') navigate(entry.path)
-  else workbench.openView(props.tab, { kind: 'document', path: entry.path })
+  else opening.openDocument(props.tab, entry.path, place.value)
 }
 function copyPaths() {
   const paths = selection.value.map((entry) => entry.path)
@@ -103,20 +114,35 @@ const closing = useClosing()
 /** Another account of the same server: in this explorer tab, or in a new one beside the terminal. */
 function switchUser(target: Target) {
   const view: TabView = { kind: 'files', path: null }
-  if (docked.value) workbench.openView(props.tab, view, { target })
-  else void closing.replaceTab(props.tab.id, target, view)
+  if (!docked.value) void closing.replaceTab(props.tab.id, target, view)
+  else if (workbench.openView(props.tab, view, { target }) && props.dialog) emit('close')
 }
 function detach() {
   const path = panel.value.directory
   workbench.openView(props.tab, { kind: 'files', path: path.startsWith('/') ? path : null })
-  files.hide(props.tab.id)
+  hide()
+}
+function hide() {
+  if (props.dialog) emit('close')
+  else files.hide(props.tab.id)
+}
+function back() {
+  void protection.closeDocument(props.tab.id)
 }
 </script>
 <template>
+  <FileDocument
+    v-if="opened"
+    :tab-id="tab.id"
+    :path="opened"
+    :class="dialog ? 'bg-surface' : 'bg-rail'"
+    @back="back"
+  />
   <FileDropZone
+    v-else
     :directory="panel.directory"
     class="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
-    :class="docked ? 'bg-rail' : 'bg-surface'"
+    :class="docked && !dialog ? 'bg-rail' : 'bg-surface'"
     aria-label="Explorateur distant"
     data-files-explorer
     @drop="transfers.drop"
@@ -142,7 +168,7 @@ function detach() {
         @hidden="hidden = !hidden"
         @search="toggleFilter"
         @detach="detach"
-        @hide="files.hide(tab.id)"
+        @hide="hide"
       />
     </FileNavigation>
     <FileFilter
@@ -194,7 +220,7 @@ function detach() {
           @refresh="navigate(panel.directory)"
           @hidden="hidden = !hidden"
           @detach="detach"
-          @hide="files.hide(tab.id)"
+          @hide="hide"
         />
       </ContextMenu>
     </div>

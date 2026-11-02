@@ -25,7 +25,7 @@ import { findTab, splitOf } from '@/domain/space'
 import { useClosing } from '@/composables/useClosing'
 import { useShortcutLabel } from '@/composables/useShortcutLabel'
 import { terminals } from '@/terminal/registry'
-import { useFiles } from '@/stores/files'
+import { useFileOpening } from '@/composables/useFileOpening'
 import { useSpaces } from '@/stores/spaces'
 import { useUi } from '@/stores/ui'
 import { useWorkbench } from '@/stores/workbench'
@@ -34,7 +34,7 @@ const props = defineProps<{ tabId: Id }>()
 const host = ref<HTMLElement>()
 const spaces = useSpaces()
 const ui = useUi()
-const files = useFiles()
+const opening = useFileOpening()
 const workbench = useWorkbench()
 const closing = useClosing()
 const kbd = useShortcutLabel()
@@ -84,7 +84,9 @@ function paste() {
 }
 
 function showFiles() {
-  files.setVisible(props.tabId, true)
+  const space = spaces.spaceOf(props.tabId)
+  const tab = space && findTab(space, props.tabId)
+  if (tab) opening.openExplorer(tab)
 }
 </script>
 
