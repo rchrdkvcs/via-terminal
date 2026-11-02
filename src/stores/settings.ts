@@ -22,6 +22,7 @@ const defaultSettings: Settings = {
   optionAsMeta: true,
   letterSpacing: 0,
   keybindings: {},
+  filesAutoOpen: 'off',
 }
 
 export const useSettings = defineStore('settings', () => {

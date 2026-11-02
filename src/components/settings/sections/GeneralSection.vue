@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useSettings } from '@/stores/settings'
+import type { FilesAutoOpen } from '@/ipc/types'
+import SettingChoice from '../SettingChoice.vue'
 import SettingGroup from '../SettingGroup.vue'
 import SettingRow from '../SettingRow.vue'
 import UpdateSettings from '../UpdateSettings.vue'
@@ -16,6 +18,12 @@ import UpdateSettings from '../UpdateSettings.vue'
 const store = useSettings()
 
 const SYSTEM = '__system__'
+
+const filesModes: { value: FilesAutoOpen; label: string }[] = [
+  { value: 'off', label: 'Non' },
+  { value: 'panel', label: 'Panneau latéral' },
+  { value: 'tab', label: 'Onglet' },
+]
 
 const systemLabel = computed(() => `Shell du système (${store.shellName(store.systemShell)})`)
 
@@ -63,6 +71,21 @@ function onShell(value: unknown) {
           :aria-describedby="descriptionId"
           :model-value="store.settings.confirmCloseRunning"
           @update:model-value="(on: boolean) => store.update({ confirmCloseRunning: on })"
+        />
+      </SettingRow>
+    </SettingGroup>
+
+    <SettingGroup title="Explorateur distant">
+      <SettingRow
+        v-slot="{ labelId }"
+        label="Ouvrir automatiquement"
+        description="À la connexion d'un terminal SSH, affiche ses fichiers à côté ou ajoute un onglet explorateur."
+      >
+        <SettingChoice
+          :options="filesModes"
+          :labelledby="labelId"
+          :model-value="store.settings.filesAutoOpen"
+          @update:model-value="(filesAutoOpen) => store.update({ filesAutoOpen })"
         />
       </SettingRow>
     </SettingGroup>

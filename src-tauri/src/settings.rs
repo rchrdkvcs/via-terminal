@@ -31,6 +31,19 @@ pub enum CursorStyle {
     Bar,
 }
 
+/// Where the remote explorer of an SSH terminal opens by itself once connected.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+pub enum FilesAutoOpen {
+    /// Beside the terminal.
+    Panel,
+    /// In its own explorer tab.
+    Tab,
+    #[default]
+    #[serde(other)]
+    Off,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
@@ -58,6 +71,7 @@ pub struct Settings {
     pub letter_spacing: f32,
     /// Shortcut overrides by action id; absent actions keep their default combination.
     pub keybindings: BTreeMap<String, Vec<String>>,
+    pub files_auto_open: FilesAutoOpen,
 }
 
 const MAX_KEYBINDINGS: usize = 64;
@@ -82,6 +96,7 @@ impl Default for Settings {
             option_as_meta: true,
             letter_spacing: 0.0,
             keybindings: BTreeMap::new(),
+            files_auto_open: FilesAutoOpen::Off,
         }
     }
 }
@@ -142,7 +157,7 @@ impl SettingsStore {
 
 #[cfg(test)]
 mod tests {
-    use super::{CursorStyle, Settings, SettingsStore, Theme, DOCUMENT};
+    use super::{CursorStyle, FilesAutoOpen, Settings, SettingsStore, Theme, DOCUMENT};
     use crate::storage::Storage;
     use std::{collections::BTreeMap, sync::Arc};
 
@@ -156,6 +171,7 @@ mod tests {
             confirm_close_running: true,
             option_as_meta: false,
             keybindings: BTreeMap::from([("closeTab".into(), vec!["Cmd".into(), "W".into()])]),
+            files_auto_open: FilesAutoOpen::Tab,
             ..Settings::default()
         }
     }
@@ -244,12 +260,18 @@ mod tests {
 
     #[test]
     fn unknown_appearance_values_fall_back_to_defaults() {
-        let settings: Settings =
-            serde_json::from_str(r#"{"theme":"sepia","cursorStyle":"beam","fontSize":16}"#)
-                .unwrap();
+        let settings: Settings = serde_json::from_str(
+            r#"{"theme":"sepia","cursorStyle":"beam","filesAutoOpen":"window","fontSize":16}"#,
+        )
+        .unwrap();
         assert_eq!(
-            (settings.theme, settings.cursor_style, settings.font_size),
-            (Theme::System, CursorStyle::Bar, 16)
+            (
+                settings.theme,
+                settings.cursor_style,
+                settings.files_auto_open,
+                settings.font_size
+            ),
+            (Theme::System, CursorStyle::Bar, FilesAutoOpen::Off, 16)
         );
         let dark: Settings = serde_json::from_str(r#"{"theme":"dark"}"#).unwrap();
         assert_eq!(
