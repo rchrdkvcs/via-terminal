@@ -98,7 +98,8 @@ export const useWorkbench = defineStore('workbench', () => {
     return existing.id
   }
 
-  function replace(tabId: Id, target: Target): Id | undefined {
+  /** Connects the tab to `target` instead, as a terminal unless `view` keeps an explorer. */
+  function replace(tabId: Id, target: Target, view?: TabView): Id | undefined {
     const space = spaces.spaceOf(tabId)
     if (
       !space ||
@@ -106,7 +107,7 @@ export const useWorkbench = defineStore('workbench', () => {
         {
           type: 'updateTab',
           tabId,
-          patch: { target, title: null, remoteCwd: null, view: undefined },
+          patch: { target, title: null, remoteCwd: null, view },
         },
         space.id,
       )
@@ -120,16 +121,20 @@ export const useWorkbench = defineStore('workbench', () => {
   /**
    * Shows a remote explorer or document of `source`'s target in its own tab, right after
    * `source` when that one is temporary. A document already open in the space is reused.
-   * With `activate: false` the tab is only added, asleep, and `source` keeps the focus.
+   * With `activate: false` the tab is only added, asleep, and `source` keeps the focus;
+   * `target` connects it to another account of the same server.
    */
   function openView(
     source: Tab,
     view: TabView,
-    { activate: focus = true }: { activate?: boolean } = {},
+    {
+      activate: focus = true,
+      target = source.target,
+    }: { activate?: boolean; target?: Target } = {},
   ): Id | undefined {
     const space = spaces.spaceOf(source.id)
-    if (!space || source.target.kind === 'local') return
-    const same = JSON.stringify(source.target)
+    if (!space || target.kind === 'local') return
+    const same = JSON.stringify(target)
     const existing =
       view.kind === 'document' &&
       tabs(space).find(
@@ -150,7 +155,7 @@ export const useWorkbench = defineStore('workbench', () => {
     const row = newTabRow({
       id: crypto.randomUUID(),
       title: null,
-      target: clone(source.target),
+      target: clone(target),
       view,
     })
     if (!spaces.dispatch({ type: 'open', row, to }, space.id)) return
