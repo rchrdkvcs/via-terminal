@@ -9,6 +9,7 @@ import { useFiles } from '@/stores/files'
 import { useCwdMemory } from './useCwdMemory'
 import { adoptTabNames } from './useNameAdoption'
 import { dragging, hint } from './useRowDnd'
+import { useActivity } from '@/stores/activity'
 import { useSessions } from '@/stores/sessions'
 import { useSettings } from '@/stores/settings'
 import { useSpaces } from '@/stores/spaces'
@@ -44,6 +45,7 @@ export function useBootstrap() {
   const vault = useVault()
   const workbench = useWorkbench()
   const rememberCwd = useCwdMemory()
+  const activity = useActivity()
 
   terminals.configure({
     onData: (tabId, data) => sessions.input(tabId, data),
@@ -53,6 +55,7 @@ export function useBootstrap() {
       if (settings.settings.copyOnSelect && text) void navigator.clipboard.writeText(text)
     },
     onCwd: (tabId, payload, osc) => rememberCwd(tabId, payload, osc),
+    onBell: (tabId) => activity.bell(tabId),
   })
 
   async function load() {

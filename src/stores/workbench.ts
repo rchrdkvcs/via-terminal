@@ -17,6 +17,7 @@ import { placeFor } from '@/domain/drop'
 import type { Edge } from '@/domain/split'
 import { clone } from '@/lib/clone'
 import { terminals } from '@/terminal/registry'
+import { useActivity } from './activity'
 import { useFiles } from './files'
 import { useSessions } from './sessions'
 import { useSpaces } from './spaces'
@@ -330,6 +331,12 @@ export const useWorkbench = defineStore('workbench', () => {
     stopEnded()
     stopHostSaved()
   })
+  const activity = useActivity()
+  watch(
+    () => activeTab.value?.id,
+    (id) => activity.view(id),
+    { immediate: true },
+  )
   watch(
     [
       () => activeTab.value?.id,
