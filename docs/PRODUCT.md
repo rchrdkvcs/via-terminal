@@ -28,7 +28,7 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 
 - **Sidebar**, from top to bottom: the sidebar toggle, the space name and its pinned area (pinned tabs, split views and folders), a divider, New tab, the temporary tabs, and the space switcher: spaces centered, New space on the right.
 - **Content**: the active row, shown as a single terminal or a split view, on a rounded surface. No tab strip.
-- The sidebar can be hidden and shown again with Ctrl+Shift+B or its button. A thin title bar above the content holds the address pill of the current tab in the middle, and the vault, settings and window controls top right. It stays when the sidebar is hidden.
+- The sidebar can be hidden and shown again with Ctrl+Shift+B or its button. A thin title bar above the content holds the address pill of the current tab in the middle, and the settings and window controls top right; the vault opens from the command bar or its shortcut. It stays when the sidebar is hidden.
 
 ## Opening things
 
