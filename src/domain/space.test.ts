@@ -31,6 +31,13 @@ describe('successor', () => {
     expect(successor(space([tab('a'), tab('c')]), 'c')).toBe('a')
     expect(successor({ ...space([]), pinned: [tab('only')] }, 'only')).toBeUndefined()
   })
+
+  it('skips tabs that are not accepted and looks further on both sides', () => {
+    const live = (id: string) => ['p', 'd'].includes(id)
+    expect(successor(space([tab('a'), tab('b'), tab('c'), tab('d')]), 'b', live)).toBe('d')
+    expect(successor(space([tab('a'), tab('b'), tab('c')]), 'b', live)).toBe('p')
+    expect(successor(space([tab('a')]), 'a', () => false)).toBeUndefined()
+  })
 })
 
 describe('rowOf', () => {

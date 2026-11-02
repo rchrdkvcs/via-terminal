@@ -47,7 +47,7 @@ Via is a terminal you enjoy living in: a sidebar of spaces and tabs for your ses
 - A pinned tab remembers its target and its name. A local tab also remembers the folder its shell was last in, and reopens there (Git Bash, bash, zsh, PowerShell and cmd report it; other shells reopen in the home folder).
 - A host saved by quick connect is named after its address until named: naming its tab names the host, so the sidebar, the command bar and the vault show one name.
 - A temporary local shell that exits normally closes its tab. A failed launch or a dropped SSH connection keeps the tab with its output and offers Reconnect.
-- Ctrl+Shift+W closes the current tab; closing a pinned tab puts it to sleep, closing again removes it. Removing offers Undo.
+- Ctrl+Shift+W closes the current tab; closing a pinned tab puts it to sleep, closing again removes it. Removing offers Undo. Focus then moves to the nearest tab with a running session; when none runs, the home page shows instead of waking an asleep tab.
 - Renaming: use the row menu or F2. A manual name stops following the terminal title until reset.
 - Ctrl+Tab / Ctrl+Shift+Tab cycle tabs in sidebar order; Ctrl+1…9 switch spaces.
 
