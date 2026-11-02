@@ -12,16 +12,15 @@ const names = useTabLabel()
 const tab = computed(() => workbench.activeTab)
 const text = computed(() => (tab.value ? names.detail(tab.value) : 'Rechercher ou se connecter'))
 
-function open() {
-  ui.openCommand(tab.value ? { kind: 'replace', tabId: tab.value.id } : { kind: 'new' })
-}
+// Opens a new tab; retargeting the current one stays an explicit action (shortcut, row menu).
+const open = () => ui.openCommand({ kind: 'new' })
 </script>
 
 <template>
   <button
     type="button"
     class="material-field flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-start text-[13px] text-ink-muted outline-none hover:text-foreground"
-    :aria-label="tab ? `Changer la cible : ${text}` : 'Ouvrir la barre de commande'"
+    :aria-label="tab ? `${text}, ouvrir un nouvel onglet` : 'Ouvrir la barre de commande'"
     @click="open"
   >
     <Search v-if="!tab" :size="14" :stroke-width="1.5" class="shrink-0" />
