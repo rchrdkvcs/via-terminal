@@ -17,6 +17,7 @@ describe('workbench closing and space removal', () => {
   it('removes an asleep pinned tab and restores it with undo without waking it', () => {
     const { spaces, workbench } = setup([row('pinned'), row('neighbor')])
     workbench.activate('pinned', { wake: false })
+    mocks.live.add('neighbor')
     const result = workbench.closeTab('pinned')
     expect(findTab(spaces.active, 'pinned')).toBeUndefined()
     expect(workbench.activeTab?.id).toBe('neighbor')
@@ -38,6 +39,22 @@ describe('workbench closing and space removal', () => {
     vi.advanceTimersByTime(0)
     expect(mocks.focus).toHaveBeenCalledExactlyOnceWith('right')
     expect(mocks.live.has('right')).toBe(true)
+  })
+
+  it('shows the home page instead of switching to a tab with nothing running', () => {
+    const { workbench } = setup([row('asleep')], [row('closing')])
+    workbench.activate('closing', { wake: false })
+    workbench.closeTab('closing')
+    expect(workbench.activeTab).toBeUndefined()
+    expect(mocks.start).not.toHaveBeenCalled()
+  })
+
+  it('skips an asleep neighbor for a running one further away', () => {
+    const { workbench } = setup([row('running'), row('asleep')], [row('closing')])
+    mocks.live.add('running')
+    workbench.activate('closing', { wake: false })
+    workbench.closeTab('closing')
+    expect(workbench.activeTab?.id).toBe('running')
   })
 
   it('rejects the removal of the last space before releasing its sessions', () => {

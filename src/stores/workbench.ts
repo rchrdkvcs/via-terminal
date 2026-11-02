@@ -120,8 +120,13 @@ export const useWorkbench = defineStore('workbench', () => {
   /**
    * Shows a remote explorer or document of `source`'s target in its own tab, right after
    * `source` when that one is temporary. A document already open in the space is reused.
+   * With `activate: false` the tab is only added, asleep, and `source` keeps the focus.
    */
-  function openView(source: Tab, view: TabView): Id | undefined {
+  function openView(
+    source: Tab,
+    view: TabView,
+    { activate: focus = true }: { activate?: boolean } = {},
+  ): Id | undefined {
     const space = spaces.spaceOf(source.id)
     if (!space || source.target.kind === 'local') return
     const same = JSON.stringify(source.target)
@@ -149,7 +154,7 @@ export const useWorkbench = defineStore('workbench', () => {
       view,
     })
     if (!spaces.dispatch({ type: 'open', row, to }, space.id)) return
-    activate(row.id)
+    if (focus) activate(row.id)
     return row.id
   }
 
@@ -213,7 +218,8 @@ export const useWorkbench = defineStore('workbench', () => {
     const space = spaces.spaceOf(tabId)
     const row = space && rowOfTab(space, tabId)
     if (!space || !row) return
-    const next = successor(space, tabId)
+    // Only a running tab takes over; otherwise the home page shows.
+    const next = successor(space, tabId, sessions.isLive)
     const snapshot = clone(row)
     const place = placeFor(space, row.id, 'after')
     const pinned = locate(space, row.id)?.area === 'pinned'
@@ -221,7 +227,7 @@ export const useWorkbench = defineStore('workbench', () => {
       return
     if (focused[space.id] === tabId) {
       focused[space.id] = next
-      if (next && sessions.isLive(next)) focusTerminal(next)
+      if (next) focusTerminal(next)
     }
     release(tabId)
     if (!undoable || !pinned || row.kind !== 'tab' || !place) return {}

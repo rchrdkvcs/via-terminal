@@ -7,6 +7,7 @@ import {
   FolderPlus,
   FolderUp,
   Plus,
+  Search,
   Upload,
   X,
 } from '@lucide/vue'
@@ -18,12 +19,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+const mod = /Mac/.test(navigator.userAgent) ? '⌘' : 'Ctrl+'
 /** Selection actions live in the list's context menu; the toolbar keeps creation and view. */
-defineProps<{ enabled: boolean; hidden: boolean; docked: boolean }>()
+defineProps<{ enabled: boolean; hidden: boolean; docked: boolean; filtering?: boolean }>()
 const emit = defineEmits<{
   create: [directory: boolean]
   upload: [directory: boolean]
   hidden: []
+  search: []
   detach: []
   hide: []
 }>()
@@ -63,6 +66,17 @@ const emit = defineEmits<{
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      aria-label="Filtrer ce dossier"
+      :title="`Filtrer ce dossier (${mod}F)`"
+      :aria-pressed="filtering"
+      @click="emit('search')"
+    >
+      <Search :stroke-width="1.5" />
+    </Button>
     <Button
       type="button"
       variant="ghost"

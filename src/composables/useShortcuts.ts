@@ -32,7 +32,11 @@ export function useShortcuts() {
         if (space) spaces.activate(space.id)
       },
       sidebar: () => spaces.setSidebar({ visible: !spaces.sidebar.visible }),
-      search: () => tab && !tab.view && (ui.searching = true),
+      search: () => {
+        if (!tab) return
+        if (!tab.view) ui.searching = true
+        else if (tab.view.kind === 'files') ui.filterFiles = tab.id
+      },
       copy: () => {
         const selection = tab && terminals.selection(tab.id)
         if (selection) void navigator.clipboard.writeText(selection)
@@ -55,6 +59,8 @@ export function useShortcuts() {
       !target?.closest('.xterm') &&
       !!target?.closest('.cm-editor, input, textarea, [contenteditable="true"]')
     if (editing && !appliesWhileEditing(found.id)) return
+    // The remote explorer filters its own directory.
+    if (found.id === 'search' && target?.closest('[data-files-explorer]')) return
     if (document.querySelector('[data-update-dialog]')) {
       event.preventDefault()
       event.stopPropagation()

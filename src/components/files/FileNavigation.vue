@@ -1,10 +1,16 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { ArrowUp, RefreshCw } from '@lucide/vue'
 import type { FileState } from '@/stores/files'
 import { Button } from '@/components/ui/button'
 import FilePath from './FilePath.vue'
-defineProps<{ panel: FileState; connected: boolean }>()
+const props = defineProps<{ panel: FileState; connected: boolean }>()
 const emit = defineEmits<{ navigate: [path: string] }>()
+const directories = computed(() =>
+  props.panel.entries
+    .filter((entry) => entry.kind === 'directory' || entry.targetKind === 'directory')
+    .map((entry) => entry.path),
+)
 const parent = (directory: string) => directory.replace(/\/[^/]+\/?$/, '') || '/'
 </script>
 <template>
@@ -29,6 +35,7 @@ const parent = (directory: string) => directory.replace(/\/[^/]+\/?$/, '') || '/
       <FilePath
         :directory="panel.directory"
         :connected="connected"
+        :directories="directories"
         @navigate="emit('navigate', $event)"
       />
       <Button

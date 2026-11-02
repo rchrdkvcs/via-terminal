@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, useId, watch } from 'vue'
 import { File, Folder, Link } from '@lucide/vue'
 import type { RemoteEntry } from '@/ipc/files'
+import { contains } from '@/domain/search'
 import { entrySize } from './fileSize'
 import { useFileSelection } from './useFileSelection'
 const props = defineProps<{
@@ -11,6 +12,7 @@ const props = defineProps<{
   hidden: boolean
   connected: boolean
   failed: boolean
+  filter?: string
 }>()
 const emit = defineEmits<{
   selectAll: [paths: string[]]
@@ -20,8 +22,13 @@ const emit = defineEmits<{
 }>()
 const root = ref<HTMLElement>()
 const keys = useId()
-const visible = computed(() =>
+const shown = computed(() =>
   props.entries.filter((entry) => props.hidden || !entry.name.startsWith('.')),
+)
+const visible = computed(() =>
+  props.filter?.trim()
+    ? shown.value.filter((entry) => contains(props.filter ?? '', entry.name))
+    : shown.value,
 )
 const chosen = computed(
   () => visible.value.filter((entry) => props.selected.includes(entry.path)).length,
@@ -154,7 +161,11 @@ function onKeydown(event: KeyboardEvent) {
       class="py-8 text-center text-xs text-ink-muted"
     >
       {{
-        entries.length ? 'Ce dossier ne contient que des fichiers cachés.' : 'Ce dossier est vide.'
+        filter?.trim() && shown.length
+          ? `Aucun élément ne correspond à « ${filter.trim()} ».`
+          : entries.length
+            ? 'Ce dossier ne contient que des fichiers cachés.'
+            : 'Ce dossier est vide.'
       }}
     </p>
   </div>

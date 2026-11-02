@@ -53,7 +53,7 @@ const emptyPinned = computed(
       <li
         v-for="(entry, index) in entries"
         :key="entry.id"
-        class="relative grid list-none transition-[grid-template-rows,opacity] duration-200 ease-[var(--ease-out)] motion-reduce:transition-none"
+        class="relative grid min-w-0 list-none grid-cols-[minmax(0,1fr)] transition-[grid-template-rows,opacity] duration-200 ease-[var(--ease-out)] motion-reduce:transition-none"
         :class="shown(entry) ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'"
         :inert="!shown(entry)"
       >

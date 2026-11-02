@@ -49,6 +49,7 @@ fn generate() -> String {
         .add::<settings::Settings>()
         .add::<settings::Theme>()
         .add::<settings::CursorStyle>()
+        .add::<settings::FilesAutoOpen>()
         .add::<layout::Layout>()
         .add::<layout::Sidebar>()
         .add::<layout::Space>()
